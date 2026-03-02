@@ -7,4 +7,4 @@ pub mod file;
 pub mod hardware;
 
 pub use file::{AudioFileReader, AudioFileWriter, FileError};
-pub use hardware::{HardwareConfig, HardwareError};
+pub use hardware::{HardwareConfig, HardwareHost, HardwareError};

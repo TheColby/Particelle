@@ -143,16 +143,13 @@ impl HardwareHost {
 #[cfg(feature = "realtime")]
 fn ctrlc_channel(tx: std::sync::mpsc::Sender<()>) {
     std::thread::spawn(move || {
-        let mut signals = Vec::new();
-        // Wait for SIGINT
+        // Block forever — the process will be killed by Ctrl+C/SIGINT
+        // which drops the stream via RAII cleanup.
         loop {
-            std::thread::sleep(std::time::Duration::from_millis(100));
-            // Simple approach: just wait
+            std::thread::sleep(std::time::Duration::from_secs(3600));
         }
     });
-    // Also register via the ctrlc crate if available, or just use signal handling
-    // For now, the user presses Ctrl+C which terminates the process
-    let _ = tx; // fallback: process exit handles cleanup via Drop
+    let _ = tx;
 }
 
 #[derive(Debug, Error)]

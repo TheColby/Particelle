@@ -209,18 +209,20 @@ fn cmd_validate(patch_path: &str) -> Result<()> {
         .with_context(|| "YAML parse error")?;
     let errors = particelle_schema::validate(&config);
     if errors.is_empty() {
-        println!("OK — configuration is valid.");
+        let n_ch = config.layout.channels.len();
+        let n_clouds = config.clouds.len();
+        println!("✓ Patch is valid. {} cloud(s), {} channel(s).", n_clouds, n_ch);
     } else {
         eprintln!("{} validation error(s):", errors.len());
         for e in &errors {
-            eprintln!("  - {}", e);
+            eprintln!("  ✗ {}", e);
         }
         std::process::exit(1);
     }
     Ok(())
 }
 
-fn cmd_render(patch_path: &str, output_path: &str, _duration: f64, emit_hash: bool) -> Result<()> {
+fn cmd_render(patch_path: &str, output_path: &str, duration: f64, emit_hash: bool) -> Result<()> {
     let yaml = std::fs::read_to_string(patch_path)
         .with_context(|| format!("Cannot read '{}'", patch_path))?;
     let config: particelle_schema::ParticelleConfig = serde_yaml::from_str(&yaml)
@@ -228,18 +230,67 @@ fn cmd_render(patch_path: &str, output_path: &str, _duration: f64, emit_hash: bo
     let errors = particelle_schema::validate(&config);
     if !errors.is_empty() {
         for e in &errors {
-            eprintln!("  - {}", e);
+            eprintln!("  ✗ {}", e);
         }
         anyhow::bail!("Configuration is invalid. Cannot render.");
     }
 
-    println!("Rendering to '{}'...", output_path);
-    // TODO: Phase 5 — engine construction, block loop, file write
-    println!("Render complete.");
+    let sample_rate = config.engine.sample_rate as f64;
+    let block_size = config.engine.block_size;
+    let n_channels = config.layout.channels.len();
+    let total_frames = (duration * sample_rate) as u64;
+
+    eprintln!(
+        "→ Rendering {:.1}s @ {}Hz, {} ch, block {} → '{}'",
+        duration, sample_rate as u32, n_channels, block_size, output_path
+    );
+
+    let mut writer = particelle_io::AudioFileWriter::create(
+        output_path,
+        n_channels,
+        sample_rate,
+        24, // 24-bit output
+    ).with_context(|| "Cannot create output file")?;
+
+    // Render loop: generate silence blocks (engine scheduling not yet wired)
+    // TODO: connect grain engine here
+    let mut frames_rendered = 0u64;
+    let mut block = particelle_core::audio_block::AudioBlock::new(n_channels, block_size);
+
+    while frames_rendered < total_frames {
+        let remaining = (total_frames - frames_rendered) as usize;
+        let frames_this_block = block_size.min(remaining);
+
+        // For now, generate silence — grain engine integration is next
+        block.silence();
+
+        // If this is the last block, we need a trimmed block
+        if frames_this_block < block_size {
+            let mut trimmed = particelle_core::audio_block::AudioBlock::new(n_channels, frames_this_block);
+            for ch in 0..n_channels {
+                trimmed.channels[ch][..frames_this_block]
+                    .copy_from_slice(&block.channels[ch][..frames_this_block]);
+            }
+            writer.write_block(&trimmed)
+                .with_context(|| "Write error")?;
+        } else {
+            writer.write_block(&block)
+                .with_context(|| "Write error")?;
+        }
+
+        frames_rendered += frames_this_block as u64;
+    }
+
+    let written = writer.finalize()
+        .with_context(|| "Finalize error")?;
+    eprintln!("✓ Wrote {} frames ({} channels) to '{}'", written, n_channels, output_path);
 
     if emit_hash {
-        // TODO: Phase 5 — compute SHA-256 over output samples
-        println!("SHA-256: (not yet implemented)");
+        use sha2::{Sha256, Digest};
+        let file_bytes = std::fs::read(output_path)
+            .with_context(|| "Cannot read output for hashing")?;
+        let hash = Sha256::digest(&file_bytes);
+        println!("SHA-256: {:x}", hash);
     }
 
     Ok(())
@@ -248,18 +299,87 @@ fn cmd_render(patch_path: &str, output_path: &str, _duration: f64, emit_hash: bo
 fn cmd_run(patch_path: &str) -> Result<()> {
     let yaml = std::fs::read_to_string(patch_path)
         .with_context(|| format!("Cannot read '{}'", patch_path))?;
-    let _config: particelle_schema::ParticelleConfig = serde_yaml::from_str(&yaml)
+    let config: particelle_schema::ParticelleConfig = serde_yaml::from_str(&yaml)
         .with_context(|| "YAML parse error")?;
-    println!("Realtime mode: not yet implemented.");
-    // TODO: Phase 8 — hardware host setup, audio thread launch
+    let errors = particelle_schema::validate(&config);
+    if !errors.is_empty() {
+        for e in &errors {
+            eprintln!("  ✗ {}", e);
+        }
+        anyhow::bail!("Configuration is invalid. Cannot run.");
+    }
+
+    let n_channels = config.layout.channels.len();
+    let sample_rate = config.engine.sample_rate as f64;
+    let block_size = config.engine.block_size;
+
+    let hw_config = particelle_io::HardwareConfig {
+        device_name: config.hardware.as_ref().and_then(|h| h.device_name.clone()),
+        n_channels,
+        sample_rate,
+        block_size,
+        ..Default::default()
+    };
+
+    let host = particelle_io::HardwareHost::new(hw_config);
+    host.run(move |buffer: &mut [f32]| {
+        // Zero-fill for now — grain engine callback goes here
+        for s in buffer.iter_mut() {
+            *s = 0.0;
+        }
+    }).with_context(|| "Audio stream error")?;
+
     Ok(())
 }
 
 fn cmd_init(channels: usize) -> Result<()> {
-    // TODO: generate from a template based on channel count
+    let channel_defs: Vec<String> = if channels == 1 {
+        vec!["    - { name: \"M\", azimuth_deg: 0.0, elevation_deg: 0.0 }".into()]
+    } else if channels == 2 {
+        vec![
+            "    - { name: \"L\", azimuth_deg: -30.0, elevation_deg: 0.0 }".into(),
+            "    - { name: \"R\", azimuth_deg:  30.0, elevation_deg: 0.0 }".into(),
+        ]
+    } else {
+        // Distribute channels evenly in a circle at ear level
+        (0..channels)
+            .map(|i| {
+                let az = -180.0 + (360.0 * i as f64 / channels as f64);
+                format!("    - {{ name: \"CH{}\", azimuth_deg: {:.1}, elevation_deg: 0.0 }}", i + 1, az)
+            })
+            .collect()
+    };
+
     let yaml = format!(
-        "engine:\n  sample_rate: 48000\n  block_size: 256\n\nlayout:\n  channels: []\n\ntuning:\n  mode: twelve_tet\n\nclouds: []\n\n# {} output channels requested\n",
-        channels
+r#"# Particelle patch — generated by `particelle init -n {channels}`
+# Edit this file to configure your grain clouds.
+# Documentation: https://github.com/TheColby/Particelle
+
+engine:
+  sample_rate: 48000
+  block_size: 256
+
+layout:
+  channels:
+{channel_lines}
+
+tuning:
+  mode: twelve_tet
+
+clouds:
+  - id: my_cloud
+    source: "audio/music_example.wav"
+    density: 16.0
+    duration: 0.1
+    amplitude: 0.5
+    position: 0.0
+    window:
+      type: hann
+    listener_pos: {{ x: 0.0, y: 1.0, z: 0.0 }}
+    width: 0.5
+"#,
+        channels = channels,
+        channel_lines = channel_defs.join("\n"),
     );
     print!("{}", yaml);
     Ok(())
@@ -271,6 +391,7 @@ fn cmd_curve(curve_path: &str, resolution: usize) -> Result<()> {
     let curve = particelle_curve::CompiledCurve::from_json(&json)
         .with_context(|| "Curve compile error")?;
     let (x_min, x_max) = curve.domain();
+    eprintln!("→ Evaluating '{}' over [{:.4}, {:.4}] at {} points", curve_path, x_min, x_max, resolution);
     println!("# x\ty");
     for i in 0..=resolution {
         let t = i as f64 / resolution as f64;
@@ -280,8 +401,38 @@ fn cmd_curve(curve_path: &str, resolution: usize) -> Result<()> {
     Ok(())
 }
 
-fn cmd_set(_patch_path: &str, _param: &str, _value: &str) -> Result<()> {
-    // TODO: read YAML, locate param by dot path, substitute value, print
-    println!("set: not yet implemented.");
+fn cmd_set(patch_path: &str, param: &str, value: &str) -> Result<()> {
+    let yaml = std::fs::read_to_string(patch_path)
+        .with_context(|| format!("Cannot read '{}'", patch_path))?;
+
+    // Simple key-value replacement in YAML text
+    // Find the line containing the param's last segment and replace its value
+    let parts: Vec<&str> = param.split('.').collect();
+    let key = parts.last().ok_or_else(|| anyhow::anyhow!("Empty parameter path"))?;
+
+    let mut found = false;
+    let mut output_lines: Vec<String> = Vec::new();
+
+    for line in yaml.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with(&format!("{}:", key)) || trimmed.starts_with(&format!("{} :", key)) {
+            // Replace the value part
+            if let Some(colon_pos) = line.find(':') {
+                let prefix = &line[..=colon_pos];
+                output_lines.push(format!("{} {}", prefix, value));
+                found = true;
+            } else {
+                output_lines.push(line.to_string());
+            }
+        } else {
+            output_lines.push(line.to_string());
+        }
+    }
+
+    if !found {
+        anyhow::bail!("Parameter '{}' not found in '{}'", param, patch_path);
+    }
+
+    println!("{}", output_lines.join("\n"));
     Ok(())
 }
