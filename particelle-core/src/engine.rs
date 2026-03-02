@@ -84,20 +84,20 @@ impl Engine for GranularEngine {
     fn process(&mut self, output: &mut AudioBlock) -> Result<(), CoreError> {
         output.silence();
         
+        let sample_rate = self.state.config.sample_rate;
+        
         for cloud in &mut self.clouds {
-            // Placeholder: density=16.0, duration=100ms, start=0, rate=1.0, amp=0.5
-            // Real parameter signals will replace these constants in the next phase.
-            let sample_rate = self.state.config.sample_rate;
-            
             // For now, we update onset delay by the block size.
             // Better: loop sample-by-sample for accurate onsets.
             for _ in 0..output.frames {
-                cloud.update(sample_rate, 16.0, || crate::grain::GrainParams {
+                cloud.update(sample_rate, 16.0, self.spatializer.as_ref(), || crate::grain::GrainParams {
                     start_frame: 0.0,
                     duration_frames: 0.1 * sample_rate,
                     playback_rate: 1.0,
+                    azimuth_deg: 0.0,
+                    elevation_deg: 0.0,
+                    width: 0.5,
                     amplitude: 0.5,
-                    ..Default::default()
                 });
             }
             

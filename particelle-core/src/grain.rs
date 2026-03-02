@@ -106,6 +106,7 @@ pub struct GrainParams {
     pub playback_rate: f64,
     pub azimuth_deg: f64,
     pub elevation_deg: f64,
+    pub width: f64,
     pub amplitude: f64,
 }
 
@@ -131,6 +132,7 @@ impl Cloud {
         &mut self,
         sample_rate: f64,
         density: f64,
+        spatializer: &dyn crate::spatializer::Spatializer,
         mut next_params: impl FnMut() -> GrainParams,
     ) {
         if density <= 0.0 {
@@ -142,7 +144,17 @@ impl Cloud {
         if self.onset_delay <= 0.0 {
             if let Some(grain) = self.pool.acquire() {
                 let p = next_params();
-                let gains = vec![p.amplitude; grain.output_gains.len()];
+                let mut gains = vec![0.0; grain.output_gains.len()];
+                
+                // Calculate spatial distribution
+                let pos = crate::spatializer::Vec3::from_az_el(p.azimuth_deg, p.elevation_deg);
+                spatializer.distribute(pos, p.width, &mut gains);
+                
+                // Apply overall amplitude
+                for g in &mut gains {
+                    *g *= p.amplitude;
+                }
+                
                 grain.activate(p.start_frame, p.duration_frames, p.playback_rate, &gains);
             }
             self.onset_delay = avg_delay;
