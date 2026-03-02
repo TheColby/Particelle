@@ -1,0 +1,61 @@
+[workspace]
+members = [
+    "particelle-core",
+    "particelle-dsp",
+    "particelle-curve",
+    "particelle-params",
+    "particelle-tuning",
+    "particelle-midi",
+    "particelle-io",
+    "particelle-schema",
+    "particelle-cli",
+]
+resolver = "2"
+
+[workspace.package]
+version   = "0.1.0"
+edition   = "2021"
+authors   = ["Particelle"]
+license   = "MIT"
+
+[workspace.dependencies]
+# Internal crates
+particelle-core   = { path = "particelle-core" }
+particelle-dsp    = { path = "particelle-dsp" }
+particelle-curve  = { path = "particelle-curve" }
+particelle-params = { path = "particelle-params" }
+particelle-tuning = { path = "particelle-tuning" }
+particelle-midi   = { path = "particelle-midi" }
+particelle-io     = { path = "particelle-io" }
+particelle-schema = { path = "particelle-schema" }
+
+# Serialization
+serde      = { version = "1", features = ["derive"] }
+serde_yaml = "0.9"
+serde_json = "1"
+
+# Error handling
+thiserror = "2"
+anyhow    = "1"
+
+# Concurrency / lock-free
+ringbuf = "0.4"
+
+# CLI
+clap = { version = "4", features = ["derive"] }
+
+# Deterministic testing
+sha2   = "0.10"
+digest = "0.10"
+
+# MIDI (offline file parsing)
+midly = "0.5"
+
+# Math (no_std-compatible transcendentals)
+libm = "0.2"
+
+# Audio hardware backend (optional)
+cpal = "0.15"
+
+# MIDI realtime (optional)
+midir = "0.10"

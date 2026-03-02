@@ -1,0 +1,17 @@
+[package]
+name    = "particelle-io"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[features]
+default  = []
+realtime = ["dep:cpal", "dep:ringbuf"]
+
+[dependencies]
+particelle-core.workspace = true
+thiserror.workspace = true
+anyhow.workspace    = true
+cpal   = { version = "0.15", optional = true }
+ringbuf = { version = "0.4", optional = true }

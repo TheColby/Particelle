@@ -1,0 +1,29 @@
+[package]
+name    = "particelle-cli"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "particelle"
+path = "src/main.rs"
+
+[features]
+default  = ["realtime"]
+realtime = [
+    "particelle-io/realtime",
+    "particelle-midi/realtime",
+]
+
+[dependencies]
+particelle-core.workspace   = true
+particelle-schema.workspace = true
+particelle-io.workspace     = true
+particelle-midi.workspace   = true
+particelle-curve.workspace  = true
+clap.workspace      = true
+anyhow.workspace    = true
+sha2.workspace      = true
+digest.workspace    = true
+serde_yaml.workspace = true
