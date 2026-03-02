@@ -257,7 +257,7 @@ particelle render immersive.yaml -o atmos_orbit.wav --duration 60.0
 
 ## Hold Up! What Is Granular Synthesis?
 
-Granular synthesis is a method of sound generation that operates on a fundamentally different principle than traditional synthesis or sampling. Instead of playing back audio as a continuous stream, granular synthesis **breaks sound into hundreds or thousands of tiny fragments** — called *grains* — and reassembles them in new configurations.
+Granular synthesis is a method of sound generation that operates on a fundamentally different principle than traditional synthesis or sampling. Instead of playing back audio as a continuous stream, granular synthesis **breaks sound into hundreds or thousands or more of tiny fragments** — called *grains* — and reassembles them in new configurations.
 
 ### The Grain
 
