@@ -37,7 +37,7 @@ cp target/release/particelle /usr/local/bin/
 
 ### Requirements
 
-- **Rust 1.70+** (install via [rustup.rs](https://rustup.rs/)). On mac, you can install [Homebrew](https://brew.sh) and do brew install rust.
+- **Rust 1.70+** (install via [rustup.rs](https://rustup.rs/)). On mac, you can install [Homebrew](https://brew.sh) and do `brew install rust`.
 - A C compiler for native audio dependencies (Xcode CLT on macOS, `build-essential` on Linux)
 
 ### Verify Installation
