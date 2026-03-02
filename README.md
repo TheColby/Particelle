@@ -310,6 +310,27 @@ In Particelle, hop size is derived from the **density** parameter (grains per se
 
 When density is high and duration is long enough for grains to overlap, the output sounds like a sustained, shimmering texture. When density is low, individual grains become audible as discrete sonic events — like raindrops on glass.
 
+### Creating Stutter Effects
+
+Stutter and glitch effects in Particelle are created by manipulating **overlap** and **position**:
+
+1. **Freeze Position**: Set `position` to a constant value (e.g., `0.5` for the middle of a file).
+2. **Low Overlap**: Set `density` and `duration` so the overlap factor is **≤ 1.0**. Back-to-back grains (1.0×) create a rhythmic repeat. Gappy grains (<1.0×) create a choppy, isolated stutter.
+3. **Short Duration**: Keep durations between 10ms and 50ms for that classic "glitch" sound rather than a recognizable loop.
+
+```yaml
+clouds:
+  - id: stutter_glitch
+    source: "audio/vocal.wav"
+    density: 20.0        # 20 grains/sec
+    duration: 0.02       # 20ms grains
+    # overlap = 20 * 0.02 = 0.4 (gappy stutter)
+    position: 0.25       # frozen at 25% through the file
+    amplitude: 0.8
+    window:
+      type: "rectangular" # sharp edges for clicky stutters
+```
+
 ### Why Is It Powerful?
 
 Granular synthesis decouples properties that are normally locked together in recorded audio:

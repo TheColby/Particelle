@@ -1,104 +1,152 @@
-use crate::spatializer::Vec3;
+use std::sync::Arc;
+use crate::audio_block::AudioBlock;
 
-/// A single active grain (particle).
-///
-/// All fields are set at grain birth and updated each block. No allocation
-/// occurs after grain creation. Grains are managed in a pre-allocated pool.
-#[derive(Debug, Clone)]
-pub struct Particle {
-    /// Sub-sample-accurate read position into the Matter buffer.
-    pub read_pos: f64,
-    /// Playback rate relative to the original sample rate (1.0 = unmodified).
-    pub rate: f64,
-    /// Grain duration in frames.
-    pub duration_frames: usize,
-    /// Number of frames elapsed since grain birth.
-    pub elapsed_frames: usize,
-    /// Grain position in 3D listener space.
-    pub position: Vec3,
-    /// Spatial spread parameter [0, 1].
-    pub width: f64,
-    /// Pre-computed per-channel gain values (computed by Spatializer at birth).
-    pub gains: Vec<f64>,
-    /// Amplitude scalar.
-    pub amplitude: f64,
-    /// Opaque window identifier, resolved from the window cache.
-    pub window_id: u64,
+/// State of a single active grain.
+#[derive(Clone, Debug)]
+pub struct Grain {
+    /// Reference to the source audio buffer (planar f64).
+    pub source: Arc<Vec<Vec<f64>>>,
+    /// Current playback position in frames (at the original sample rate).
+    pub current_frame: f64,
+    /// Total duration of the grain in frames (at the output sample rate).
+    pub duration_frames: f64,
+    /// Number of frames rendered so far.
+    pub rendered_frames: f64,
+    /// Playback rate (pitch). 1.0 is original speed.
+    pub playback_rate: f64,
+    /// Pre-computed window function (e.g., Hann).
+    pub window: Arc<[f64]>,
+    /// Target speaker gains (panning).
+    pub output_gains: Vec<f64>,
+    /// Whether the grain is currently active.
+    pub active: bool,
 }
 
-impl Particle {
-    /// Returns true if the grain still has frames remaining.
-    pub fn is_alive(&self) -> bool {
-        self.elapsed_frames < self.duration_frames
-    }
-
-    /// Normalized window phase in [0, 1].
-    pub fn window_phase(&self) -> f64 {
-        if self.duration_frames == 0 {
-            return 1.0;
+impl Grain {
+    pub fn new(source: Arc<Vec<Vec<f64>>>, window: Arc<[f64]>, n_output_channels: usize) -> Self {
+        Self {
+            source,
+            current_frame: 0.0,
+            duration_frames: 0.0,
+            rendered_frames: 0.0,
+            playback_rate: 1.0,
+            window,
+            output_gains: vec![0.0; n_output_channels],
+            active: false,
         }
-        self.elapsed_frames as f64 / self.duration_frames as f64
+    }
+
+    pub fn activate(
+        &mut self,
+        start_frame: f64,
+        duration_frames: f64,
+        playback_rate: f64,
+        gains: &[f64],
+    ) {
+        self.current_frame = start_frame;
+        self.duration_frames = duration_frames;
+        self.rendered_frames = 0.0;
+        self.playback_rate = playback_rate;
+        self.output_gains.copy_from_slice(gains);
+        self.active = true;
+    }
+
+    /// Render into `output`. Returns `false` if the grain becomes inactive.
+    pub fn process(&mut self, output: &mut AudioBlock) -> bool {
+        if !self.active {
+            return false;
+        }
+
+        let n_out_ch = output.n_channels().min(self.output_gains.len());
+        let n_src_ch = self.source.len();
+        let window_len = self.window.len() as f64;
+
+        for f in 0..output.frames {
+            if self.rendered_frames >= self.duration_frames {
+                self.active = false;
+                break;
+            }
+
+            // Window position [0.0, 1.0]
+            let win_pos = self.rendered_frames / self.duration_frames;
+            let win_idx = (win_pos * (window_len - 1.0)) as usize;
+            let win_val = self.window[win_idx.min(self.window.len() - 1)];
+
+            // Source position interpolation (linear)
+            let src_idx = self.current_frame.floor() as usize;
+            let src_fract = self.current_frame - (src_idx as f64);
+            
+            for ch in 0..n_src_ch {
+                let src_buf = &self.source[ch];
+                let s1 = src_buf.get(src_idx % src_buf.len()).copied().unwrap_or(0.0);
+                let s2 = src_buf.get((src_idx + 1) % src_buf.len()).copied().unwrap_or(0.0);
+                let sample = s1 + src_fract * (s2 - s1);
+                
+                let windowed = sample * win_val;
+
+                // Apply panning gains to output channels
+                for out_ch in 0..n_out_ch {
+                    output.channels[out_ch][f] += windowed * self.output_gains[out_ch];
+                }
+            }
+
+            self.current_frame += self.playback_rate;
+            self.rendered_frames += 1.0;
+        }
+
+        self.active
     }
 }
 
-/// Parameters controlling grain emission for one cloud.
-///
-/// All fields here are evaluated from `ParamSignal` in the engine; these
-/// are the resolved f64 values at a given block boundary.
-#[derive(Debug, Clone)]
-pub struct EmitterParams {
-    /// Grains per second.
-    pub density: f64,
-    /// Grain duration in seconds.
-    pub duration_s: f64,
-    /// Normalized read position into the Matter buffer [0, 1].
-    pub position: f64,
-    /// Position scatter, in units of duration [0, 1].
-    pub position_scatter: f64,
-    /// Playback rate ratio (1.0 = original pitch).
-    pub rate: f64,
-    /// Rate scatter in semitones.
-    pub rate_scatter_semitones: f64,
-    /// Peak amplitude.
+/// Parameters for emitting a new grain.
+#[derive(Clone, Debug, Default)]
+pub struct GrainParams {
+    pub start_frame: f64,
+    pub duration_frames: f64,
+    pub playback_rate: f64,
+    pub azimuth_deg: f64,
+    pub elevation_deg: f64,
     pub amplitude: f64,
-    /// 3D position in listener space.
-    pub listener_pos: Vec3,
-    /// Spatial spread [0, 1].
-    pub width: f64,
 }
 
-/// A cloud of grains sharing the same source material and emitter configuration.
-///
-/// The cloud owns a pool of `Particle` slots pre-allocated at construction.
-/// The engine scheduler activates and retires particles without allocation.
-#[derive(Debug)]
+/// A high-level grain cloud managing a pool of grains.
 pub struct Cloud {
-    pub id: u64,
-    pub params: EmitterParams,
-    /// Active particle pool. Pre-allocated at cloud creation.
-    pub active_particles: Vec<Particle>,
-    /// Maximum simultaneous particles this cloud may sustain.
-    pub max_particles: usize,
-    /// Fractional grain counter — tracks sub-grain scheduling debt.
-    pub grain_debt: f64,
+    pub id: String,
+    pub pool: crate::pool::GrainPool,
+    /// Time until the next grain onset in frames.
+    pub onset_delay: f64,
 }
 
 impl Cloud {
-    pub fn new(id: u64, max_particles: usize, params: EmitterParams) -> Self {
+    pub fn new(id: String, pool: crate::pool::GrainPool) -> Self {
         Self {
             id,
-            params,
-            active_particles: Vec::with_capacity(max_particles),
-            max_particles,
-            grain_debt: 0.0,
+            pool,
+            onset_delay: 0.0,
         }
     }
 
-    pub fn particle_count(&self) -> usize {
-        self.active_particles.len()
-    }
+    /// Update the cloud state and emit grains if necessary.
+    pub fn update(
+        &mut self,
+        sample_rate: f64,
+        density: f64,
+        mut next_params: impl FnMut() -> GrainParams,
+    ) {
+        if density <= 0.0 {
+            return;
+        }
 
-    pub fn is_full(&self) -> bool {
-        self.active_particles.len() >= self.max_particles
+        let avg_delay = sample_rate / density;
+        
+        if self.onset_delay <= 0.0 {
+            if let Some(grain) = self.pool.acquire() {
+                let p = next_params();
+                let gains = vec![p.amplitude; grain.output_gains.len()];
+                grain.activate(p.start_frame, p.duration_frames, p.playback_rate, &gains);
+            }
+            self.onset_delay = avg_delay;
+        }
+        self.onset_delay -= 1.0;
     }
 }

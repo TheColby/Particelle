@@ -83,12 +83,73 @@ impl GranularEngine {
 impl Engine for GranularEngine {
     fn process(&mut self, output: &mut AudioBlock) -> Result<(), CoreError> {
         output.silence();
-        // TODO: grain scheduling, window application, spatializer distribution
+        
+        for cloud in &mut self.clouds {
+            // Placeholder: density=16.0, duration=100ms, start=0, rate=1.0, amp=0.5
+            // Real parameter signals will replace these constants in the next phase.
+            let sample_rate = self.state.config.sample_rate;
+            
+            // For now, we update onset delay by the block size.
+            // Better: loop sample-by-sample for accurate onsets.
+            for _ in 0..output.frames {
+                cloud.update(sample_rate, 16.0, || crate::grain::GrainParams {
+                    start_frame: 0.0,
+                    duration_frames: 0.1 * sample_rate,
+                    playback_rate: 1.0,
+                    amplitude: 0.5,
+                    ..Default::default()
+                });
+            }
+            
+            cloud.pool.process_all(output);
+        }
+
         self.state.advance(output.frames);
         Ok(())
     }
 
     fn state(&self) -> &EngineState {
         &self.state
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::pool::GrainPool;
+    use crate::grain::Cloud;
+    use crate::spatializer::AmplitudePanner;
+    use std::sync::Arc;
+
+    #[test]
+    fn test_granular_engine_non_zero_output() -> Result<(), crate::error::CoreError> {
+        let config = EngineConfig::new(44100.0, 256)?;
+        let layout = crate::layout::AudioLayout::stereo();
+        let panner = Box::new(AmplitudePanner::new(layout.clone()));
+        let mut engine = GranularEngine::new(config, layout, panner)?;
+
+        // Dummy source: 1 second of 1.0 (constant signal)
+        let source = Arc::new(vec![vec![1.0; 44100]]);
+        let window = Arc::from(vec![1.0; 1024]); // Rectangular window for peak amplitude
+        let pool = GrainPool::new(10, Arc::clone(&source), Arc::clone(&window), 2);
+        let cloud = Cloud::new("test_cloud".to_string(), pool);
+        engine.add_cloud(cloud);
+
+        let mut output = AudioBlock::new(2, 256);
+        engine.process(&mut output)?;
+
+        // Verify that we have some non-zero samples in the output
+        let mut has_sound = false;
+        for ch in 0..output.n_channels() {
+            for f in 0..output.frames {
+                if output.channels[ch][f].abs() > 0.0 {
+                    has_sound = true;
+                    break;
+                }
+            }
+        }
+
+        assert!(has_sound, "Engine produced no sound (all samples are zero)");
+        Ok(())
     }
 }
