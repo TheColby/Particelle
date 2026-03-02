@@ -263,7 +263,19 @@ fn build_engine(config: &ParticelleConfig) -> Result<GranularEngine> {
         let window_buf = Arc::from(vec![1.0; 1024]); // Hardcoded rectangular window for now
         let capacity = c.max_particles.unwrap_or(1024);
         let pool = GrainPool::new(capacity, source_arc, window_buf, n_channels);
-        let cloud = Cloud::new(c.id.clone(), pool);
+        let mut cloud = Cloud::new(c.id.clone(), pool);
+        
+        // Temporarily extract constant values from SignalExprConfigs
+        // In Phase 12, these will compile into actual signals
+        if let particelle_schema::config::SignalExprConfig::Const(val) = c.density    { cloud.density = val; }
+        if let particelle_schema::config::SignalExprConfig::Const(val) = c.duration   { cloud.duration = val; }
+        if let particelle_schema::config::SignalExprConfig::Const(val) = c.amplitude  { cloud.amplitude = val; }
+        if let particelle_schema::config::SignalExprConfig::Const(val) = c.position   { cloud.position = val; }
+        if let particelle_schema::config::SignalExprConfig::Const(val) = c.width      { cloud.width = val; }
+        
+        let pos = &c.listener_pos;
+        cloud.listener_pos = particelle_core::spatializer::Vec3::new(pos.x, pos.y, pos.z);
+        
         engine.add_cloud(cloud);
     }
     

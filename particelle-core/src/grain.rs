@@ -116,6 +116,15 @@ pub struct Cloud {
     pub pool: crate::pool::GrainPool,
     /// Time until the next grain onset in frames.
     pub onset_delay: f64,
+    
+    // Interim parameters until Phase 12 (Signals)
+    pub density: f64,
+    pub duration: f64,
+    pub amplitude: f64,
+    pub position: f64,
+    pub listener_pos: crate::spatializer::Vec3,
+    pub width: f64,
+    pub playback_rate: f64,
 }
 
 impl Cloud {
@@ -124,6 +133,13 @@ impl Cloud {
             id,
             pool,
             onset_delay: 0.0,
+            density: 10.0,
+            duration: 0.1,
+            amplitude: 0.5,
+            position: 0.0,
+            listener_pos: crate::spatializer::Vec3::ORIGIN,
+            width: 0.5,
+            playback_rate: 1.0,
         }
     }
 
@@ -131,32 +147,32 @@ impl Cloud {
     pub fn update(
         &mut self,
         sample_rate: f64,
-        density: f64,
         spatializer: &dyn crate::spatializer::Spatializer,
-        mut next_params: impl FnMut() -> GrainParams,
     ) {
-        if density <= 0.0 {
+        if self.density <= 0.0 {
             return;
         }
 
-        let avg_delay = sample_rate / density;
+        let avg_delay = sample_rate / self.density;
         
         if self.onset_delay <= 0.0 {
             if let Some(grain) = self.pool.acquire() {
-                let p = next_params();
                 let mut gains = vec![0.0; grain.output_gains.len()];
                 
                 // Calculate spatial distribution
-                let pos = crate::spatializer::Vec3::from_az_el(p.azimuth_deg, p.elevation_deg);
-                spatializer.distribute(pos, p.width, &mut gains);
+                spatializer.distribute(self.listener_pos, self.width, &mut gains);
                 
                 // Apply overall amplitude
                 for g in &mut gains {
-                    *g *= p.amplitude;
+                    *g *= self.amplitude;
                 }
                 
-                grain.activate(p.start_frame, p.duration_frames, p.playback_rate, &gains);
+                let start_frame = self.position * sample_rate; // simplistic mapping
+                let dur_frames = self.duration * sample_rate;
+                grain.activate(start_frame, dur_frames, self.playback_rate, &gains);
             }
+            // Add some jitter to onset delay to avoid phasing (simplistic stochastic scheduler)
+            // A real engine would use a noise generator here
             self.onset_delay = avg_delay;
         }
         self.onset_delay -= 1.0;

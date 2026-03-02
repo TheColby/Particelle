@@ -90,15 +90,7 @@ impl Engine for GranularEngine {
             // For now, we update onset delay by the block size.
             // Better: loop sample-by-sample for accurate onsets.
             for _ in 0..output.frames {
-                cloud.update(sample_rate, 16.0, self.spatializer.as_ref(), || crate::grain::GrainParams {
-                    start_frame: 0.0,
-                    duration_frames: 0.1 * sample_rate,
-                    playback_rate: 1.0,
-                    azimuth_deg: 0.0,
-                    elevation_deg: 0.0,
-                    width: 0.5,
-                    amplitude: 0.5,
-                });
+                cloud.update(sample_rate, self.spatializer.as_ref());
             }
             
             cloud.pool.process_all(output);
