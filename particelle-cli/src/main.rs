@@ -1,5 +1,11 @@
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
+use std::sync::Arc;
+use particelle_core::engine::{Engine, EngineConfig, GranularEngine};
+use particelle_core::spatializer::AmplitudePanner;
+use particelle_core::grain::Cloud;
+use particelle_core::pool::GrainPool;
+use particelle_schema::ParticelleConfig;
 
 /// Particelle — granular synthesis engine command-line interface.
 ///
@@ -202,6 +208,68 @@ fn main() -> Result<()> {
     Ok(())
 }
 
+fn build_engine(config: &ParticelleConfig) -> Result<GranularEngine> {
+    let sample_rate = config.engine.sample_rate as f64;
+    let block_size = config.engine.block_size;
+    
+    let engine_config = EngineConfig::new(sample_rate, block_size)
+        .with_context(|| "Invalid engine config")?;
+        
+    let mut core_channels = Vec::new();
+    for ch in &config.layout.channels {
+        match ch {
+            particelle_schema::config::ChannelConfig::Spherical { name, azimuth_deg, elevation_deg } => {
+                core_channels.push(particelle_core::layout::ChannelMeta {
+                    name: name.clone(),
+                    position: particelle_core::layout::SpeakerPosition::Spherical {
+                        azimuth_deg: *azimuth_deg,
+                        elevation_deg: *elevation_deg,
+                    }
+                });
+            }
+            particelle_schema::config::ChannelConfig::Cartesian { name, x, y, z } => {
+                core_channels.push(particelle_core::layout::ChannelMeta {
+                    name: name.clone(),
+                    position: particelle_core::layout::SpeakerPosition::Cartesian { x: *x, y: *y, z: *z }
+                });
+            }
+        }
+    }
+    let layout = particelle_core::layout::AudioLayout { channels: core_channels };
+    let n_channels = layout.channels.len();
+    
+    let panner = Box::new(AmplitudePanner::new(layout.clone()));
+    let mut engine = GranularEngine::new(engine_config, layout, panner)
+        .with_context(|| "Failed to create engine")?;
+        
+    for c in &config.clouds {
+        let source_path = &c.source;
+        let mut reader = particelle_io::AudioFileReader::open(source_path)
+            .with_context(|| format!("Cannot open source audio '{}'", source_path))?;
+            
+        let mut full_source = vec![vec![0.0; reader.n_frames as usize]; reader.n_channels];
+        let mut block = particelle_core::audio_block::AudioBlock::new(reader.n_channels, 1024);
+        let mut frame_idx = 0;
+        loop {
+            let read = reader.read_block(&mut block).unwrap();
+            if read == 0 { break; }
+            for ch in 0..reader.n_channels {
+                full_source[ch][frame_idx..frame_idx + read].copy_from_slice(&block.channels[ch][..read]);
+            }
+            frame_idx += read;
+        }
+        
+        let source_arc = Arc::new(full_source);
+        let window_buf = Arc::from(vec![1.0; 1024]); // Hardcoded rectangular window for now
+        let capacity = c.max_particles.unwrap_or(1024);
+        let pool = GrainPool::new(capacity, source_arc, window_buf, n_channels);
+        let cloud = Cloud::new(c.id.clone(), pool);
+        engine.add_cloud(cloud);
+    }
+    
+    Ok(engine)
+}
+
 fn cmd_validate(patch_path: &str) -> Result<()> {
     let yaml = std::fs::read_to_string(patch_path)
         .with_context(|| format!("Cannot read '{}'", patch_path))?;
@@ -252,8 +320,7 @@ fn cmd_render(patch_path: &str, output_path: &str, duration: f64, emit_hash: boo
         24, // 24-bit output
     ).with_context(|| "Cannot create output file")?;
 
-    // Render loop: generate silence blocks (engine scheduling not yet wired)
-    // TODO: connect grain engine here
+    let mut engine = build_engine(&config)?;
     let mut frames_rendered = 0u64;
     let mut block = particelle_core::audio_block::AudioBlock::new(n_channels, block_size);
 
@@ -261,8 +328,8 @@ fn cmd_render(patch_path: &str, output_path: &str, duration: f64, emit_hash: boo
         let remaining = (total_frames - frames_rendered) as usize;
         let frames_this_block = block_size.min(remaining);
 
-        // For now, generate silence — grain engine integration is next
-        block.silence();
+        // Process actual audio through the engine
+        engine.process(&mut block).with_context(|| "Engine process error")?;
 
         // If this is the last block, we need a trimmed block
         if frames_this_block < block_size {
@@ -321,11 +388,25 @@ fn cmd_run(patch_path: &str) -> Result<()> {
         ..Default::default()
     };
 
+    let mut engine = build_engine(&config)?;
+    let mut block = particelle_core::audio_block::AudioBlock::new(n_channels, block_size);
+
     let host = particelle_io::HardwareHost::new(hw_config);
     host.run(move |buffer: &mut [f32]| {
-        // Zero-fill for now — grain engine callback goes here
-        for s in buffer.iter_mut() {
-            *s = 0.0;
+        // Process next block of audio
+        if let Err(e) = engine.process(&mut block) {
+            eprintln!("Engine error: {}", e);
+            block.silence();
+        }
+
+        // Interleave planar block to Cpal interleaved f32 buffer
+        let out_frames = buffer.len() / n_channels;
+        let frames_to_copy = out_frames.min(block.frames);
+        
+        for f in 0..frames_to_copy {
+            for ch in 0..n_channels {
+                buffer[f * n_channels + ch] = block.channels[ch][f] as f32;
+            }
         }
     }).with_context(|| "Audio stream error")?;
 

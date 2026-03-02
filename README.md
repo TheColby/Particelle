@@ -176,7 +176,7 @@ The curve `curves/stretch_pos.json` maps 16s of clock time to 4s of file positio
 ```
 
 ```sh
-particelle render audio/stretch_4x.yaml -o stretched.wav --duration 16.0
+particelle render examples/stretch_4x.yaml -o stretched.wav --duration 16.0
 ```
 
 ### Example 3 — 31-EDO Microtonal Drone
