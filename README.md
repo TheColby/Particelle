@@ -12,6 +12,251 @@ Particelle is a 64-bit, production-grade, surround-native, microtonal-first gran
 
 ---
 
+## Installation
+
+### One-Liner
+
+```sh
+git clone https://github.com/TheColby/Particelle.git && cd Particelle && ./install.sh
+```
+
+### From Source (manual)
+
+```sh
+# Clone the repository
+git clone https://github.com/TheColby/Particelle.git
+cd Particelle
+
+# Build the release binary
+cargo build --release
+
+# The binary is at target/release/particelle
+# Optionally, copy it somewhere on your PATH:
+cp target/release/particelle /usr/local/bin/
+```
+
+### Requirements
+
+- **Rust 1.70+** (install via [rustup.rs](https://rustup.rs/))
+- A C compiler for native audio dependencies (Xcode CLT on macOS, `build-essential` on Linux)
+
+### Verify Installation
+
+```sh
+particelle --version
+# → particelle 0.1.0
+```
+
+---
+
+## Help
+
+Every subcommand has built-in help:
+
+```sh
+particelle --help
+```
+
+```
+Usage: particelle <COMMAND>
+
+Commands:
+  render    Render a patch to an audio file (offline, deterministic)
+  run       Run a patch in realtime on a hardware device
+  validate  Check a YAML patch for schema errors
+  init      Generate a default starter patch to stdout
+  curve     Preview a JSON curve file
+
+Options:
+  -h, --help     Print help
+  -V, --version  Print version
+```
+
+Individual subcommands:
+
+```sh
+particelle render --help
+particelle run --help
+particelle curve --help
+```
+
+---
+
+## 60-Second Quick Start
+
+### 1. Generate a starter patch
+
+```sh
+particelle init > my_first_patch.yaml
+```
+
+This writes a complete, valid YAML patch with sensible defaults (stereo, 48kHz, Hann window, single cloud).
+
+### 2. Validate it
+
+```sh
+particelle validate my_first_patch.yaml
+# → ✓ Patch is valid. 1 cloud, 2 channels, 12-TET tuning.
+```
+
+### 3. Render to file
+
+```sh
+particelle render my_first_patch.yaml -o output.wav --duration 10.0
+# → Rendering 10.0s @ 48000Hz … done. Wrote output.wav (960000 frames, 2 channels)
+```
+
+### 4. Play in realtime
+
+```sh
+particelle run my_first_patch.yaml
+# → Streaming to "Default Output" @ 48000Hz, 256 block … (Ctrl+C to stop)
+```
+
+---
+
+## Example Patches
+
+### Example 1 — Stereo Shimmer (simplest possible patch)
+
+```yaml
+engine:
+  sample_rate: 48000
+  block_size: 256
+
+layout:
+  channels:
+    - { name: "L", azimuth_deg: -30.0, elevation_deg: 0.0 }
+    - { name: "R", azimuth_deg:  30.0, elevation_deg: 0.0 }
+
+clouds:
+  - id: shimmer
+    source: audio/music_example.wav
+    density: 20.0
+    duration: 0.12
+    amplitude: 0.6
+    position: 0.5
+    window: { type: hann }
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }
+    width: 0.3
+```
+
+```sh
+particelle render shimmer.yaml -o shimmer.wav --duration 8.0
+```
+
+### Example 2 — 4× Timestretch
+
+Slow down a 4-second file to 16 seconds without changing pitch. The grain read position is driven by a linear curve that advances 4× slower than realtime:
+
+```yaml
+clouds:
+  - id: stretch
+    source: audio/music_example.wav
+    density: 24.0
+    duration: 0.08
+    amplitude: 0.5
+    window: { type: hann }
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }
+    width: 0.8
+    position:
+      op: curve
+      ref: "curves/stretch_pos.json"
+```
+
+The curve `curves/stretch_pos.json` maps 16s of clock time to 4s of file position:
+
+```json
+{
+  "segments": [
+    { "x": 0.0, "y": 0.0, "x_end": 16.0, "y_end": 4.0, "shape": "linear" }
+  ],
+  "extrapolation": { "left": "clamp", "right": "clamp" }
+}
+```
+
+```sh
+particelle render audio/stretch_4x.yaml -o stretched.wav --duration 16.0
+```
+
+### Example 3 — 31-EDO Microtonal Drone
+
+A dense grain cloud tuned to 31 equal divisions of the octave:
+
+```yaml
+engine:
+  sample_rate: 96000
+  block_size: 512
+
+tuning:
+  mode: edo
+  steps: 31
+
+layout:
+  channels:
+    - { name: "L", azimuth_deg: -30.0 }
+    - { name: "R", azimuth_deg:  30.0 }
+
+clouds:
+  - id: drone
+    source: samples/cello_sustain.flac
+    density: 8.0
+    duration: 0.5
+    amplitude: 0.4
+    position: 0.0
+    window: { type: kaiser, beta: 8.6 }
+    listener_pos: { x: 0.0, y: 1.5, z: 0.0 }
+    width: 0.6
+```
+
+```sh
+particelle render drone_31edo.yaml -o drone.wav --duration 30.0
+```
+
+### Example 4 — 7.1.4 Immersive Spatialization
+
+12-channel Atmos-compatible layout with grains drifting through 3D space:
+
+```yaml
+engine:
+  sample_rate: 96000
+  block_size: 256
+
+layout:
+  channels:
+    - { name: "FL",  azimuth_deg: -30.0,  elevation_deg:  0.0 }
+    - { name: "FR",  azimuth_deg:  30.0,  elevation_deg:  0.0 }
+    - { name: "C",   azimuth_deg:   0.0,  elevation_deg:  0.0 }
+    - { name: "LFE", azimuth_deg:   0.0,  elevation_deg:  0.0 }
+    - { name: "BL",  azimuth_deg: -150.0, elevation_deg:  0.0 }
+    - { name: "BR",  azimuth_deg:  150.0, elevation_deg:  0.0 }
+    - { name: "SL",  azimuth_deg: -90.0,  elevation_deg:  0.0 }
+    - { name: "SR",  azimuth_deg:  90.0,  elevation_deg:  0.0 }
+    - { name: "TFL", azimuth_deg: -45.0,  elevation_deg: 45.0 }
+    - { name: "TFR", azimuth_deg:  45.0,  elevation_deg: 45.0 }
+    - { name: "TBL", azimuth_deg: -135.0, elevation_deg: 45.0 }
+    - { name: "TBR", azimuth_deg:  135.0, elevation_deg: 45.0 }
+
+clouds:
+  - id: orbit
+    source: samples/glass_textures.wav
+    density: 16.0
+    duration: 0.2
+    amplitude: 0.5
+    window: { type: tukey, alpha: 0.3 }
+    listener_pos: { x: 0.0, y: 0.0, z: 0.0 }
+    width: 0.5
+    position:
+      op: curve
+      ref: "curves/spatial_orbit.json"
+```
+
+```sh
+particelle render immersive.yaml -o atmos_orbit.wav --duration 60.0
+```
+
+---
+
 ## What Makes Particelle Different
 
 ### Surround-Native from the First Buffer
