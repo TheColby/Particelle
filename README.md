@@ -265,46 +265,7 @@ A grain is a short snippet of audio, typically between **1 and 200 milliseconds*
 
 A single grain sounds like almost nothing — a brief click or a wisp of tone. But when hundreds of grains are layered together per second, something remarkable happens: a continuous, evolving texture emerges from the aggregate. This is the central insight of granular synthesis.
 
-```mermaid
-graph LR
-    subgraph Source["Source Audio"]
-        direction LR
-        S1[" "]:::src
-        S2[" "]:::src
-        S3[" "]:::src
-        S4[" "]:::src
-        S5[" "]:::src
-    end
-
-    subgraph Grains["Windowed Grains"]
-        direction LR
-        G1["🔔 Grain 1"]:::grain
-        G2["🔔 Grain 2"]:::grain
-        G3["🔔 Grain 3"]:::grain
-        G4["🔔 Grain 4"]:::grain
-        G5["🔔 Grain 5"]:::grain
-    end
-
-    subgraph Output["Mixed Output"]
-        direction LR
-        O1["~~ continuous texture ~~"]:::out
-    end
-
-    S1 --> G1
-    S2 --> G2
-    S3 --> G3
-    S4 --> G4
-    S5 --> G5
-    G1 --> O1
-    G2 --> O1
-    G3 --> O1
-    G4 --> O1
-    G5 --> O1
-
-    classDef src fill:#e3f2fd,stroke:#1565c0,color:#000
-    classDef grain fill:#fff3e0,stroke:#ef6c00,color:#000
-    classDef out fill:#e8f5e9,stroke:#2e7d32,color:#000
-```
+![Granular synthesis explained: source audio, windowed grains, and overlap-add reconstruction](docs/granular_synthesis_explained.png)
 
 ### How It Works: The Cloud
 
@@ -319,6 +280,28 @@ A *cloud* is a stream of grains emitted over time. A cloud has parameters that c
 | **Pitch/Rate** | The playback speed of each grain (affects pitch) |
 | **Window** | The fade-in/fade-out envelope shape applied to each grain |
 | **Spatial position** | Where the grain is placed in 3D space (for surround) |
+
+#### The Hop Size and Overlap Factor
+
+The **hop size** is the time interval between successive grain onsets — essentially, how far the window "slides" between one grain and the next. It is the single most important parameter governing the character of a grain cloud.
+
+The **overlap factor** is the ratio of grain duration to hop size. At 50% overlap (hop = half the grain length), adjacent grains cross-fade smoothly through each other, producing a continuous, artifact-free texture — this is the regime shown in the plot above. The relationship:
+
+> **overlap factor = grain_duration / hop_size**
+
+| Overlap Factor | Hop Size (for 50ms grain) | Sonic Character |
+|:-:|:-:|---|
+| **1×** (no overlap) | 50ms | Choppy, percussive, individual grains audible |
+| **2×** (50% overlap) | 25ms | Smooth, continuous texture, minimal artifacts |
+| **4×** (75% overlap) | 12.5ms | Dense, lush, blurred — spectral smearing |
+| **8×** (87.5% overlap) | 6.25ms | Extremely dense, chorus-like, washy |
+| **16×+** | <3ms | Approaching resynthesis; timbre transforms |
+
+**Low overlap (1×–2×)** preserves transients and rhythmic detail. Each grain is distinct; the source material’s attack characteristics survive. Useful for percussive textures, rhythmic granulation, and time-domain effects.
+
+**High overlap (4×–16×)** blurs the source into a cloud where individual grains are no longer perceptible. The output becomes a spectral average of the source region. This is the classic “granular pad” sound — shimmering, suspended, and evolving. At very high overlap, the effect resembles spectral freezing.
+
+In Particelle, hop size is derived from the **density** parameter (grains per second) and the grain **duration**. Both are full signals, meaning the overlap factor can evolve continuously over time under curve or MIDI control.
 
 When density is high and duration is long enough for grains to overlap, the output sounds like a sustained, shimmering texture. When density is low, individual grains become audible as discrete sonic events — like raindrops on glass.
 
