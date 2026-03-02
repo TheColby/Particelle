@@ -52,7 +52,7 @@ impl ParamSignal {
             }
             ParamSignal::Sum(a, b) => a.eval(ctx) + b.eval(ctx),
             ParamSignal::Mul(a, b) => a.eval(ctx) * b.eval(ctx),
-            ParamSignal::Map { input, func } => func.apply(input.eval(ctx)),
+            ParamSignal::Map { input, func } => func.apply(input.eval(ctx), ctx),
             ParamSignal::Clamp { input, min, max } => {
                 input.eval(ctx).clamp(*min, *max)
             }
@@ -79,7 +79,7 @@ pub enum MapFunc {
 }
 
 impl MapFunc {
-    pub fn apply(&self, v: f64) -> f64 {
+    pub fn apply(&self, v: f64, ctx: &SignalContext<'_>) -> f64 {
         match self {
             MapFunc::DbToLinear => 10.0f64.powf(v / 20.0),
             MapFunc::LinearToDb => 20.0 * v.abs().max(f64::MIN_POSITIVE).log10(),
@@ -88,7 +88,9 @@ impl MapFunc {
             MapFunc::Abs => v.abs(),
             MapFunc::Negate => -v,
             MapFunc::Recip => if v == 0.0 { 0.0 } else { 1.0 / v },
-            MapFunc::Custom { .. } => v, // TODO: resolver dispatch
+            MapFunc::Custom { name } => {
+                ctx.resolve_custom_map(name, v)
+            }
         }
     }
 }
@@ -99,7 +101,7 @@ mod tests {
     use crate::context::{SignalContext, NullFields};
 
     fn ctx() -> SignalContext<'static> {
-        SignalContext { frame: 0, sample_rate: 48000.0, fields: &NullFields }
+        SignalContext { frame: 0, sample_rate: 48000.0, fields: &NullFields, custom_resolver: None }
     }
 
     #[test]
@@ -137,13 +139,13 @@ mod tests {
 
     #[test]
     fn db_to_linear_0db() {
-        let v = MapFunc::DbToLinear.apply(0.0);
+        let v = MapFunc::DbToLinear.apply(0.0, &ctx());
         assert!((v - 1.0).abs() < 1e-14);
     }
 
     #[test]
     fn midi_note_69_is_440hz() {
-        let v = MapFunc::MidiNoteToHz.apply(69.0);
+        let v = MapFunc::MidiNoteToHz.apply(69.0, &ctx());
         assert!((v - 440.0).abs() < 1e-10);
     }
 }

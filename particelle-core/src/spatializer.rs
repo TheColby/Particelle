@@ -25,6 +25,34 @@ impl Vec3 {
         let dz = self.z - other.z;
         dx * dx + dy * dy + dz * dz
     }
+
+    pub fn dot(&self, other: &Vec3) -> f64 {
+        self.x * other.x + self.y * other.y + self.z * other.z
+    }
+
+    pub fn length(&self) -> f64 {
+        self.dot(self).sqrt()
+    }
+
+    pub fn normalize(&self) -> Self {
+        let len = self.length();
+        if len > f64::EPSILON {
+            Self::new(self.x / len, self.y / len, self.z / len)
+        } else {
+            Self::FORWARD
+        }
+    }
+
+    pub fn from_az_el(azimuth_deg: f64, elevation_deg: f64) -> Self {
+        let az = azimuth_deg.to_radians();
+        let el = elevation_deg.to_radians();
+        let cos_el = el.cos();
+        Self {
+            x: cos_el * az.sin(),
+            y: cos_el * az.cos(),
+            z: el.sin(),
+        }
+    }
 }
 
 /// Distributes a signal source positioned in 3D space across output channels.
@@ -49,26 +77,73 @@ pub trait Spatializer: Send + Sync {
 /// VBAP, ambisonics, or HRTF implementations.
 pub struct AmplitudePanner {
     layout: AudioLayout,
+    speaker_vecs: Vec<Vec3>,
 }
 
 impl AmplitudePanner {
     pub fn new(layout: AudioLayout) -> Self {
-        Self { layout }
+        let speaker_vecs = layout.channels.iter()
+            .map(|ch| Vec3::from_az_el(ch.azimuth_deg, ch.elevation_deg))
+            .collect();
+        Self { layout, speaker_vecs }
     }
 }
 
 impl Spatializer for AmplitudePanner {
-    fn distribute(&self, _position: Vec3, _width: f64, out_gains: &mut [f64]) {
-        // TODO: implement azimuth/elevation weighted gain distribution
-        // Placeholder: equal power across all channels
-        let n = out_gains.len().min(self.layout.n_channels());
-        let equal = 1.0 / (n as f64).sqrt();
+    fn distribute(&self, position: Vec3, width: f64, out_gains: &mut [f64]) {
+        let n = out_gains.len().min(self.speaker_vecs.len());
+        let source_dir = position.normalize();
+        
+        // Spread exponent controlled by width
+        let p = if width >= 0.99 { 0.0 } else { 1.0 / (width.max(0.01) * 2.0) };
+        
+        let mut sum_sq = 0.0;
+        for i in 0..n {
+            let dot = source_dir.dot(&self.speaker_vecs[i]);
+            // Only the hemisphere facing the speaker receives gain
+            let gain = if dot > 0.0 { dot.powf(p) } else { 0.0 };
+            out_gains[i] = gain;
+            sum_sq += gain * gain;
+        }
+        
+        // Constant power normalization
+        let norm = if sum_sq > f64::EPSILON { 1.0 / sum_sq.sqrt() } else { 0.0 };
         for g in out_gains[..n].iter_mut() {
-            *g = equal;
+            *g *= norm;
         }
     }
 
     fn layout(&self) -> &AudioLayout {
         &self.layout
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_vec3_from_az_el() {
+        let front = Vec3::from_az_el(0.0, 0.0);
+        assert!((front.y - 1.0).abs() < 1e-10);
+
+        let right = Vec3::from_az_el(90.0, 0.0);
+        assert!((right.x - 1.0).abs() < 1e-10);
+
+        let up = Vec3::from_az_el(0.0, 90.0);
+        assert!((up.z - 1.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_amplitude_panner_stereo() {
+        let layout = AudioLayout::stereo();
+        let panner = AmplitudePanner::new(layout);
+        let mut gains = vec![0.0; 2];
+        
+        panner.distribute(Vec3::from_az_el(-30.0, 0.0), 0.1, &mut gains);
+        assert!(gains[0] > gains[1]); // Left speaker louder than right
+
+        panner.distribute(Vec3::from_az_el(0.0, 0.0), 0.1, &mut gains);
+        assert!((gains[0] - gains[1]).abs() < 1e-10); // Center is equal
     }
 }
