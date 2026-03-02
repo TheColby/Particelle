@@ -331,14 +331,7 @@ The source material is still recognizable, but you have total control over its m
 
 Every grain is multiplied by a *window function* — a bell-shaped curve that smoothly fades the grain in and out. Without windowing, each grain would start and stop abruptly, producing harsh clicks at the boundaries.
 
-```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#fff3e0'}}}%%
-xychart-beta
-    title "Hann Window (bell-shaped fade)"
-    x-axis "Time within grain" 0 --> 100
-    y-axis "Amplitude" 0 --> 1.0
-    line [0.0, 0.0, 0.01, 0.02, 0.05, 0.09, 0.15, 0.21, 0.29, 0.37, 0.45, 0.52, 0.60, 0.67, 0.73, 0.79, 0.84, 0.89, 0.92, 0.95, 0.97, 0.99, 1.0, 1.0, 0.99, 0.97, 0.95, 0.92, 0.89, 0.84, 0.79, 0.73, 0.67, 0.60, 0.52, 0.45, 0.37, 0.29, 0.21, 0.15, 0.09, 0.05, 0.02, 0.01, 0.0, 0.0]
-```
+![Hann window — smooth bell-shaped fade used to shape each grain](docs/hann_window.png)
 
 Different window shapes produce different timbral qualities. A Hann window gives a soft, warm overlap. A Kaiser window with a high beta produces a tighter, more focused grain. Particelle includes **35+ window types** precisely because the window is one of the most expressive parameters in granular synthesis.
 
