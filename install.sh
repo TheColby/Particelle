@@ -42,10 +42,19 @@ else
 fi
 
 echo "✓ Installed: $(which particelle || echo "$INSTALL_DIR/particelle")"
+
+# Create `ptc` shorthand symlink
+echo "→ Creating symlink: ptc → particelle"
+if [ -w "$INSTALL_DIR" ]; then
+    ln -sf "$INSTALL_DIR/particelle" "$INSTALL_DIR/ptc"
+else
+    sudo ln -sf "$INSTALL_DIR/particelle" "$INSTALL_DIR/ptc"
+fi
+echo "✓ Symlink created: $(which ptc || echo "$INSTALL_DIR/ptc")"
 echo ""
 
 # Verify
 particelle --version 2>/dev/null && echo "" || true
 
-echo "Done. Run 'particelle --help' to get started."
-echo "Quick start:  particelle init > patch.yaml && particelle validate patch.yaml"
+echo "Done. Run 'particelle --help' or 'ptc --help' to get started."
+echo "Quick start:  ptc init > patch.yaml && ptc validate patch.yaml"
