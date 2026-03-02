@@ -54,6 +54,9 @@ midly = "0.5"
 # Math (no_std-compatible transcendentals)
 libm = "0.2"
 
+# Audio file IO (WAV)
+hound = "3.5"
+
 # Audio hardware backend (optional)
 cpal = "0.15"
 

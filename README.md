@@ -265,17 +265,45 @@ A grain is a short snippet of audio, typically between **1 and 200 milliseconds*
 
 A single grain sounds like almost nothing — a brief click or a wisp of tone. But when hundreds of grains are layered together per second, something remarkable happens: a continuous, evolving texture emerges from the aggregate. This is the central insight of granular synthesis.
 
-```
-Source Audio:  ───────────────────────────────────────────────
-                    ╭──╮   ╭──╮   ╭──╮   ╭──╮   ╭──╮
-Grains:            │  │   │  │   │  │   │  │   │  │
-                    ╰──╯   ╰──╯   ╰──╯   ╰──╯   ╰──╯
-                     ▲       ▲       ▲       ▲       ▲
-                  Window  Window  Window  Window  Window
-                  (Hann)  (Hann)  (Hann)  (Hann)  (Hann)
+```mermaid
+graph LR
+    subgraph Source["Source Audio"]
+        direction LR
+        S1[" "]:::src
+        S2[" "]:::src
+        S3[" "]:::src
+        S4[" "]:::src
+        S5[" "]:::src
+    end
 
-Output:        ─────~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~────
-               (overlapping grains form a continuous texture)
+    subgraph Grains["Windowed Grains"]
+        direction LR
+        G1["🔔 Grain 1"]:::grain
+        G2["🔔 Grain 2"]:::grain
+        G3["🔔 Grain 3"]:::grain
+        G4["🔔 Grain 4"]:::grain
+        G5["🔔 Grain 5"]:::grain
+    end
+
+    subgraph Output["Mixed Output"]
+        direction LR
+        O1["~~ continuous texture ~~"]:::out
+    end
+
+    S1 --> G1
+    S2 --> G2
+    S3 --> G3
+    S4 --> G4
+    S5 --> G5
+    G1 --> O1
+    G2 --> O1
+    G3 --> O1
+    G4 --> O1
+    G5 --> O1
+
+    classDef src fill:#e3f2fd,stroke:#1565c0,color:#000
+    classDef grain fill:#fff3e0,stroke:#ef6c00,color:#000
+    classDef out fill:#e8f5e9,stroke:#2e7d32,color:#000
 ```
 
 ### How It Works: The Cloud
@@ -320,15 +348,13 @@ The source material is still recognizable, but you have total control over its m
 
 Every grain is multiplied by a *window function* — a bell-shaped curve that smoothly fades the grain in and out. Without windowing, each grain would start and stop abruptly, producing harsh clicks at the boundaries.
 
-```
- Window shape (Hann):
-
-                    ╭────────╮
-                  ╱              ╲
-                ╱                  ╲
-              ╱                      ╲
- ─────────╱──────────────────────────╲─────────
-          0                          duration
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#fff3e0'}}}%%
+xychart-beta
+    title "Hann Window (bell-shaped fade)"
+    x-axis "Time within grain" 0 --> 100
+    y-axis "Amplitude" 0 --> 1.0
+    line [0.0, 0.0, 0.01, 0.02, 0.05, 0.09, 0.15, 0.21, 0.29, 0.37, 0.45, 0.52, 0.60, 0.67, 0.73, 0.79, 0.84, 0.89, 0.92, 0.95, 0.97, 0.99, 1.0, 1.0, 0.99, 0.97, 0.95, 0.92, 0.89, 0.84, 0.79, 0.73, 0.67, 0.60, 0.52, 0.45, 0.37, 0.29, 0.21, 0.15, 0.09, 0.05, 0.02, 0.01, 0.0, 0.0]
 ```
 
 Different window shapes produce different timbral qualities. A Hann window gives a soft, warm overlap. A Kaiser window with a high beta produces a tighter, more focused grain. Particelle includes **35+ window types** precisely because the window is one of the most expressive parameters in granular synthesis.
