@@ -1,5 +1,4 @@
 use thiserror::Error;
-use crate::schema::CurveSchema;
 
 /// Errors produced during curve compilation.
 #[derive(Debug, Error)]
@@ -83,8 +82,8 @@ impl CompiledCurve {
                 if d[i - 1] * d[i] <= 0.0 {
                     m[i] = 0.0;
                 } else {
-                    let h_prev = segments[i - 1].seg.x_end - segments[i - 1].seg.x;
-                    let h_curr = segments[i].seg.x_end - segments[i].seg.x;
+                    let _h_prev = segments[i - 1].seg.x_end - segments[i - 1].seg.x;
+                    let _h_curr = segments[i].seg.x_end - segments[i].seg.x;
                     let alpha = m[i] / d[i - 1];
                     let beta = m[i] / d[i];
                     if alpha * alpha + beta * beta > 9.0 {
@@ -208,9 +207,9 @@ impl CompiledCurve {
                 if *k == 0.0 {
                     seg.y + t * (seg.y_end - seg.y)
                 } else {
-                    let s = (k.exp() * t).exp() / k.exp(); // Placeholder, usually exp is (exp(kt)-1)/(exp(k)-1)
+                    let _s = (k.exp() * t).exp() / k.exp(); // Placeholder, usually exp is (exp(kt)-1)/(exp(k)-1)
                     // Let's use standard exp curve form:
-                    let s = (k.powf(t) - 1.0) / (*k - 1.0); // If k is the base
+                    let _s = (k.powf(t) - 1.0) / (*k - 1.0); // If k is the base
                     // Re-evaluating based on common audio exp:
                     let s = ((*k * t).exp() - 1.0) / (k.exp() - 1.0);
                     seg.y + s * (seg.y_end - seg.y)

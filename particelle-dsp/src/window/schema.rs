@@ -1,4 +1,3 @@
-use std::f64::consts::PI;
 use serde::{Deserialize, Serialize};
 
 /// Specifies the type of mathematical window and any required parameters.
