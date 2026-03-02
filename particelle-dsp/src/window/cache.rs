@@ -1,21 +1,31 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-use super::spec::{NormalizationMode, WindowSpec};
-use super::normalize;
+use super::schema::{WindowSpec, WindowNormalization};
+use super::generator::generate;
+use super::normalization::apply_normalization;
 
-/// Cache key: serialized spec string + length + normalization mode.
+/// Cache key: serialized spec string + length/// Cache key definition for identical windows.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 struct CacheKey {
-    /// JSON-serialized `WindowSpec` — stable, unique per variant + params.
-    spec_json: String,
-    length: usize,
-    norm: NormalizationMode,
+    // Note: Due to f64s in WindowSpec, deriving Eq and Hash directly is tricky.
+    // For Phase 2 we use a string-serialized key to side-step float hashing complexity
+    // in the map, ensuring deterministic lookups.
+    key_hash: String,
+}
+
+impl CacheKey {
+    fn new(spec: &WindowSpec, len: usize, norm: WindowNormalization) -> Self {
+        // Since norm is now simple we can just serialize the spec and append len/norm
+        let serialized_spec = serde_json::to_string(spec).unwrap();
+        let key_hash = format!("{}-{}-{:?}", serialized_spec, len, norm);
+        Self { key_hash }
+    }
 }
 
 /// Thread-safe window cache.
 ///
-/// Windows are computed once per `(WindowSpec, length, NormalizationMode)` triple
+/// Windows are computed once per `(WindowSpec, length, WindowNormalization)` triple
 /// and returned as `Arc<[f64]>`. The audio thread receives a clone of the Arc,
 /// which is a pointer copy — no allocation. The cache itself is never accessed
 /// from the audio thread after initialization.
@@ -33,13 +43,9 @@ impl WindowCache {
         &self,
         spec: &WindowSpec,
         length: usize,
-        norm: NormalizationMode,
+        norm: WindowNormalization,
     ) -> Arc<[f64]> {
-        let key = CacheKey {
-            spec_json: serde_json::to_string(spec).expect("WindowSpec serialization must not fail"),
-            length,
-            norm,
-        };
+        let key = CacheKey::new(spec, length, norm);
 
         let mut cache = self.cache.lock().expect("WindowCache lock poisoned");
 
@@ -47,8 +53,8 @@ impl WindowCache {
             return Arc::clone(w);
         }
 
-        let mut values = compute_window(spec, length);
-        normalize(&mut values, norm);
+        let mut values = generate(spec, length);
+        apply_normalization(&mut values, norm);
         let arc: Arc<[f64]> = values.into();
         cache.insert(key, Arc::clone(&arc));
         arc
@@ -70,23 +76,6 @@ impl Default for WindowCache {
     }
 }
 
-/// Compute a raw (unnormalized) window of `length` samples.
-///
-/// # Panics
-/// Panics with a clear message if `length == 0`.
-pub fn compute_window(spec: &WindowSpec, length: usize) -> Vec<f64> {
-    assert!(length > 0, "Window length must be > 0");
-    // TODO: implement all 35+ window functions in particelle-dsp Phase 2
-    // Return a Hann window as placeholder for all types
-    let n = length as f64 - 1.0;
-    (0..length)
-        .map(|i| {
-            let _ = spec; // will dispatch on spec
-            0.5 * (1.0 - (2.0 * std::f64::consts::PI * i as f64 / n).cos())
-        })
-        .collect()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -94,16 +83,16 @@ mod tests {
     #[test]
     fn cache_returns_same_arc_for_same_key() {
         let cache = WindowCache::new();
-        let a = cache.get(&WindowSpec::Hann, 1024, NormalizationMode::Peak);
-        let b = cache.get(&WindowSpec::Hann, 1024, NormalizationMode::Peak);
+        let a = cache.get(&WindowSpec::Hann, 1024, WindowNormalization::Peak);
+        let b = cache.get(&WindowSpec::Hann, 1024, WindowNormalization::Peak);
         assert!(Arc::ptr_eq(&a, &b), "Same key must return the same Arc");
     }
 
     #[test]
     fn cache_returns_different_arc_for_different_length() {
         let cache = WindowCache::new();
-        let a = cache.get(&WindowSpec::Hann, 512, NormalizationMode::None);
-        let b = cache.get(&WindowSpec::Hann, 1024, NormalizationMode::None);
+        let a = cache.get(&WindowSpec::Hann, 512, WindowNormalization::None);
+        let b = cache.get(&WindowSpec::Hann, 1024, WindowNormalization::None);
         assert!(!Arc::ptr_eq(&a, &b));
     }
 
@@ -111,7 +100,7 @@ mod tests {
     fn window_output_length_matches_request() {
         let cache = WindowCache::new();
         for &len in &[64usize, 256, 1024, 4096] {
-            let w = cache.get(&WindowSpec::Hann, len, NormalizationMode::None);
+            let w = cache.get(&WindowSpec::Hann, len, WindowNormalization::None);
             assert_eq!(w.len(), len);
         }
     }

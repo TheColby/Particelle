@@ -11,3 +11,6 @@ serde.workspace   = true
 serde_json.workspace = true
 thiserror.workspace = true
 libm.workspace = true
+rubato = "1.0.1"
+audioadapter = "2.0.0"
+audioadapter-buffers = "2.0.0"

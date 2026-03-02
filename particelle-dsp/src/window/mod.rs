@@ -1,7 +1,9 @@
-pub mod spec;
+pub mod schema;
 pub mod cache;
-pub mod normalize;
+pub mod normalization;
+pub mod generator;
 
-pub use spec::{WindowSpec, NormalizationMode};
+pub use schema::{WindowSpec, WindowNormalization};
 pub use cache::WindowCache;
-pub use normalize::normalize;
+pub use generator::generate;
+pub use normalization::apply_normalization;
