@@ -6,9 +6,9 @@
 
 Sound, atomized.
 
-**A research-grade granular synthesis engine for immersive and microtonal composition.**
+**A modern granular synthesis engine for immersive and microtonal composition.**
 
-Particelle is a 64-bit, production-grade, surround-native, microtonal-first granular synthesis engine written entirely in Rust. It is not a plugin. It is not GUI-driven. It operates as infrastructure-level audio software, fully controlled through YAML configuration files and a command-line interface. Every parameter is a signal. Every result is reproducible.
+Particelle is a 64-bit, research-grade, surround-native, microtonal-first granular synthesis engine written entirely in Rust. It is not a plugin. It is not GUI-driven. It operates as infrastructure-level audio software, fully controlled through YAML configuration files and a command-line interface. Every parameter is a signal. Every result is reproducible.
 
 ---
 
