@@ -1,38 +1,5 @@
 <p align="center">
-  <svg xmlns="http://www.w3.org/2000/svg" width="1400" height="360" viewBox="0 0 1400 360" role="img" aria-label="Particelle logo">
-    <!-- Background -->
-    <rect width="1400" height="360" fill="#FFFFFF"/>
-
-    <!-- Mark (Nucleus + orbits) -->
-    <g transform="translate(380,180)">
-      <!-- Orbits -->
-      <g fill="none" stroke="#000000" stroke-width="3" opacity="0.28">
-        <ellipse cx="0" cy="0" rx="120" ry="56"/>
-        <ellipse cx="0" cy="0" rx="70" ry="120"/>
-      </g>
-
-      <!-- Particles -->
-      <g fill="#000000">
-        <circle cx="0" cy="0" r="10"/>
-        <circle cx="118" cy="0" r="6"/>
-        <circle cx="0" cy="-118" r="5.5"/>
-        <circle cx="-84" cy="78" r="5.8"/>
-        <circle cx="-100" cy="-28" r="5.2"/>
-        <circle cx="58" cy="96" r="5.4"/>
-      </g>
-    </g>
-
-    <!-- Wordmark -->
-    <g transform="translate(610, 210)">
-      <text x="0" y="0"
-            fill="#000000"
-            font-size="110"
-            letter-spacing="2"
-            font-family="Didot, 'Didot LT STD', 'Bodoni 72', 'Bodoni MT', serif">
-        Particelle
-      </text>
-    </g>
-  </svg>
+  <img src="logo.svg" alt="Particelle Logo" width="700">
 </p>
 
 # Particelle
