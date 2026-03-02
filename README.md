@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="logo.svg" alt="Particelle Logo" width="700">
+  <img src="assets/logo.svg" alt="Particelle Logo" width="700">
 </p>
 
 # Particelle
@@ -291,11 +291,16 @@ The **overlap factor** is the ratio of grain duration to hop size. At 50% overla
 
 | Overlap Factor | Hop Size (for 50ms grain) | Sonic Character |
 |:-:|:-:|---|
-| **1×** (no overlap) | 50ms | Choppy, percussive, individual grains audible |
+| **0.1×** | 500ms | Sparse, isolated events — pointillist, stochastic |
+| **0.25×** | 200ms | Scattered droplets — grains separated by silence |
+| **0.5×** | 100ms | Rhythmic pulse — grains with gaps, percussive feel |
+| **1×** (no overlap) | 50ms | Back-to-back grains, choppy, percussive |
 | **2×** (50% overlap) | 25ms | Smooth, continuous texture, minimal artifacts |
 | **4×** (75% overlap) | 12.5ms | Dense, lush, blurred — spectral smearing |
 | **8×** (87.5% overlap) | 6.25ms | Extremely dense, chorus-like, washy |
 | **16×+** | <3ms | Approaching resynthesis; timbre transforms |
+
+**Sub-unity overlap (<1×)** produces silence between grains. The lower the factor, the sparser the texture. At very low values (0.1×–0.25×), each grain is an isolated sonic event — you hear individual “droplets” or “particles” with audible gaps between them. This regime is ideal for pointillist composition, stochastic textures, and rhythmic granulation where the silence *between* grains is as important as the grains themselves.
 
 **Low overlap (1×–2×)** preserves transients and rhythmic detail. Each grain is distinct; the source material’s attack characteristics survive. Useful for percussive textures, rhythmic granulation, and time-domain effects.
 
@@ -712,22 +717,6 @@ Particelle is designed under two constraints that admit no exception:
 The project is designed to scale. Adding a new window type, a new curve shape, or a new tuning mode should require touching exactly one module without propagating changes through the codebase. Traits enforce the boundaries. Tests enforce the invariants.
 
 This is a long-horizon platform. Compatibility, correctness, and architectural clarity take precedence over feature velocity.
-
----
-
-## Roadmap
-
-| Phase | Scope |
-|-------|-------|
-| 0 | Workspace, crate boundaries, core type system, schema |
-| 1 | ParamSignal graph, curve evaluators, control-rate reconstruction |
-| 2 | Window library (35+ types), window cache, normalization |
-| 3 | Multichannel engine, grain scheduler, spatializer |
-| 4 | Tuning subsystem (EDO, JI, Scala), pitch pipeline |
-| 5 | Offline render, deterministic hash tests |
-| 6 | MIDI + MPE ingest, routing layer |
-| 7 | Realtime hardware backend (CPAL), lock-free audio thread |
-| 8 | Optimization pass (SIMD, buffer pooling, profiling) |
 
 ---
 
