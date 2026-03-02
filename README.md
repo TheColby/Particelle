@@ -117,7 +117,7 @@ particelle run my_first_patch.yaml
 
 ## Example Patches
 
-### Example 1 — Stereo Shimmer (simplest possible patch)
+### Example 1 — Stereo Shimmer
 
 ```yaml
 engine:
