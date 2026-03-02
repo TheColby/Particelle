@@ -133,8 +133,8 @@ mod tests {
             hardware: None,
             layout: LayoutConfig {
                 channels: vec![
-                    ChannelConfig { name: "L".into(), azimuth_deg: -30.0, elevation_deg: 0.0 },
-                    ChannelConfig { name: "R".into(), azimuth_deg:  30.0, elevation_deg: 0.0 },
+                    ChannelConfig::Spherical { name: "L".into(), azimuth_deg: -30.0, elevation_deg: 0.0 },
+                    ChannelConfig::Spherical { name: "R".into(), azimuth_deg:  30.0, elevation_deg: 0.0 },
                 ],
             },
             tuning: TuningConfig::TwelveTet,

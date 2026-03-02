@@ -83,7 +83,7 @@ pub struct AmplitudePanner {
 impl AmplitudePanner {
     pub fn new(layout: AudioLayout) -> Self {
         let speaker_vecs = layout.channels.iter()
-            .map(|ch| Vec3::from_az_el(ch.azimuth_deg, ch.elevation_deg))
+            .map(|ch| ch.position.normalize())
             .collect();
         Self { layout, speaker_vecs }
     }

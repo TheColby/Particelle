@@ -1,12 +1,10 @@
 /// Metadata for a single output channel.
 ///
-/// Azimuth is measured in degrees, 0° = front, positive = clockwise.
-/// Elevation is measured in degrees, 0° = ear level, 90° = directly above.
+/// Stores the physical/virtual position of the speaker in 3D Cartesian space.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ChannelMeta {
     pub name: String,
-    pub azimuth_deg: f64,
-    pub elevation_deg: f64,
+    pub position: crate::spatializer::Vec3,
 }
 
 /// Declarative multichannel audio layout.
@@ -31,15 +29,15 @@ impl AudioLayout {
     /// Convenience constructor for stereo (L/R at ±30°).
     pub fn stereo() -> Self {
         Self::new(vec![
-            ChannelMeta { name: "L".into(), azimuth_deg: -30.0, elevation_deg: 0.0 },
-            ChannelMeta { name: "R".into(), azimuth_deg:  30.0, elevation_deg: 0.0 },
+            ChannelMeta { name: "L".into(), position: crate::spatializer::Vec3::from_az_el(-30.0, 0.0) },
+            ChannelMeta { name: "R".into(), position: crate::spatializer::Vec3::from_az_el(30.0, 0.0) },
         ])
     }
 
     /// Convenience constructor for mono.
     pub fn mono() -> Self {
         Self::new(vec![
-            ChannelMeta { name: "M".into(), azimuth_deg: 0.0, elevation_deg: 0.0 },
+            ChannelMeta { name: "M".into(), position: crate::spatializer::Vec3::from_az_el(0.0, 0.0) },
         ])
     }
 }

@@ -50,11 +50,20 @@ pub struct LayoutConfig {
 
 /// A single output channel with spatial metadata.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ChannelConfig {
-    pub name: String,
-    pub azimuth_deg: f64,
-    #[serde(default)]
-    pub elevation_deg: f64,
+#[serde(untagged)]
+pub enum ChannelConfig {
+    Spherical {
+        name: String,
+        azimuth_deg: f64,
+        #[serde(default)]
+        elevation_deg: f64,
+    },
+    Cartesian {
+        name: String,
+        x: f64,
+        y: f64,
+        z: f64,
+    }
 }
 
 /// Tuning system selection and configuration.
