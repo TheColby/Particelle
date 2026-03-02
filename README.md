@@ -81,18 +81,31 @@ If you are looking for a visual instrument, Particelle is not the right tool. If
 
 ## Architecture Overview
 
-```
-YAML Config
-    └── particelle-schema        (validation, deserialization)
-            ├── particelle-params    (ParamSignal graph + registry)
-            │       └── particelle-curve     (JSON curve schema + evaluators)
-            ├── particelle-tuning    (EDO, JI, Scala, pitch pipeline)
-            ├── particelle-midi      (MIDI + MPE event routing)
-            └── particelle-core      (AudioBlock, Cloud, Particle, Engine trait)
-                    └── particelle-dsp   (Windows, interpolation, smoothing)
-
-particelle-io    (file I/O + CPAL hardware backend)
-particelle-cli   (thin frontend: render / run / validate / init)
+```mermaid
+graph TD
+    classDef Crate fill:#f0ab3c,stroke:#333,stroke-width:2px,color:#fff;
+    classDef Module fill:#f2f2f2,stroke:#333,stroke-width:1px,color:#000;
+    
+    A[particelle-cli]:::Crate --> B[particelle-io]:::Crate
+    A --> C[particelle-schema]:::Crate
+    B --> D[particelle-core]:::Crate
+    C --> D
+    
+    subgraph particelle-schema [Schema Validation]
+        C --> E[particelle-params]:::Crate
+        C --> F[particelle-tuning]:::Crate
+        C --> G[particelle-midi]:::Crate
+    end
+    
+    E --> H[particelle-curve]:::Crate
+    D --> I[particelle-dsp]:::Crate
+    
+    %% Connections mapping
+    E -.-> D
+    F -.-> D
+    G -.-> E
+    H -.-> E
+    I -.-> D
 ```
 
 All internal audio data is `f64`. Multichannel buffers are planar: one `Vec<f64>` per channel. The block size and sample rate are fixed at engine initialization. Frame time is tracked as a monotonic `u64`.
@@ -206,7 +219,19 @@ tuning:
   kbm_path: scales/partch_43.kbm
 ```
 
-The full pitch pipeline for a grain: scale degree → tuning frequency → MPE pitchbend (semitones) → curve offset (Hz) → modulation (Hz) → final playback ratio. All arithmetic is `f64`. No conversion to `f32` occurs before the hardware boundary.
+The full pitch pipeline for a grain: 
+
+```mermaid
+flowchart LR
+    A[Scale Degree] -->|Tuning Hz| B(MPE Pitchbend\nsemitones)
+    B --> C(Curve Offset\nHz)
+    C --> D(Modulation Field\nHz)
+    D -->|Final Hz| E[Playback Ratio]
+    
+    style E fill:#4caf50,stroke:#333,stroke-width:2px,color:#fff;
+```
+
+All arithmetic is `f64`. No conversion to `f32` occurs before the hardware boundary.
 
 MPE pitchbend range is configurable per voice. Per-note pressure and timbre are routed into the ParamSignal graph as named Fields.
 
@@ -268,7 +293,23 @@ Supported control-rate to audio-rate reconstruction:
 
 `zoh` · `linear` · `cubic` · `monotone_cubic` · `sinc(taps)` · `one_pole` · `two_pole` · `slew_limiter` · `minblep_step`
 
-Signal expressions compose:
+Signal expressions compose. Here is a visual representation of how a density parameter might be routed:
+
+```mermaid
+graph TD
+    A[curves/density_env.json]:::Curve -->|Curve Value| B(Mul Node):::Op
+    C[Field: $midi_cc1]:::Control -->|Direct Value| B
+    B -->|Product| D(Clamp Node):::Op
+    E[Const: 1.0]:::Const -->|Min| D
+    F[Const: 64.0]:::Const -->|Max| D
+    D -->|Final Value| G[Cloud Density]:::Output
+    
+    classDef Op fill:#ffeb3b,stroke:#fbc02d,color:#000
+    classDef Curve fill:#3f51b5,stroke:#303f9f,color:#fff
+    classDef Control fill:#9c27b0,stroke:#7b1fa2,color:#fff
+    classDef Const fill:#e0e0e0,stroke:#9e9e9e,color:#000
+    classDef Output fill:#4caf50,stroke:#388e3c,color:#fff
+```
 
 ```yaml
 density:

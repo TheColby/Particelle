@@ -1,39 +1,35 @@
-use crate::tuning::Tuning;
+use crate::Tuning;
 
-/// Equal Division of the Octave (EDO) tuning.
-///
-/// Any positive number of steps per octave is supported.
-/// 12-EDO = standard equal temperament.
-/// 31-EDO, 53-EDO, etc. are natively supported.
+/// Equal Divisions of the Octave (EDO).
+/// Represents tunings like 12-TET, 31-EDO, etc.
 #[derive(Debug, Clone)]
-pub struct Edo {
-    /// Number of equal steps per octave.
+pub struct EdoTuning {
+    /// Number of equal steps in an octave.
     pub steps: u32,
+    /// The base frequency for degree 0 (usually A4 = 440.0Hz).
+    pub base_frequency: f64,
 }
 
-impl Edo {
-    pub fn new(steps: u32) -> Self {
-        assert!(steps > 0, "EDO steps must be > 0");
-        Self { steps }
+impl EdoTuning {
+    pub fn new(steps: u32, base_frequency: f64) -> Self {
+        Self {
+            steps,
+            base_frequency,
+        }
     }
 
-    /// Standard 12-tone equal temperament.
-    pub fn twelve_tet() -> Self {
-        Self { steps: 12 }
+    /// Convenience constructor for standard 12-Tone Equal Temperament mapping.
+    /// Degree 0 is A4 (440Hz). Degree -9 points to Middle C (~261.63Hz).
+    pub fn twelve_tet(base_frequency: f64) -> Self {
+        Self::new(12, base_frequency)
     }
 }
 
-impl Tuning for Edo {
-    fn degree_to_freq(&self, degree: i32, base_hz: f64) -> f64 {
-        base_hz * 2.0f64.powf(degree as f64 / self.steps as f64)
-    }
-
-    fn freq_to_degree(&self, freq: f64, base_hz: f64) -> f64 {
-        (freq / base_hz).log2() * self.steps as f64
-    }
-
-    fn name(&self) -> &str {
-        "EDO"
+impl Tuning for EdoTuning {
+    fn frequency_for_degree(&self, degree: i32) -> f64 {
+        // formula: f0 * 2^(degree / steps)
+        let ratio = 2.0_f64.powf(degree as f64 / self.steps as f64);
+        self.base_frequency * ratio
     }
 }
 
@@ -42,30 +38,31 @@ mod tests {
     use super::*;
 
     #[test]
-    fn twelve_edo_a4_440() {
-        let edo = Edo::twelve_tet();
-        // A4 is 9 semitones above C4 (261.6255...)
-        let c4 = 440.0 / 2.0f64.powf(9.0 / 12.0);
-        let a4 = edo.degree_to_freq(9, c4);
-        assert!((a4 - 440.0).abs() < 1e-10, "12-EDO A4 must be 440.0 Hz, got {}", a4);
+    fn test_twelve_tet() {
+        let tuning = EdoTuning::twelve_tet(440.0);
+        
+        // Degree 0 is A4 = 440
+        assert!((tuning.frequency_for_degree(0) - 440.0).abs() < 1e-6);
+
+        // Degree 12 is A5 = 880
+        assert!((tuning.frequency_for_degree(12) - 880.0).abs() < 1e-6);
+
+        // Degree -12 is A3 = 220
+        assert!((tuning.frequency_for_degree(-12) - 220.0).abs() < 1e-6);
+
+        // Degree -9 is Middle C (~261.625 Hz)
+        assert!((tuning.frequency_for_degree(-9) - 261.625565).abs() < 1e-5);
     }
 
     #[test]
-    fn octave_is_double() {
-        let edo = Edo::new(31);
-        let base = 220.0;
-        let octave = edo.degree_to_freq(31, base);
-        assert!((octave - 440.0).abs() < 1e-10);
-    }
-
-    #[test]
-    fn roundtrip_degree_freq() {
-        let edo = Edo::twelve_tet();
-        let base = 261.625_565_300_598_6;
-        for degree in -12i32..=24 {
-            let freq = edo.degree_to_freq(degree, base);
-            let back = edo.freq_to_degree(freq, base);
-            assert!((back - degree as f64).abs() < 1e-9);
-        }
+    fn test_31_edo() {
+        let tuning = EdoTuning::new(31, 440.0);
+        
+        // Degree 31 is an octave up
+        assert!((tuning.frequency_for_degree(31) - 880.0).abs() < 1e-6);
+        
+        // Degree 1 is a dieselis interval in 31-EDO
+        let step_ratio = 2.0_f64.powf(1.0 / 31.0);
+        assert!((tuning.frequency_for_degree(1) - (440.0 * step_ratio)).abs() < 1e-6);
     }
 }

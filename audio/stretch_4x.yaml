@@ -1,0 +1,35 @@
+engine:
+  sample_rate: 44100
+  block_size: 256
+
+layout:
+  channels:
+    - { name: "L", azimuth_deg: -30.0, elevation_deg: 0.0 }
+    - { name: "R", azimuth_deg:  30.0, elevation_deg: 0.0 }
+
+tuning:
+  mode: twelve_tet
+
+clouds:
+  - id: stretch_4x
+    source: "audio/music_example.wav"
+    density: 24.0          # 24 grains per second
+    duration: 0.08         # 80ms grain duration
+    amplitude: 0.5
+    window:
+      type: hann
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }
+    width: 0.8
+    # To timestretch 4x, we advance the read head 4x slower through the file.
+    # The file is 4 seconds long. We will map a curve across 16 seconds (4x stretch).
+    position:
+      op: curve
+      ref: "curves/stretch_pos.json"
+
+# curves/stretch_pos.json would contain:
+# {
+#   "segments": [
+#     { "x": 0.0, "y": 0.0, "x_end": 16.0, "y_end": 4.0, "shape": "linear" }
+#   ],
+#   "extrapolation": { "left": "clamp", "right": "clamp" }
+# }
