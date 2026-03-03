@@ -236,8 +236,64 @@ fn compile_signal(expr: &particelle_schema::config::SignalExprConfig, base_dir: 
             Ok(ParamSignal::Curve(std::sync::Arc::new(compiled)))
         }
         SignalExprConfig::Expr(op_config) => {
-            // We can implement full Expr parsing (Sum, Mul, Map, Clamp) later.
-            anyhow::bail!("Expr evaluation not yet implemented for operator '{}'", op_config.op)
+            match op_config.op.as_str() {
+                "sum" | "add" => {
+                    if op_config.args.len() != 2 {
+                        anyhow::bail!("'{}' requires exactly 2 arguments", op_config.op);
+                    }
+                    let a = compile_signal(&op_config.args[0], base_dir)?;
+                    let b = compile_signal(&op_config.args[1], base_dir)?;
+                    Ok(ParamSignal::Sum(Box::new(a), Box::new(b)))
+                }
+                "mul" | "multiply" => {
+                    if op_config.args.len() != 2 {
+                        anyhow::bail!("'{}' requires exactly 2 arguments", op_config.op);
+                    }
+                    let a = compile_signal(&op_config.args[0], base_dir)?;
+                    let b = compile_signal(&op_config.args[1], base_dir)?;
+                    Ok(ParamSignal::Mul(Box::new(a), Box::new(b)))
+                }
+                "clamp" => {
+                    if op_config.args.len() != 3 {
+                        anyhow::bail!("'clamp' requires exactly 3 arguments: [input, min, max]");
+                    }
+                    let input = compile_signal(&op_config.args[0], base_dir)?;
+                    
+                    // We expect min and max to be parsed as Const configurations 
+                    let min_val = if let SignalExprConfig::Const(v) = &op_config.args[1] { *v } 
+                        else { anyhow::bail!("clamp min must be a constant") };
+                    let max_val = if let SignalExprConfig::Const(v) = &op_config.args[2] { *v } 
+                        else { anyhow::bail!("clamp max must be a constant") };
+
+                    Ok(ParamSignal::Clamp {
+                        input: Box::new(input),
+                        min: min_val,
+                        max: max_val,
+                    })
+                }
+                "map" => {
+                    if op_config.args.len() != 2 {
+                        anyhow::bail!("'map' requires exactly 2 arguments: [input, func_name]");
+                    }
+                    let input = compile_signal(&op_config.args[0], base_dir)?;
+                    let func_str = if let SignalExprConfig::Ref(s) = &op_config.args[1] { s } 
+                        else { anyhow::bail!("map func_name must be a reference string") };
+
+                    let func = match func_str.as_str() {
+                        "db_to_linear" => particelle_params::signal::MapFunc::DbToLinear,
+                        "linear_to_db" => particelle_params::signal::MapFunc::LinearToDb,
+                        "midi_note_to_hz" => particelle_params::signal::MapFunc::MidiNoteToHz,
+                        "hz_to_midi_note" => particelle_params::signal::MapFunc::HzToMidiNote,
+                        "abs" => particelle_params::signal::MapFunc::Abs,
+                        "negate" => particelle_params::signal::MapFunc::Negate,
+                        "recip" => particelle_params::signal::MapFunc::Recip,
+                        other => particelle_params::signal::MapFunc::Custom { name: other.to_string() },
+                    };
+
+                    Ok(ParamSignal::Map { input: Box::new(input), func })
+                }
+                other => anyhow::bail!("Expr operator '{}' is not supported", other),
+            }
         }
     }
 }
