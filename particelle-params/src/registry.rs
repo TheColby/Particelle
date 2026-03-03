@@ -80,3 +80,47 @@ pub enum RegistryError {
     #[error("Parameter not found: '{path}'")]
     NotFound { path: String },
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn dummy_descriptor(path: &str) -> ParamDescriptor {
+        ParamDescriptor {
+            path: path.to_owned(),
+            unit: Unit::None,
+            domain: Domain::Continuous,
+            range: (0.0, 1.0),
+            default: 0.5,
+            description: None,
+        }
+    }
+
+    #[test]
+    fn test_bind_success() {
+        let mut registry = ParamRegistry::new();
+        registry.register(dummy_descriptor("foo.bar")).unwrap();
+
+        let signal = ParamSignal::Const(0.75);
+        let result = registry.bind("foo.bar", signal.clone());
+        assert!(result.is_ok());
+
+        let retrieved = registry.get_signal("foo.bar").unwrap();
+        match retrieved {
+            ParamSignal::Const(val) => assert_eq!(*val, 0.75),
+            _ => panic!("Expected Const signal"),
+        }
+    }
+
+    #[test]
+    fn test_bind_not_found() {
+        let mut registry = ParamRegistry::new();
+        let signal = ParamSignal::Const(0.75);
+        let result = registry.bind("foo.bar", signal);
+
+        match result {
+            Err(RegistryError::NotFound { path }) => assert_eq!(path, "foo.bar"),
+            _ => panic!("Expected NotFound error"),
+        }
+    }
+}
