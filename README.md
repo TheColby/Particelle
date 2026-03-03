@@ -757,34 +757,6 @@ MPE pitchbend range is configurable per voice. Per-note pressure and timbre are 
 
 ## Surround and Spatial Workflow
 
-Layouts are declared declaratively. Any number of channels with any position may be specified. The engine supports both Spherical (Azimuth/Elevation) and Cartesian (X/Y/Z) coordinates.
-
-**Spherical / Dolby Atmos style (degrees):**
-```yaml
-layout:
-  channels:
-    - { name: "FL",  azimuth_deg: -30.0,  elevation_deg:  0.0 }
-    - { name: "FR",  azimuth_deg:  30.0,  elevation_deg:  0.0 }
-    - { name: "C",   azimuth_deg:   0.0,  elevation_deg:  0.0 }
-    - { name: "LFE", azimuth_deg:   0.0,  elevation_deg:  0.0 }
-    - { name: "BL",  azimuth_deg: -150.0, elevation_deg:  0.0 }
-    - { name: "BR",  azimuth_deg:  150.0, elevation_deg:  0.0 }
-    - { name: "TFL", azimuth_deg:  -45.0, elevation_deg: 45.0 }
-    - { name: "TFR", azimuth_deg:   45.0, elevation_deg: 45.0 }
-    - { name: "TBL", azimuth_deg: -135.0, elevation_deg: 45.0 }
-    - { name: "TBR", azimuth_deg:  135.0, elevation_deg: 45.0 }
-    - { name: "TC",  azimuth_deg:   0.0,  elevation_deg: 90.0 }
-    - { name: "BC",  azimuth_deg:   0.0,  elevation_deg: -45.0 }
-```
-
-**Cartesian style (meters):**
-```yaml
-layout:
-  channels:
-    - { name: "FL", x: -1.0, y:  1.0, z: 0.0 }
-    - { name: "FR", x:  1.0, y:  1.0, z: 0.0 }
-    - { name: "BL", x: -1.0, y: -1.0, z: 0.0 }
-    - { name: "BR", x:  1.0, y: -1.0, z: 0.0 }
 ```
 
 Each grain carries a position in 3D listener space (`x`, `y`, `z`). The `Spatializer` trait computes per-channel gains from that position and the channel layout. Position can be signal-driven: a curve can move a grain cluster through space over time.
@@ -868,3 +840,31 @@ Offline and realtime modes share the same engine core. A deterministic offline r
 ## License
 
 MIT
+    - { name: "BR", x:  1.0, y: -1.0, z: 0.0 }
+    - { name: "BL", x: -1.0, y: -1.0, z: 0.0 }
+    - { name: "FR", x:  1.0, y:  1.0, z: 0.0 }
+    - { name: "FL", x: -1.0, y:  1.0, z: 0.0 }
+  channels:
+layout:
+```yaml
+**Cartesian style (meters):**
+
+```
+    - { name: "BC",  azimuth_deg:   0.0,  elevation_deg: -45.0 }
+    - { name: "TC",  azimuth_deg:   0.0,  elevation_deg: 90.0 }
+    - { name: "TBR", azimuth_deg:  135.0, elevation_deg: 45.0 }
+    - { name: "TBL", azimuth_deg: -135.0, elevation_deg: 45.0 }
+    - { name: "TFR", azimuth_deg:   45.0, elevation_deg: 45.0 }
+    - { name: "TFL", azimuth_deg:  -45.0, elevation_deg: 45.0 }
+    - { name: "BR",  azimuth_deg:  150.0, elevation_deg:  0.0 }
+    - { name: "BL",  azimuth_deg: -150.0, elevation_deg:  0.0 }
+    - { name: "LFE", azimuth_deg:   0.0,  elevation_deg:  0.0 }
+    - { name: "C",   azimuth_deg:   0.0,  elevation_deg:  0.0 }
+    - { name: "FR",  azimuth_deg:  30.0,  elevation_deg:  0.0 }
+    - { name: "FL",  azimuth_deg: -30.0,  elevation_deg:  0.0 }
+  channels:
+layout:
+```yaml
+**Spherical / Dolby Atmos style (degrees):**
+
+Layouts are declared declaratively. Any number of channels with any position may be specified. The engine supports both Spherical (Azimuth/Elevation) and Cartesian (X/Y/Z) coordinates.

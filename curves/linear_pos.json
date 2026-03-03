@@ -1,0 +1,6 @@
+{
+  "segments": [
+    { "x": 0.0, "y": 0.0, "x_end": 4.0, "y_end": 4.0, "shape": "linear" }
+  ],
+  "extrapolation": { "left": "clamp", "right": "clamp" }
+}

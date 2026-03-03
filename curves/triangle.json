@@ -1,0 +1,22 @@
+{
+  "segments": [
+    {
+      "x": 0.0,
+      "y": 0.0,
+      "x_end": 5.0,
+      "y_end": 1.0,
+      "shape": "linear"
+    },
+    {
+      "x": 5.0,
+      "y": 1.0,
+      "x_end": 10.0,
+      "y_end": 0.0,
+      "shape": "linear"
+    }
+  ],
+  "extrapolation": {
+    "left": "clamp",
+    "right": "clamp"
+  }
+}

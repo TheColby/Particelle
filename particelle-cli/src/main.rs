@@ -487,9 +487,9 @@ fn cmd_render(patch_path: &str, output_path: &str, duration: f64, emit_hash: boo
     Ok(())
 }
 
-fn cmd_run(patch_path: &str) -> Result<()> {
-    let yaml = std::fs::read_to_string(patch_path)
-        .with_context(|| format!("Cannot read '{}'", patch_path))?;
+fn cmd_run(patch: &str) -> Result<()> {
+    let yaml = std::fs::read_to_string(patch)
+        .with_context(|| format!("Cannot read '{}'", patch))?;
     let config: particelle_schema::ParticelleConfig = serde_yaml::from_str(&yaml)
         .with_context(|| "YAML parse error")?;
     let errors = particelle_schema::validate(&config);
@@ -518,20 +518,128 @@ fn cmd_run(patch_path: &str) -> Result<()> {
     }
     let router = particelle_midi::routing::MidiRouter::new(rules);
     
-    // We recreate the engine here to inject our router's fields. But we don't have realtime MIDI hookups yet.
-    // As a placeholder for Phase 14 validation, we will just simulate a pressure curve!
-    let mut engine = build_engine(&config)?;
+    let engine = build_engine(&config)?;
     let mut block = particelle_core::audio_block::AudioBlock::new(n_channels, block_size);
 
     let host = particelle_io::HardwareHost::new(hw_config);
     
-    // Simple pressure simulator for the test patch
+    // Wrap the engine and router in an Arc<Mutex> so they can be hot-swapped
+    let safe_engine = Arc::new(std::sync::Mutex::new(engine));
+    let safe_router = Arc::new(std::sync::Mutex::new(router));
+    
+    // Setup file watcher for the patch
+    use notify::{Watcher, RecursiveMode, EventKind};
+    use std::path::Path;
+    
+    let patch_path = Path::new(patch).to_path_buf();
+    let thread_engine = Arc::clone(&safe_engine);
+    let thread_router = Arc::clone(&safe_router);
+    
+    // We launch a background thread to listen for notify events
+    std::thread::spawn(move || {
+        let (tx, rx) = std::sync::mpsc::channel();
+        let mut watcher = match notify::recommended_watcher(tx) {
+            Ok(w) => w,
+            Err(e) => {
+                eprintln!("Failed to initialize file watcher: {}", e);
+                return;
+            }
+        };
+        
+        let target_dir = patch_path.parent().unwrap_or_else(|| Path::new("."));
+        if let Err(e) = watcher.watch(target_dir, RecursiveMode::NonRecursive) {
+            eprintln!("Failed to watch directory: {}", e);
+            return;
+        }
+
+        eprintln!("→ Live-reloading enabled. Edit '{}' to update the engine...", patch_path.display());
+
+        for res in rx {
+            match res {
+                Ok(event) => {
+                    // We only care about file modification events on our patch
+                    if matches!(event.kind, EventKind::Modify(_)) {
+                        if event.paths.iter().any(|p| p == &patch_path) {
+                            // Give the filesystem a tiny moment to finish writing
+                            std::thread::sleep(std::time::Duration::from_millis(50));
+                            
+                            eprintln!("→ Patch updated, attempting hot-swap...");
+                            
+                            // Attempt to parse and build the new engine
+                            let yaml_str = match std::fs::read_to_string(&patch_path) {
+                                Ok(s) => s,
+                                Err(_) => continue,
+                            };
+                            
+                            let new_config: particelle_schema::ParticelleConfig = match serde_yaml::from_str(&yaml_str) {
+                                Ok(c) => c,
+                                Err(e) => {
+                                    eprintln!("  [Config Error] {}", e);
+                                    continue;
+                                }
+                            };
+                            
+                            let schema_errors = particelle_schema::validate(&new_config);
+                            if !schema_errors.is_empty() {
+                                eprintln!("  [Validation Error] Schema failed.");
+                                for err in schema_errors {
+                                    eprintln!("    ✗ {}", err);
+                                }
+                                continue;
+                            }
+                            
+                            let new_engine = match build_engine(&new_config) {
+                                Ok(e) => e,
+                                Err(e) => {
+                                    eprintln!("  [Engine Build Error] {}", e);
+                                    continue;
+                                }
+                            };
+                            
+                            let mut new_rules = Vec::new();
+                            for b in new_config.routing.midi_bindings.iter() {
+                                new_rules.push(particelle_midi::routing::RoutingRule::direct(&b.source, &b.target));
+                            }
+                            let new_router = particelle_midi::routing::MidiRouter::new(new_rules);
+                            
+                            // Swap them safely!
+                            if let Ok(mut lock) = thread_engine.lock() {
+                                *lock = new_engine;
+                            }
+                            if let Ok(mut lock) = thread_router.lock() {
+                                *lock = new_router;
+                            }
+                            
+                            eprintln!("✓ Hot-swap successful!");
+                        }
+                    }
+                }
+                Err(e) => eprintln!("Watch error: {}", e),
+            }
+        }
+    });
+
     let mut simulated_pressure = 0.0;
     
+    let audio_engine = Arc::clone(&safe_engine);
+    let audio_router = Arc::clone(&safe_router);
+
+    // Enter real-time IO loop
     host.run(move |buffer: &mut [f32]| {
         simulated_pressure += 0.005;
         if simulated_pressure > 1.0 { simulated_pressure = 0.0; }
         
+        // Take a fast lock on the active patch state
+        let router_guard = match audio_router.try_lock() {
+            Ok(g) => g,
+            Err(_) => return, // Drop the frame if the background thread happens to be hot-swapping right now
+        };
+        
+        let mut engine_guard = match audio_engine.try_lock() {
+            Ok(g) => g,
+            Err(_) => return, // Drop the frame if the background thread happens to be hot-swapping right now
+        };
+
         let sim_events = vec![particelle_midi::events::MidiEvent {
             frame_offset: 0,
             kind: particelle_midi::events::MidiEventKind::Expression(
@@ -544,21 +652,19 @@ fn cmd_run(patch_path: &str) -> Result<()> {
             )
         }];
         
-        // Dynamically typecast and update the engine's FieldProvider map
-        if let Some(map_provider) = engine.fields.as_any_mut().and_then(|a| a.downcast_mut::<MapProvider>()) {
-             let new_fields = router.process(&sim_events);
+        let new_fields = router_guard.process(&sim_events);
+        
+        if let Some(map_provider) = engine_guard.fields.as_any_mut().and_then(|a| a.downcast_mut::<MapProvider>()) {
              for (k, v) in new_fields {
                  map_provider.fields.insert(k, v);
              }
         }
         
-        // Process next block of audio
-        if let Err(e) = engine.process(&mut block) {
+        if let Err(e) = engine_guard.process(&mut block) {
             eprintln!("Engine error: {}", e);
             block.silence();
         }
 
-        // Interleave planar block to Cpal interleaved f32 buffer
         let out_frames = buffer.len() / n_channels;
         let frames_to_copy = out_frames.min(block.frames);
         

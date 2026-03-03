@@ -143,13 +143,12 @@ impl HardwareHost {
 #[cfg(feature = "realtime")]
 fn ctrlc_channel(tx: std::sync::mpsc::Sender<()>) {
     std::thread::spawn(move || {
-        // Block forever — the process will be killed by Ctrl+C/SIGINT
-        // which drops the stream via RAII cleanup.
+        // We move tx into the closure so it stays alive
+        let _keep_alive = tx;
         loop {
             std::thread::sleep(std::time::Duration::from_secs(3600));
         }
     });
-    let _ = tx;
 }
 
 #[derive(Debug, Error)]
