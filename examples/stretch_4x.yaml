@@ -22,9 +22,7 @@ clouds:
     width: 0.8
     # To timestretch 4x, we advance the read head 4x slower through the file.
     # The file is 4 seconds long. We will map a curve across 16 seconds (4x stretch).
-    position:
-      op: curve
-      ref: "curves/stretch_pos.json"
+    position: "curves/stretch_pos.json"
 
 # curves/stretch_pos.json would contain:
 # {

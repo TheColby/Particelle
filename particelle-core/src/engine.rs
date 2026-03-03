@@ -85,12 +85,20 @@ impl Engine for GranularEngine {
         output.silence();
         
         let sample_rate = self.state.config.sample_rate;
+        let start_frame = self.state.frame;
+        let null_fields = particelle_params::context::NullFields;
         
         for cloud in &mut self.clouds {
             // For now, we update onset delay by the block size.
             // Better: loop sample-by-sample for accurate onsets.
-            for _ in 0..output.frames {
-                cloud.update(sample_rate, self.spatializer.as_ref());
+            for i in 0..output.frames {
+                let ctx = particelle_params::context::SignalContext {
+                    frame: start_frame + i as crate::FrameCount,
+                    sample_rate,
+                    fields: &null_fields,
+                    custom_resolver: None,
+                };
+                cloud.update(sample_rate, self.spatializer.as_ref(), &ctx);
             }
             
             cloud.pool.process_all(output);

@@ -1,4 +1,3 @@
-use particelle_core::FrameCount;
 use crate::unit::Unit;
 
 /// Runtime evaluation context passed to every `ParamSignal::eval` call.
@@ -6,7 +5,7 @@ use crate::unit::Unit;
 /// This struct is stack-allocated and must not cause any heap allocation.
 pub struct SignalContext<'a> {
     /// Current frame index (monotonic).
-    pub frame: FrameCount,
+    pub frame: u64,
     /// Engine sample rate in Hz.
     pub sample_rate: f64,
     /// Provides runtime field values (MIDI, MPE, control inputs).

@@ -207,6 +207,40 @@ fn main() -> Result<()> {
 
     Ok(())
 }
+fn compile_signal(expr: &particelle_schema::config::SignalExprConfig, base_dir: Option<&std::path::Path>) -> Result<particelle_params::signal::ParamSignal> {
+    use particelle_schema::config::SignalExprConfig;
+    use particelle_params::signal::ParamSignal;
+    match expr {
+        SignalExprConfig::Const(val) => Ok(ParamSignal::Const(*val)),
+        SignalExprConfig::Ref(path_str) => {
+            // If it starts with $, it's a control field
+            if path_str.starts_with('$') {
+                return Ok(ParamSignal::Control { field: path_str[1..].to_string() });
+            }
+            
+            // Otherwise treat as a curve file path
+            let path = if let Some(base) = base_dir {
+                base.join(path_str)
+            } else {
+                std::path::PathBuf::from(path_str)
+            };
+            
+            let json = std::fs::read_to_string(&path)
+                .with_context(|| format!("Cannot read curve file '{}'", path.display()))?;
+            let def: particelle_curve::CurveSchema = serde_json::from_str(&json)
+                .with_context(|| format!("Failed to parse curve JSON from '{}'", path.display()))?;
+            // Compile curve
+            let compiled = particelle_curve::CompiledCurve::compile(def)
+                .map_err(|e| anyhow::anyhow!("Failed to compile curve '{}': {:?}", path.display(), e))?;
+                
+            Ok(ParamSignal::Curve(std::sync::Arc::new(compiled)))
+        }
+        SignalExprConfig::Expr(op_config) => {
+            // We can implement full Expr parsing (Sum, Mul, Map, Clamp) later.
+            anyhow::bail!("Expr evaluation not yet implemented for operator '{}'", op_config.op)
+        }
+    }
+}
 
 fn build_engine(config: &ParticelleConfig) -> Result<GranularEngine> {
     let sample_rate = config.engine.sample_rate as f64;
@@ -242,6 +276,8 @@ fn build_engine(config: &ParticelleConfig) -> Result<GranularEngine> {
     let mut engine = GranularEngine::new(engine_config, layout, panner)
         .with_context(|| "Failed to create engine")?;
         
+    let window_cache = particelle_dsp::window::WindowCache::new();
+        
     for c in &config.clouds {
         let source_path = &c.source;
         let mut reader = particelle_io::AudioFileReader::open(source_path)
@@ -260,18 +296,24 @@ fn build_engine(config: &ParticelleConfig) -> Result<GranularEngine> {
         }
         
         let source_arc = Arc::new(full_source);
-        let window_buf = Arc::from(vec![1.0; 1024]); // Hardcoded rectangular window for now
+        
+        let spec_json = serde_json::to_value(&c.window)
+            .with_context(|| "Failed to serialize window spec")?;
+        let window_spec: particelle_dsp::window::WindowSpec = serde_json::from_value(spec_json)
+            .with_context(|| "Failed to parse window spec")?;
+        let window_buf = window_cache.get(&window_spec, 8192, particelle_dsp::window::WindowNormalization::Peak);
+        
         let capacity = c.max_particles.unwrap_or(1024);
         let pool = GrainPool::new(capacity, source_arc, window_buf, n_channels);
         let mut cloud = Cloud::new(c.id.clone(), pool);
         
-        // Temporarily extract constant values from SignalExprConfigs
-        // In Phase 12, these will compile into actual signals
-        if let particelle_schema::config::SignalExprConfig::Const(val) = c.density    { cloud.density = val; }
-        if let particelle_schema::config::SignalExprConfig::Const(val) = c.duration   { cloud.duration = val; }
-        if let particelle_schema::config::SignalExprConfig::Const(val) = c.amplitude  { cloud.amplitude = val; }
-        if let particelle_schema::config::SignalExprConfig::Const(val) = c.position   { cloud.position = val; }
-        if let particelle_schema::config::SignalExprConfig::Const(val) = c.width      { cloud.width = val; }
+        // Compile Signal Expressions
+        let base_dir = std::path::Path::new(".").canonicalize().ok();
+        cloud.density   = compile_signal(&c.density, base_dir.as_deref())?;
+        cloud.duration  = compile_signal(&c.duration, base_dir.as_deref())?;
+        cloud.amplitude = compile_signal(&c.amplitude, base_dir.as_deref())?;
+        cloud.position  = compile_signal(&c.position, base_dir.as_deref())?;
+        cloud.width     = compile_signal(&c.width, base_dir.as_deref())?;
         
         let pos = &c.listener_pos;
         cloud.listener_pos = particelle_core::spatializer::Vec3::new(pos.x, pos.y, pos.z);
@@ -329,7 +371,7 @@ fn cmd_render(patch_path: &str, output_path: &str, duration: f64, emit_hash: boo
         output_path,
         n_channels,
         sample_rate,
-        24, // 24-bit output
+        32, // 32-bit float output
     ).with_context(|| "Cannot create output file")?;
 
     let mut engine = build_engine(&config)?;
