@@ -1,0 +1,40 @@
+# ai2yaml prompt:
+# "Granulate a sustained violin note violin.wav using a Scala microtonal scale
+#  loaded from a .scl file arabic_24.scl. Use 24-tone Arabic tuning.
+#  Position scrubs very slowly. Amplitude breathes via a sine LFO at 0.08 Hz
+#  between 0.35 and 0.75. Grain duration 200ms, density 50. Stereo output."
+
+engine:
+  sample_rate: 48000
+  block_size: 256
+
+layout:
+  channels:
+    - { name: "L", azimuth_deg: -30.0, elevation_deg: 0.0 }
+    - { name: "R", azimuth_deg:  30.0, elevation_deg: 0.0 }
+
+tuning:
+  mode: scala
+  scl_path: scales/arabic_24.scl
+
+clouds:
+  - id: arabic_microtonal
+    source: samples/violin.wav
+
+    density: 50.0
+    duration: 0.200
+
+    # Breathing amplitude: 0.55 centre ± 0.20
+    amplitude:
+      op: add
+      args:
+        - 0.55
+        - op: mul
+          args:
+            - { op: osc, args: [sine, 0.08] }
+            - 0.20
+
+    position: { op: osc, args: [phasor, 0.006] }
+    window: { type: hann }
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }
+    width: 1.0

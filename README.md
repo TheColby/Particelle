@@ -359,6 +359,10 @@ A grain is a short snippet of audio, typically between **1 and 200 milliseconds*
 
 A single grain sounds like almost nothing — a brief click or a wisp of tone. But when hundreds of grains are layered together per second, something remarkable happens: a continuous, evolving texture emerges from the aggregate. This is the central insight of granular synthesis.
 
+![Granular synthesis: a mono waveform segmented into five overlapping Hann-windowed grains with labeled hop size and grain duration](docs/grain_hopping_windows.png)
+
+*Each colored envelope is one grain — a short Hann-windowed segment. The grains hop forward by the **hop size** and overlap each other, producing a continuous output through overlap-add reconstruction.*
+
 ![Granular synthesis explained: source audio, windowed grains, and overlap-add reconstruction](docs/granular_synthesis_explained.png)
 
 ### How It Works: The Cloud
@@ -673,17 +677,46 @@ The `examples/ai2yaml/` folder contains 10 fully-annotated, ready-to-run patches
 | [`08_chroma_driven_pan.yaml`](examples/ai2yaml/08_chroma_driven_pan.yaml) | Dominant chroma pitch class sweeps spatial width and amplitude |
 | [`09_mfcc_texture.yaml`](examples/ai2yaml/09_mfcc_texture.yaml) | MFCC-3 drives grain width for dynamic timbral morphing |
 | [`10_polyrhythmic_bursts.yaml`](examples/ai2yaml/10_polyrhythmic_bursts.yaml) | Three simultaneous clouds at prime density ratios in Just Intonation |
+| [`11_arabic_microtonal.yaml`](examples/ai2yaml/11_arabic_microtonal.yaml) | 24-tone Arabic Scala tuning with breathing amplitude LFO |
+| [`12_granular_reverb_tail.yaml`](examples/ai2yaml/12_granular_reverb_tail.yaml) | 4-channel granular reverb tail with Kaiser window |
+| [`13_reverse_scrub.yaml`](examples/ai2yaml/13_reverse_scrub.yaml) | Reverse scrub through ocean.wav in 5.1 surround |
+| [`14_dual_source_layer.yaml`](examples/ai2yaml/14_dual_source_layer.yaml) | Dense bass + sparse pad from two different source files |
+| [`15_flux_phoneme_gate.yaml`](examples/ai2yaml/15_flux_phoneme_gate.yaml) | Spectral flux of speech gates grain density of a background texture |
+| [`16_inharmonicity_follower.yaml`](examples/ai2yaml/16_inharmonicity_follower.yaml) | Bell inharmonicity inversely controls grain duration |
+| [`17_mfcc_triple_cloud.yaml`](examples/ai2yaml/17_mfcc_triple_cloud.yaml) | Three clouds each driven by a different MFCC coefficient |
+| [`18_zcr_wind_turbulence.yaml`](examples/ai2yaml/18_zcr_wind_turbulence.yaml) | ZCR of wind.wav drives cloud density — calm to turbulent |
+| [`19_attack_time_density.yaml`](examples/ai2yaml/19_attack_time_density.yaml) | Log attack time sets a fixed grain density (pluck vs. bow) |
+| [`20_thunder_height_cloud.yaml`](examples/ai2yaml/20_thunder_height_cloud.yaml) | 8-channel hemispherical thunder cloud with height speakers |
+| [`21_bohlen_pierce_pad.yaml`](examples/ai2yaml/21_bohlen_pierce_pad.yaml) | Three-layer pad in Bohlen-Pierce 13-step tritave tuning |
+| [`22_entropy_spatial_width.yaml`](examples/ai2yaml/22_entropy_spatial_width.yaml) | Spectral entropy drives grain scatter across 8 immersive channels |
+| [`23_breathing_loop.yaml`](examples/ai2yaml/23_breathing_loop.yaml) | Looping flute texture with breath LFO + subtle 60 Hz tremolo |
+| [`24_micro_montage.yaml`](examples/ai2yaml/24_micro_montage.yaml) | Four micro-sources merged into a composite texture at 5ms grains |
+| [`25_granular_pitch_shift.yaml`](examples/ai2yaml/25_granular_pitch_shift.yaml) | Two passes of guitar.wav — root plus minor third down |
+| [`26_loudness_scatter.yaml`](examples/ai2yaml/26_loudness_scatter.yaml) | dBFS loudness inversely controls spatial scatter width |
+| [`27_tritone_chroma_position.yaml`](examples/ai2yaml/27_tritone_chroma_position.yaml) | C# vs G# chroma rivalry modulates scrub position |
+| [`28_three_tier_ambient.yaml`](examples/ai2yaml/28_three_tier_ambient.yaml) | Slow/mid/fast grain tiers layered for generative ambient |
+| [`29_harmonic_ratio_density.yaml`](examples/ai2yaml/29_harmonic_ratio_density.yaml) | Harmonic ratio inverted to density; crest factor gates amplitude |
+| [`30_cinematic_impact.yaml`](examples/ai2yaml/30_cinematic_impact.yaml) | One-shot impact: density 400, duration and amplitude chase phasor |
 
 To regenerate any recipe from its prompt:
 ```bash
 ./ai2yaml "<prompt from top of file>" my_version.yaml
 ```
 
+
 ---
 
 ## Offline Audio Feature Analysis
 
 The `analysis` block extracts time-varying acoustic feature vectors from source files offline (before rendering begins). These vectors are then interpolated at audio rate and exposed as `$analysis.<id>` references anywhere in the parameter graph. The source file in `analysis` blocks is independent of — and can be completely different from — the cloud's granular source.
+
+![Particelle offline analysis pipeline: source file → extractor → feature vector → $analysis.id → granular parameter](docs/analysis_pipeline.png)
+
+*Feature extraction runs once at patch load time. The resulting `Vec<f64>` is then interpolated at audio rate during rendering/realtime performance.*
+
+Because the analysis source is **independent of the granulation source**, you can cross-couple any file to any cloud:
+
+![Cross-file feature mapping: A.wav's spectral flatness controls grain window size on B.wav](docs/cross_file_analysis.png)
 
 **Supported extractors (30+):**
 
@@ -1002,20 +1035,20 @@ Offline and realtime modes share the same engine core. A deterministic offline r
 1. **Gabor, Dennis (1946)** — *Theory of communication. Part 1: The analysis of information*. Journal of the Institution of Electrical Engineers. [DOI: 10.1049/ji-3-2.1946.0074](https://doi.org/10.1049/ji-3-2.1946.0074)
 2. **Xenakis, Iannis (1971)** — *Formalized Music: Thought and Mathematics in Composition*. Pendragon Press. ISBN: 1576470792
 3. **Roads, Curtis (1978)** — *Automated Granular Synthesis of Sound*. Computer Music Journal, Vol. 2, No. 2. [DOI: 10.2307/3679443](https://doi.org/10.2307/3679443)
-4. **Truax, Barry (1988)** — *Real-Time Granular Synthesis with a Digital Signal Processor*. Computer Music Journal, Vol. 12, No. 2. [DOI: 10.2307/3680233](https://doi.org/10.2307/3680233)
-5. **De Poli, Giovanni; Piccialli, Aldo; Roads, Curtis (Eds.) (1991)** — *Representations of Musical Signals*. MIT Press. ISBN: 026204126X
-6. **Wishart, Trevor (1996)** — *On Sonic Art*. Routledge. ISBN: 371865847X
-7. **Roads, Curtis (2001)** — *Microsound*. MIT Press. ISBN: 0262182157
-8. **Bregman, Albert S. (1990)** — *Auditory Scene Analysis: The Perceptual Organization of Sound*. MIT Press. ISBN: 0262521954
-9. **Moore, F. Richard (1990)** — *Elements of Computer Music*. Prentice Hall. ISBN: 0132525526
-10. **Puckette, Miller S. (2007)** — *The Theory and Technique of Electronic Music*. World Scientific. [DOI: 10.1142/6277](https://doi.org/10.1142/6277)
-11. **Smith, Julius O. (2010)** — *Physical Audio Signal Processing*. W3K Publishing. ISBN: 978-0974560724. [Online](https://ccrma.stanford.edu/~jos/pasp/)
+4. **Berg, Paul (1979)** — *Poc: A composer's approach to computer music*. Interface: Journal of New Music Research, Vol. 8, No. 3. [DOI: 10.1080/09298217908570353](https://doi.org/10.1080/09298217908570353)
+5. **Truax, Barry (1988)** — *Real-Time Granular Synthesis with a Digital Signal Processor*. Computer Music Journal, Vol. 12, No. 2. [DOI: 10.2307/3680233](https://doi.org/10.2307/3680233)
+6. **Bregman, Albert S. (1990)** — *Auditory Scene Analysis: The Perceptual Organization of Sound*. MIT Press. ISBN: 0262521954
+7. **Moore, F. Richard (1990)** — *Elements of Computer Music*. Prentice Hall. ISBN: 0132525526
+8. **De Poli, Giovanni; Piccialli, Aldo; Roads, Curtis (Eds.) (1991)** — *Representations of Musical Signals*. MIT Press. ISBN: 026204126X
+9. **Roads, Curtis (1996)** — *The Computer Music Tutorial*. MIT Press. ISBN: 0262680823
+10. **Wishart, Trevor (1996)** — *On Sonic Art*. Routledge. ISBN: 371865847X
+11. **Roads, Curtis (2001)** — *Microsound*. MIT Press. ISBN: 0262182157
 12. **De Cheveigné, Alain; Kawahara, Hideki (2002)** — *YIN, a fundamental frequency estimator for speech and music*. Journal of the Acoustical Society of America. [DOI: 10.1121/1.1458024](https://doi.org/10.1121/1.1458024)
-13. **Müller, Meinard (2015)** — *Fundamentals of Music Processing: Audio, Analysis, Algorithms, Applications*. Springer. [DOI: 10.1007/978-3-319-21945-5](https://doi.org/10.1007/978-3-319-21945-5)
-14. **Zölzer, Udo (Ed.) (2011)** — *DAFX: Digital Audio Effects* (2nd ed.). Wiley. ISBN: 9780470665992
-15. **Klapuri, Anssi; Davy, Manuel (Eds.) (2006)** — *Signal Processing Methods for Music Transcription*. Springer. [DOI: 10.1007/0-387-32845-9](https://doi.org/10.1007/0-387-32845-9)
-16. **Berg, Paul (1979)** — *Poc: A composer's approach to computer music*. Interface: Journal of New Music Research, Vol. 8, No. 3. [DOI: 10.1080/09298217908570353](https://doi.org/10.1080/09298217908570353)
-17. **Roads, Curtis; Strawn, John (1996)** — *The Computer Music Tutorial*. MIT Press. ISBN: 0262680823
+13. **Klapuri, Anssi; Davy, Manuel (Eds.) (2006)** — *Signal Processing Methods for Music Transcription*. Springer. [DOI: 10.1007/0-387-32845-9](https://doi.org/10.1007/0-387-32845-9)
+14. **Puckette, Miller S. (2007)** — *The Theory and Technique of Electronic Music*. World Scientific. [DOI: 10.1142/6277](https://doi.org/10.1142/6277)
+15. **Smith, Julius O. (2010)** — *Physical Audio Signal Processing*. W3K Publishing. ISBN: 978-0974560724. [Online](https://ccrma.stanford.edu/~jos/pasp/)
+16. **Zölzer, Udo (Ed.) (2011)** — *DAFX: Digital Audio Effects* (2nd ed.). Wiley. ISBN: 9780470665992
+17. **Müller, Meinard (2015)** — *Fundamentals of Music Processing: Audio, Analysis, Algorithms, Applications*. Springer. [DOI: 10.1007/978-3-319-21945-5](https://doi.org/10.1007/978-3-319-21945-5)
 
 ## License
 

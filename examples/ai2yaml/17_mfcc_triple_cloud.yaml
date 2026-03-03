@@ -1,0 +1,106 @@
+# ai2yaml prompt:
+# "Create a textural morphing patch with three clouds all reading from choir.wav,
+#  but each cloud uses a different MFCC coefficient to control its grain width:
+#  cloud 1 uses MFCC-1 (overall energy slope), cloud 2 uses MFCC-4 (mid-range shape),
+#  cloud 3 uses MFCC-8 (upper formant). Each cloud pans to a different angle.
+#  All amplitudes at 0.25 to avoid clipping. Stereo output."
+
+engine:
+  sample_rate: 48000
+  block_size: 256
+
+layout:
+  channels:
+    - { name: "L", azimuth_deg: -30.0, elevation_deg: 0.0 }
+    - { name: "R", azimuth_deg:  30.0, elevation_deg: 0.0 }
+
+tuning:
+  mode: twelve_tet
+
+analysis:
+  - id: mfcc_c1
+    source: samples/choir.wav
+    extractor: mfcc1
+  - id: mfcc_c4
+    source: samples/choir.wav
+    extractor: mfcc4
+  - id: mfcc_c8
+    source: samples/choir.wav
+    extractor: mfcc8
+
+clouds:
+  - id: choir_mfcc1
+    source: samples/choir.wav
+    density: 50.0
+    duration: 0.20
+    # Width: normalise mfcc1 [-30,+30] → [0.2, 2.0]
+    width:
+      op: add
+      args:
+        - 0.20
+        - op: mul
+          args:
+            - op: clamp
+              args:
+                - op: mul
+                  args:
+                    - op: add
+                      args: ["$analysis.mfcc_c1", 30.0]
+                    - 0.0333
+                - 0.0
+                - 1.0
+            - 1.80
+    amplitude: 0.25
+    position: 0.3
+    window: { type: hann }
+    listener_pos: { x: -0.6, y: 1.0, z: 0.0 }
+
+  - id: choir_mfcc4
+    source: samples/choir.wav
+    density: 50.0
+    duration: 0.20
+    width:
+      op: add
+      args:
+        - 0.20
+        - op: mul
+          args:
+            - op: clamp
+              args:
+                - op: mul
+                  args:
+                    - op: add
+                      args: ["$analysis.mfcc_c4", 30.0]
+                    - 0.0333
+                - 0.0
+                - 1.0
+            - 1.80
+    amplitude: 0.25
+    position: 0.5
+    window: { type: hann }
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }
+
+  - id: choir_mfcc8
+    source: samples/choir.wav
+    density: 50.0
+    duration: 0.20
+    width:
+      op: add
+      args:
+        - 0.20
+        - op: mul
+          args:
+            - op: clamp
+              args:
+                - op: mul
+                  args:
+                    - op: add
+                      args: ["$analysis.mfcc_c8", 30.0]
+                    - 0.0333
+                - 0.0
+                - 1.0
+            - 1.80
+    amplitude: 0.25
+    position: 0.7
+    window: { type: hann }
+    listener_pos: { x: 0.6, y: 1.0, z: 0.0 }

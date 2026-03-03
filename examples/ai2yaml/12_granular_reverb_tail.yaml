@@ -1,0 +1,42 @@
+# ai2yaml prompt:
+# "Build a granular reverb tail from a piano note piano.wav.
+#  Position is fixed at the sustain (0.3). Density increases exponentially 
+#  at the start then fades — simulate by summing two phasors at different rates.
+#  Grain duration: 180ms. Amplitude: 0.45. Use Kaiser window for smooth tail."
+
+engine:
+  sample_rate: 48000
+  block_size: 256
+
+layout:
+  channels:
+    - { name: "L",  azimuth_deg: -30.0, elevation_deg: 0.0 }
+    - { name: "R",  azimuth_deg:  30.0, elevation_deg: 0.0 }
+    - { name: "SL", azimuth_deg: -90.0, elevation_deg: 0.0 }
+    - { name: "SR", azimuth_deg:  90.0, elevation_deg: 0.0 }
+
+tuning:
+  mode: twelve_tet
+
+clouds:
+  - id: reverb_tail
+    source: samples/piano.wav
+
+    # Density: two interleaved rates simulate density envelope
+    density:
+      op: add
+      args:
+        - op: mul
+          args: [{ op: osc, args: [phasor, 1.3] }, 40.0]
+        - op: mul
+          args: [{ op: osc, args: [phasor, 2.7] }, 30.0]
+
+    duration: 0.180
+    amplitude: 0.45
+
+    # Fixed inside sustain body
+    position: 0.30
+
+    window: { type: kaiser, beta: 6.0 }
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }
+    width: 2.5

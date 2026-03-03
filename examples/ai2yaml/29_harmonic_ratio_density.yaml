@@ -1,0 +1,62 @@
+# ai2yaml prompt:
+# "Use harmonic ratio of an accordion accordion.wav to drive two behaviours:
+#  when harmonic ratio is high (pure chords), density drops to 20 (sparse, reverent).
+#  When harmonic ratio is low (dissonant cluster), density rises to 140 (swarm).
+#  density = 80 - harmonic_ratio × 60.  Also use crest_factor to gate amplitude:
+#  high crest (sudden accent) → bright amplitude pulse. Stereo, duration 0.14, loop."
+
+engine:
+  sample_rate: 48000
+  block_size: 256
+
+layout:
+  channels:
+    - { name: "L", azimuth_deg: -30.0, elevation_deg: 0.0 }
+    - { name: "R", azimuth_deg:  30.0, elevation_deg: 0.0 }
+
+tuning:
+  mode: twelve_tet
+
+analysis:
+  - id: accordion_hnr
+    source: samples/accordion.wav
+    extractor: harmonic_ratio     # Range [0, 1]
+
+  - id: accordion_crest
+    source: samples/accordion.wav
+    extractor: crest_factor       # Range: ratio, often 1–20
+
+clouds:
+  - id: harmonic_swarm
+    source: samples/accordion.wav
+    loop_source: true
+
+    # density = 80 − harmonic_ratio × 60  → range [20, 80] inverted
+    density:
+      op: add
+      args:
+        - 80.0
+        - op: mul
+          args: ["$analysis.accordion_hnr", -60.0]
+
+    duration: 0.140
+
+    # Amplitude: base 0.5, boosted by crest_factor (normalised by /20)
+    amplitude:
+      op: clamp
+      args:
+        - op: add
+          args:
+            - 0.30
+            - op: mul
+              args:
+                - op: mul
+                  args: ["$analysis.accordion_crest", 0.05]
+                - 1.0
+        - 0.20
+        - 0.85
+
+    position: { op: osc, args: [phasor, 0.02] }
+    window: { type: hann }
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }
+    width: 1.0

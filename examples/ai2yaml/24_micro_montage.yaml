@@ -1,0 +1,63 @@
+# ai2yaml prompt:
+# "Create a micro-montage from four very different short clips (a hi-hat, a vowel,
+#  a spring reverb hit, and a synth blip) by defining four micro-clouds, each
+#  reading only a tiny slice of their respective samples. Position fixed at 0.5 for all.
+#  Very dense (200 grains/sec each), very short (5ms grains). Amplitudes all 0.20.
+#  This creates a composite synthetic texture. Stereo."
+
+engine:
+  sample_rate: 48000
+  block_size: 256
+
+layout:
+  channels:
+    - { name: "L", azimuth_deg: -30.0, elevation_deg: 0.0 }
+    - { name: "R", azimuth_deg:  30.0, elevation_deg: 0.0 }
+
+tuning:
+  mode: twelve_tet
+
+clouds:
+  - id: micro_hihat
+    source: samples/hihat.wav
+    loop_source: true
+    density: 200.0
+    duration: 0.005
+    amplitude: 0.20
+    position: 0.5
+    window: { type: hann }
+    listener_pos: { x: -0.5, y: 1.0, z: 0.0 }
+    width: 0.4
+
+  - id: micro_vowel
+    source: samples/vowel.wav
+    loop_source: true
+    density: 200.0
+    duration: 0.005
+    amplitude: 0.20
+    position: 0.5
+    window: { type: hann }
+    listener_pos: { x: -0.15, y: 1.0, z: 0.0 }
+    width: 0.4
+
+  - id: micro_spring
+    source: samples/spring_reverb.wav
+    loop_source: true
+    density: 200.0
+    duration: 0.005
+    amplitude: 0.20
+    position: 0.5
+    window: { type: hann }
+    listener_pos: { x: 0.15, y: 1.0, z: 0.0 }
+    width: 0.4
+
+  - id: micro_blip
+    source: samples/synth_blip.wav
+    loop_source: true
+    density: 200.0
+    duration: 0.005
+    amplitude: 0.20
+    position: 0.5
+    window: { type: hann }
+    listener_pos: { x: 0.5, y: 1.0, z: 0.0 }
+    width: 0.4

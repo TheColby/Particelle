@@ -1,0 +1,42 @@
+# ai2yaml prompt:
+# "Make a granular pitch-shifter effect that reads the same sample guitar.wav twice:
+#  one pass at normal position, one pass shifted down a minor third.
+#  The second cloud uses tuning degree_offset to transpose. Both clouds have identical
+#  density (80) and duration (0.12). Mix both at amplitude 0.45 each. Stereo. Loop both."
+
+engine:
+  sample_rate: 48000
+  block_size: 256
+
+layout:
+  channels:
+    - { name: "L", azimuth_deg: -30.0, elevation_deg: 0.0 }
+    - { name: "R", azimuth_deg:  30.0, elevation_deg: 0.0 }
+
+tuning:
+  mode: twelve_tet
+
+clouds:
+  - id: guitar_root
+    source: samples/guitar.wav
+    loop_source: true
+    density: 80.0
+    duration: 0.120
+    amplitude: 0.45
+    position: { op: osc, args: [phasor, 0.02] }
+    window: { type: hann }
+    listener_pos: { x: -0.2, y: 1.0, z: 0.0 }
+    width: 0.8
+
+  - id: guitar_minor_third_down
+    source: samples/guitar.wav
+    loop_source: true
+    density: 80.0
+    duration: 0.120
+    amplitude: 0.45
+    position: { op: osc, args: [phasor, 0.02] }
+    # Pitch-shift: multiply grain playback by ratio for minor third down (≈ ×0.8409)
+    pitch_ratio: 0.8409
+    window: { type: hann }
+    listener_pos: { x: 0.2, y: 1.0, z: 0.0 }
+    width: 0.8

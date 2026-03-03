@@ -1,0 +1,46 @@
+# ai2yaml prompt:
+# "Extract the inharmonicity of a bell bell.wav and use it to cross-fade
+#  between two behaviors: when inharmonicity is low (pure harmonics), use wide/long grains.
+#  When inharmonicity is high (metallic/random), use tight/short grains.
+#  Formula: duration = 0.40 × (1 - inharmonicity). Density constant at 60.
+#  Stereo, Planck taper window."
+
+engine:
+  sample_rate: 48000
+  block_size: 256
+
+layout:
+  channels:
+    - { name: "L", azimuth_deg: -30.0, elevation_deg: 0.0 }
+    - { name: "R", azimuth_deg:  30.0, elevation_deg: 0.0 }
+
+tuning:
+  mode: twelve_tet
+
+analysis:
+  - id: bell_inharmonicity
+    source: samples/bell.wav
+    extractor: inharmonicity       # Range 0 (pure) → 1 (metallic)
+
+clouds:
+  - id: inharmonicity_follower
+    source: samples/bell.wav
+
+    density: 60.0
+
+    # duration = 0.40 × (1 − inharmonicity): long when pure, short when metallic
+    duration:
+      op: mul
+      args:
+        - 0.40
+        - op: add
+          args:
+            - 1.0
+            - op: mul
+              args: ["$analysis.bell_inharmonicity", -1.0]
+
+    amplitude: 0.65
+    position: { op: osc, args: [phasor, 0.015] }
+    window: { type: planck_taper }
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }
+    width: 1.0

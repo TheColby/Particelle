@@ -1,0 +1,49 @@
+# ai2yaml prompt:
+# "Extract spectral entropy from crowd.wav. When entropy is high (complex, many voices),
+#  scatter the grains widely across 8 channels. When entropy is low (homogeneous),
+#  collapse the stereo field narrow. Map entropy [0,1] → width [0.1, 4.0].
+#  Density 70, duration 90ms. 8-channel immersive output."
+
+engine:
+  sample_rate: 48000
+  block_size: 256
+
+layout:
+  channels:
+    - { name: "L",   azimuth_deg: -30.0,  elevation_deg:  0.0 }
+    - { name: "R",   azimuth_deg:  30.0,  elevation_deg:  0.0 }
+    - { name: "Ls",  azimuth_deg: -110.0, elevation_deg:  0.0 }
+    - { name: "Rs",  azimuth_deg:  110.0, elevation_deg:  0.0 }
+    - { name: "TFL", azimuth_deg:  -45.0, elevation_deg: 45.0 }
+    - { name: "TFR", azimuth_deg:   45.0, elevation_deg: 45.0 }
+    - { name: "TBL", azimuth_deg: -135.0, elevation_deg: 45.0 }
+    - { name: "TBR", azimuth_deg:  135.0, elevation_deg: 45.0 }
+
+tuning:
+  mode: twelve_tet
+
+analysis:
+  - id: crowd_entropy
+    source: samples/crowd.wav
+    extractor: spectral_entropy    # Range [0, 1]
+
+clouds:
+  - id: entropy_width
+    source: samples/crowd.wav
+    loop_source: true
+
+    density: 70.0
+    duration: 0.090
+
+    # width = 0.1 + entropy × 3.9
+    width:
+      op: add
+      args:
+        - 0.10
+        - op: mul
+          args: ["$analysis.crowd_entropy", 3.90]
+
+    amplitude: 0.55
+    position: { op: osc, args: [phasor, 0.008] }
+    window: { type: hann }
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }

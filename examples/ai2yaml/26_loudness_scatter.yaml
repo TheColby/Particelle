@@ -1,0 +1,50 @@
+# ai2yaml prompt:
+# "Map loudness in dBFS of an energetic drum loop drums.wav to control how far
+#  apart grains are spatially: when loud (-3 to 0 dBFS), grains stay mono/narrow (width 0.2);
+#  when quiet (-20 to -12 dBFS), grains scatter wide (width 2.5).
+#  Formula: width = 2.5 + loudness_dbfs × 0.115 (maps -20→0.2 and 0→2.5 linearly).
+#  Use drums to granulate a pad sound pad.wav. Density 50, duration 200ms."
+
+engine:
+  sample_rate: 48000
+  block_size: 256
+
+layout:
+  channels:
+    - { name: "L",  azimuth_deg: -30.0, elevation_deg: 0.0 }
+    - { name: "R",  azimuth_deg:  30.0, elevation_deg: 0.0 }
+    - { name: "SL", azimuth_deg: -90.0, elevation_deg: 0.0 }
+    - { name: "SR", azimuth_deg:  90.0, elevation_deg: 0.0 }
+
+tuning:
+  mode: twelve_tet
+
+analysis:
+  - id: drum_loudness
+    source: samples/drums.wav
+    extractor: loudness_dbfs      # Range [-96, 0] dBFS
+
+clouds:
+  - id: loudness_scatter
+    source: samples/pad.wav
+    loop_source: true
+
+    density: 50.0
+    duration: 0.200
+
+    # width = 2.5 + loudness_dbfs × 0.115  (loud → narrow, quiet → wide)
+    width:
+      op: clamp
+      args:
+        - op: add
+          args:
+            - 2.5
+            - op: mul
+              args: ["$analysis.drum_loudness", 0.115]
+        - 0.10
+        - 2.80
+
+    amplitude: 0.60
+    position: { op: osc, args: [phasor, 0.015] }
+    window: { type: hann }
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }

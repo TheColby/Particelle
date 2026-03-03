@@ -1,0 +1,47 @@
+# ai2yaml prompt:
+# "Use spectral flux from speech.wav — which is high at phoneme boundaries —
+#  to gate density. When flux is high (fast speech), density jumps to 120.
+#  When speech is steady, density drops to 30. Map flux from [0, 50] → [30, 120].
+#  Granulate a separate background texture texture.wav. Stereo output."
+
+engine:
+  sample_rate: 48000
+  block_size: 256
+
+layout:
+  channels:
+    - { name: "L", azimuth_deg: -30.0, elevation_deg: 0.0 }
+    - { name: "R", azimuth_deg:  30.0, elevation_deg: 0.0 }
+
+tuning:
+  mode: twelve_tet
+
+analysis:
+  - id: speech_flux
+    source: samples/speech.wav
+    extractor: spectral_flux      # Onset strength, range ~[0, 50+]
+
+clouds:
+  - id: flux_gated_texture
+    source: samples/texture.wav
+
+    # density = 30 + (clamp(flux, 0, 50) / 50) × 90
+    density:
+      op: add
+      args:
+        - 30.0
+        - op: mul
+          args:
+            - op: mul
+              args:
+                - op: clamp
+                  args: ["$analysis.speech_flux", 0.0, 50.0]
+                - 0.02                  # divide by 50 → normalise to [0, 1]
+            - 90.0
+
+    duration: 0.06
+    amplitude: 0.60
+    position: { op: osc, args: [phasor, 0.012] }
+    window: { type: hann }
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }
+    width: 1.0

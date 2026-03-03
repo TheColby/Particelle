@@ -1,0 +1,53 @@
+# ai2yaml prompt:
+# "Granulate a field recording forest.wav. Extract chroma energy for C# (Cs)
+#  and G# (Gs) simultaneously — these are a tritone apart, the most dissonant interval.
+#  When chroma_Cs is high, push the grain cloud slightly forward (position += 0.1).
+#  When chroma_Gs is high, pull back (position -= 0.1). Net position oscillates
+#  between harmonic 'landing zones'. Stereo, density 60, duration 0.25, loop."
+
+engine:
+  sample_rate: 48000
+  block_size: 256
+
+layout:
+  channels:
+    - { name: "L", azimuth_deg: -30.0, elevation_deg: 0.0 }
+    - { name: "R", azimuth_deg:  30.0, elevation_deg: 0.0 }
+
+tuning:
+  mode: twelve_tet
+
+analysis:
+  - id: chroma_Cs
+    source: samples/forest.wav
+    extractor: chroma_Cs   # C# pitch class energy, normalized [0, 1]
+  - id: chroma_Gs
+    source: samples/forest.wav
+    extractor: chroma_Gs   # G# pitch class energy, normalized [0, 1]
+
+clouds:
+  - id: tritone_position
+    source: samples/forest.wav
+    loop_source: true
+
+    density: 60.0
+    duration: 0.250
+
+    # position = 0.5 + 0.1 × (Cs − Gs)
+    position:
+      op: add
+      args:
+        - 0.50
+        - op: mul
+          args:
+            - op: add
+              args:
+                - "$analysis.chroma_Cs"
+                - op: mul
+                  args: ["$analysis.chroma_Gs", -1.0]
+            - 0.10
+
+    amplitude: 0.65
+    window: { type: hann }
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }
+    width: 1.2

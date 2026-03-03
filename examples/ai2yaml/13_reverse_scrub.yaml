@@ -1,0 +1,49 @@
+# ai2yaml prompt:
+# "Slowly scrub backwards through ocean.wav by reversing a phasor position
+#  (1.0 minus phasor output). Use very long grains 500ms at low density 20.
+#  Amplitude breathes slowly. Output in 5.1 surround."
+
+engine:
+  sample_rate: 48000
+  block_size: 256
+
+layout:
+  channels:
+    - { name: "L",   azimuth_deg: -30.0,  elevation_deg: 0.0 }
+    - { name: "R",   azimuth_deg:  30.0,  elevation_deg: 0.0 }
+    - { name: "C",   azimuth_deg:   0.0,  elevation_deg: 0.0 }
+    - { name: "LFE", azimuth_deg:  45.0,  elevation_deg: -30.0 }
+    - { name: "Ls",  azimuth_deg: -110.0, elevation_deg: 0.0 }
+    - { name: "Rs",  azimuth_deg:  110.0, elevation_deg: 0.0 }
+
+tuning:
+  mode: twelve_tet
+
+clouds:
+  - id: reverse_ocean
+    source: samples/ocean.wav
+
+    density: 20.0
+    duration: 0.50
+
+    # Reverse scrub: 1 - phasor(0.01 Hz)
+    position:
+      op: add
+      args:
+        - 1.0
+        - op: mul
+          args:
+            - { op: osc, args: [phasor, 0.01] }
+            - -1.0
+
+    # Slow breath
+    amplitude:
+      op: add
+      args:
+        - 0.55
+        - op: mul
+          args: [{ op: osc, args: [sine, 0.05] }, 0.20]
+
+    window: { type: hann }
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }
+    width: 3.14

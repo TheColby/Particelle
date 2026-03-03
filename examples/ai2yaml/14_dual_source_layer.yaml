@@ -1,0 +1,38 @@
+# ai2yaml prompt:
+# "Create a granular cloud that layers two different source files simultaneously:
+#  bass.wav as dense short grains (10ms) and pad.wav as sparse long grains (600ms).
+#  The bass cloud sweeps position left to right; the pad cloud is centered and static.
+#  Balance the mix so bass is 0.5 and pad is 0.3. Stereo, 12-TET."
+
+engine:
+  sample_rate: 48000
+  block_size: 256
+
+layout:
+  channels:
+    - { name: "L", azimuth_deg: -30.0, elevation_deg: 0.0 }
+    - { name: "R", azimuth_deg:  30.0, elevation_deg: 0.0 }
+
+tuning:
+  mode: twelve_tet
+
+clouds:
+  - id: bass_layer
+    source: samples/bass.wav
+    density: 140.0
+    duration: 0.010
+    amplitude: 0.50
+    position: { op: osc, args: [phasor, 0.04] }
+    window: { type: hann }
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }
+    width: 1.6
+
+  - id: pad_layer
+    source: samples/pad.wav
+    density: 12.0
+    duration: 0.600
+    amplitude: 0.30
+    position: 0.50
+    window: { type: planck_taper }
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }
+    width: 0.8

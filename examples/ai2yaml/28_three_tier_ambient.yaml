@@ -1,0 +1,53 @@
+# ai2yaml prompt:
+# "Build a generative ambient patch from sine_tone.wav with three independent
+#  density tiers that operate at slow / medium / fast timescales.
+#  Slow tier: 5 grains/sec, 750ms grains — sweeping atmosphere.
+#  Mid tier: 30 grains/sec, 120ms grains — body and movement.
+#  Fast tier: 120 grains/sec, 15ms grains — shimmer and sparkle.
+#  All from same source, mixed at 0.5 / 0.35 / 0.25. Stereo, loop."
+
+engine:
+  sample_rate: 48000
+  block_size: 256
+
+layout:
+  channels:
+    - { name: "L", azimuth_deg: -30.0, elevation_deg: 0.0 }
+    - { name: "R", azimuth_deg:  30.0, elevation_deg: 0.0 }
+
+tuning:
+  mode: twelve_tet
+
+clouds:
+  - id: slow_atmosphere
+    source: samples/sine_tone.wav
+    loop_source: true
+    density: 5.0
+    duration: 0.750
+    amplitude: 0.50
+    position: { op: osc, args: [phasor, 0.004] }
+    window: { type: hann }
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }
+    width: 2.0
+
+  - id: mid_body
+    source: samples/sine_tone.wav
+    loop_source: true
+    density: 30.0
+    duration: 0.120
+    amplitude: 0.35
+    position: { op: osc, args: [phasor, 0.014] }
+    window: { type: hann }
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }
+    width: 1.2
+
+  - id: fast_shimmer
+    source: samples/sine_tone.wav
+    loop_source: true
+    density: 120.0
+    duration: 0.015
+    amplitude: 0.25
+    position: { op: osc, args: [phasor, 0.035] }
+    window: { type: planck_taper }
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }
+    width: 0.6

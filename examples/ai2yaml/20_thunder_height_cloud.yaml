@@ -1,0 +1,44 @@
+# ai2yaml prompt:
+# "Create an immersive height cloud from thunder.wav using a hemispherical layout
+#  (front/rear at ground + overhead). Use very long grains (2 seconds) at very
+#  low density (5 grains/sec). Amplitude modulated by a triangle LFO at 0.02 Hz
+#  sweeping 0.2–0.7. Thunderous presence. 8-channel output."
+
+engine:
+  sample_rate: 48000
+  block_size: 256
+
+layout:
+  channels:
+    - { name: "L",   azimuth_deg: -30.0,  elevation_deg:  0.0 }
+    - { name: "R",   azimuth_deg:  30.0,  elevation_deg:  0.0 }
+    - { name: "Ls",  azimuth_deg: -110.0, elevation_deg:  0.0 }
+    - { name: "Rs",  azimuth_deg:  110.0, elevation_deg:  0.0 }
+    - { name: "TFL", azimuth_deg: -45.0,  elevation_deg: 45.0 }
+    - { name: "TFR", azimuth_deg:  45.0,  elevation_deg: 45.0 }
+    - { name: "TBL", azimuth_deg: -135.0, elevation_deg: 45.0 }
+    - { name: "TBR", azimuth_deg:  135.0, elevation_deg: 45.0 }
+
+tuning:
+  mode: twelve_tet
+
+clouds:
+  - id: thunder_height
+    source: samples/thunder.wav
+
+    density: 5.0
+    duration: 2.0
+
+    # Sweeping amplitude 0.45 ± 0.25
+    amplitude:
+      op: add
+      args:
+        - 0.45
+        - op: mul
+          args: [{ op: osc, args: [triangle, 0.02] }, 0.25]
+
+    position: 0.20
+
+    window: { type: dpss, half_bandwidth: 4.0 }
+    listener_pos: { x: 0.0, y: 1.0, z: 0.5 }
+    width: 6.28

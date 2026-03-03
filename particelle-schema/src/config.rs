@@ -106,7 +106,13 @@ pub struct CloudConfig {
     pub width:        SignalExprConfig,
     #[serde(default)]
     pub max_particles: Option<usize>,
+    /// When true (default), grain read-heads wrap around when they pass the end
+    /// of the source buffer so the cloud plays continuously regardless of render duration.
+    #[serde(default = "default_loop_source")]
+    pub loop_source: bool,
 }
+
+fn default_loop_source() -> bool { true }
 
 /// An inline signal expression: a constant, a named reference, or an expression tree.
 #[derive(Debug, Clone, Serialize, Deserialize)]

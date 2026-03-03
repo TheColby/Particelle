@@ -1,0 +1,43 @@
+# ai2yaml prompt:
+# "Extract log attack time (LAT) from guitar.wav — this gives a single scalar.
+#  Use it to set a fixed grain overlap density (fast attack → many dense grains,
+#  slow attack → fewer sparse grains). Since LAT is a global constant, multiply
+#  the constant by -20 to map log-seconds to useful grain density range.
+#  LAT ~ -2 for fast pluck → density ~ 40. LAT ~ -1 for slow bow → density ~ 20.
+#  Grain duration 150ms, amplitude 0.70."
+
+engine:
+  sample_rate: 48000
+  block_size: 256
+
+layout:
+  channels:
+    - { name: "L", azimuth_deg: -30.0, elevation_deg: 0.0 }
+    - { name: "R", azimuth_deg:  30.0, elevation_deg: 0.0 }
+
+tuning:
+  mode: twelve_tet
+
+analysis:
+  - id: attack_time
+    source: samples/guitar.wav
+    extractor: log_attack_time   # log10(seconds), e.g. -2 = fast, -1 = slow, 0 = 1 second
+
+clouds:
+  - id: attack_mapped
+    source: samples/guitar.wav
+
+    # density = abs(lat) × 20 → range ~20–40 (fast pluck to slow bow)
+    density:
+      op: mul
+      args:
+        - op: map
+          args: ["$analysis.attack_time", abs]
+        - 20.0
+
+    duration: 0.150
+    amplitude: 0.70
+    position: { op: osc, args: [phasor, 0.018] }
+    window: { type: hann }
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }
+    width: 1.0

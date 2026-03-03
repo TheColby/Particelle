@@ -1,0 +1,58 @@
+# ai2yaml prompt:
+# "Create an evolving pad from strings.wav in Bohlen-Pierce tuning (13-step
+#  tritave, not octave). Three clouds at different positions in the sample,
+#  each with gently offset density and different widths. Amplitudes gently 
+#  swell using sine LFOs at different rates. Stereo, loop the source."
+
+engine:
+  sample_rate: 48000
+  block_size: 256
+
+layout:
+  channels:
+    - { name: "L", azimuth_deg: -30.0, elevation_deg: 0.0 }
+    - { name: "R", azimuth_deg:  30.0, elevation_deg: 0.0 }
+
+tuning:
+  mode: scala
+  scl_path: scales/bohlen_pierce.scl
+
+clouds:
+  - id: bp_layer_a
+    source: samples/strings.wav
+    loop_source: true
+    density: 45.0
+    duration: 0.22
+    amplitude:
+      op: add
+      args: [0.50, { op: mul, args: [{ op: osc, args: [sine, 0.07] }, 0.20] }]
+    position: 0.15
+    window: { type: hann }
+    listener_pos: { x: -0.4, y: 1.0, z: 0.0 }
+    width: 0.8
+
+  - id: bp_layer_b
+    source: samples/strings.wav
+    loop_source: true
+    density: 38.0
+    duration: 0.30
+    amplitude:
+      op: add
+      args: [0.42, { op: mul, args: [{ op: osc, args: [sine, 0.05] }, 0.18] }]
+    position: 0.45
+    window: { type: hann }
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }
+    width: 1.0
+
+  - id: bp_layer_c
+    source: samples/strings.wav
+    loop_source: true
+    density: 52.0
+    duration: 0.18
+    amplitude:
+      op: add
+      args: [0.38, { op: mul, args: [{ op: osc, args: [sine, 0.09] }, 0.15] }]
+    position: 0.70
+    window: { type: hann }
+    listener_pos: { x: 0.4, y: 1.0, z: 0.0 }
+    width: 0.9

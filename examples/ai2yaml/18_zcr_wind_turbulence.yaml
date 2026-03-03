@@ -1,0 +1,45 @@
+# ai2yaml prompt:
+# "Granulate wind.wav and use its Zero Crossing Rate (ZCR) to modulate density.
+#  ZCR is high when wind is turbulent (many rapid oscillations), low when calm.
+#  density = 20 + ZCR × 800 (ZCR range ~0.0–0.3, so density ~ 20–260).
+#  Grain duration: 80ms, amplitude 0.60. 5.1 surround output."
+
+engine:
+  sample_rate: 48000
+  block_size: 256
+
+layout:
+  channels:
+    - { name: "L",   azimuth_deg: -30.0,  elevation_deg: 0.0 }
+    - { name: "R",   azimuth_deg:  30.0,  elevation_deg: 0.0 }
+    - { name: "C",   azimuth_deg:   0.0,  elevation_deg: 0.0 }
+    - { name: "LFE", azimuth_deg:  45.0,  elevation_deg: -30.0 }
+    - { name: "Ls",  azimuth_deg: -110.0, elevation_deg: 0.0 }
+    - { name: "Rs",  azimuth_deg:  110.0, elevation_deg: 0.0 }
+
+tuning:
+  mode: twelve_tet
+
+analysis:
+  - id: wind_zcr
+    source: samples/wind.wav
+    extractor: zero_crossing_rate   # Normalised ~[0, 0.3] for wind
+
+clouds:
+  - id: turbulent_wind
+    source: samples/wind.wav
+
+    # density = 20 + zcr × 800
+    density:
+      op: add
+      args:
+        - 20.0
+        - op: mul
+          args: ["$analysis.wind_zcr", 800.0]
+
+    duration: 0.080
+    amplitude: 0.60
+    position: { op: osc, args: [phasor, 0.008] }
+    window: { type: hann }
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }
+    width: 2.0
