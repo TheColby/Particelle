@@ -398,6 +398,7 @@ fn build_engine(config: &ParticelleConfig) -> Result<GranularEngine> {
                 let env_config = particelle_analysis::EnvConfig {
                     window_size: 1024,
                     hop_size: (reader.sample_rate as f64 / 100.0) as usize,
+                    sample_rate: reader.sample_rate as f64,
                 };
                 particelle_analysis::extract_rms_envelope(&env_config, &mono)
             },
@@ -448,9 +449,86 @@ fn build_engine(config: &ParticelleConfig) -> Result<GranularEngine> {
                     sample_rate: reader.sample_rate as f64,
                 };
                 particelle_analysis::extract_zero_crossing_rate(&t_config, &mono)
-            }
+            },
+            // --- Spectral Shape ---
+            "spectral_spread" => {
+                let spec_config = particelle_analysis::SpectralConfig { window_size: 2048, hop_size: (reader.sample_rate as f64 / 100.0) as usize, sample_rate: reader.sample_rate as f64 };
+                particelle_analysis::extract_spectral_spread(&spec_config, &mono)
+            },
+            "spectral_skewness" => {
+                let spec_config = particelle_analysis::SpectralConfig { window_size: 2048, hop_size: (reader.sample_rate as f64 / 100.0) as usize, sample_rate: reader.sample_rate as f64 };
+                particelle_analysis::extract_spectral_skewness(&spec_config, &mono)
+            },
+            "spectral_kurtosis" => {
+                let spec_config = particelle_analysis::SpectralConfig { window_size: 2048, hop_size: (reader.sample_rate as f64 / 100.0) as usize, sample_rate: reader.sample_rate as f64 };
+                particelle_analysis::extract_spectral_kurtosis(&spec_config, &mono)
+            },
+            "spectral_entropy" => {
+                let spec_config = particelle_analysis::SpectralConfig { window_size: 2048, hop_size: (reader.sample_rate as f64 / 100.0) as usize, sample_rate: reader.sample_rate as f64 };
+                particelle_analysis::extract_spectral_entropy(&spec_config, &mono)
+            },
+            "spectral_contrast" => {
+                let spec_config = particelle_analysis::SpectralConfig { window_size: 2048, hop_size: (reader.sample_rate as f64 / 100.0) as usize, sample_rate: reader.sample_rate as f64 };
+                particelle_analysis::extract_spectral_contrast(&spec_config, &mono)
+            },
+            // --- Harmonic ---
+            "harmonic_ratio" => {
+                let spec_config = particelle_analysis::SpectralConfig { window_size: 2048, hop_size: (reader.sample_rate as f64 / 100.0) as usize, sample_rate: reader.sample_rate as f64 };
+                particelle_analysis::extract_harmonic_ratio(&spec_config, &mono)
+            },
+            "inharmonicity" => {
+                let spec_config = particelle_analysis::SpectralConfig { window_size: 2048, hop_size: (reader.sample_rate as f64 / 100.0) as usize, sample_rate: reader.sample_rate as f64 };
+                particelle_analysis::extract_inharmonicity(&spec_config, &mono)
+            },
+            "tristimulus1" => {
+                let spec_config = particelle_analysis::SpectralConfig { window_size: 2048, hop_size: (reader.sample_rate as f64 / 100.0) as usize, sample_rate: reader.sample_rate as f64 };
+                particelle_analysis::extract_tristimulus1(&spec_config, &mono)
+            },
+            // --- MFCCs (1-12) ---
+            extractor if extractor.starts_with("mfcc") => {
+                let idx: usize = extractor[4..].parse().unwrap_or(1);
+                let spec_config = particelle_analysis::SpectralConfig { window_size: 2048, hop_size: (reader.sample_rate as f64 / 100.0) as usize, sample_rate: reader.sample_rate as f64 };
+                particelle_analysis::mfcc::extract_mfcc(&spec_config, &mono, idx)
+            },
+            // --- Dynamics ---
+            "peak_amplitude" => {
+                let env_config = particelle_analysis::EnvConfig { window_size: 1024, hop_size: (reader.sample_rate as f64 / 100.0) as usize, sample_rate: reader.sample_rate as f64 };
+                particelle_analysis::extract_peak_amplitude(&env_config, &mono)
+            },
+            "loudness_dbfs" => {
+                let env_config = particelle_analysis::EnvConfig { window_size: 1024, hop_size: (reader.sample_rate as f64 / 100.0) as usize, sample_rate: reader.sample_rate as f64 };
+                particelle_analysis::extract_loudness_dbfs(&env_config, &mono)
+            },
+            "crest_factor" => {
+                let env_config = particelle_analysis::EnvConfig { window_size: 1024, hop_size: (reader.sample_rate as f64 / 100.0) as usize, sample_rate: reader.sample_rate as f64 };
+                particelle_analysis::extract_crest_factor(&env_config, &mono)
+            },
+            "log_attack_time" => {
+                let env_config = particelle_analysis::EnvConfig { window_size: 1024, hop_size: (reader.sample_rate as f64 / 100.0) as usize, sample_rate: reader.sample_rate as f64 };
+                particelle_analysis::estimate_log_attack_time(&env_config, &mono)
+            },
+            // --- Chroma ---
+            "chroma_active_class" => {
+                let spec_config = particelle_analysis::SpectralConfig { window_size: 2048, hop_size: (reader.sample_rate as f64 / 100.0) as usize, sample_rate: reader.sample_rate as f64 };
+                particelle_analysis::extract_chroma_active_class(&spec_config, &mono)
+            },
+            "chroma_strength" => {
+                let spec_config = particelle_analysis::SpectralConfig { window_size: 2048, hop_size: (reader.sample_rate as f64 / 100.0) as usize, sample_rate: reader.sample_rate as f64 };
+                particelle_analysis::extract_chroma_strength(&spec_config, &mono)
+            },
+            extractor if extractor.starts_with("chroma_") => {
+                // chroma_C, chroma_Cs, chroma_D, chroma_Ds, chroma_E, chroma_F, chroma_Fs,
+                //  chroma_G, chroma_Gs, chroma_A, chroma_As, chroma_B
+                let pc = match &extractor[7..] {
+                    "C" => 0, "Cs" => 1, "D" => 2, "Ds" => 3, "E" => 4, "F" => 5,
+                    "Fs" => 6, "G" => 7, "Gs" => 8, "A" => 9, "As" => 10, "B" => 11,
+                    n => n.parse::<usize>().unwrap_or(0).min(11),
+                };
+                let spec_config = particelle_analysis::SpectralConfig { window_size: 2048, hop_size: (reader.sample_rate as f64 / 100.0) as usize, sample_rate: reader.sample_rate as f64 };
+                particelle_analysis::extract_chroma_energy(&spec_config, &mono, pc)
+            },
             other => anyhow::bail!(
-                "Unknown extractor '{}'. Valid: f0_yin, rms, spectral_flatness, spectral_centroid, spectral_rolloff, spectral_crest, spectral_flux, zero_crossing_rate",
+                "Unknown extractor '{}'. See README § Offline Audio Feature Analysis for the full list.",
                 other
             ),
         };

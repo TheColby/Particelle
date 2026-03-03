@@ -10,6 +10,8 @@ pub struct EnvConfig {
     pub window_size: usize,
     /// Hop size in samples between consecutive RMS calculations.
     pub hop_size: usize,
+    /// Audio sample rate (Hz). Used for time-based calculations.
+    pub sample_rate: f64,
 }
 
 impl Default for EnvConfig {
@@ -17,6 +19,7 @@ impl Default for EnvConfig {
         Self {
             window_size: 1024,
             hop_size: 256,
+            sample_rate: 48000.0,
         }
     }
 }

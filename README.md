@@ -663,18 +663,62 @@ Paste the contents of [`docs/AI_PATCH_GENERATOR.md`](docs/AI_PATCH_GENERATOR.md)
 
 The `analysis` block extracts time-varying acoustic feature vectors from source files offline (before rendering begins). These vectors are then interpolated at audio rate and exposed as `$analysis.<id>` references anywhere in the parameter graph. The source file in `analysis` blocks is independent of — and can be completely different from — the cloud's granular source.
 
-**Supported extractors:**
+**Supported extractors (30+):**
+
+*Pitch & Tonality*
 
 | Extractor | Output | Description |
 |---|---|---|
-| `f0_yin` | Hz (40–2000 Hz) | Fundamental frequency via YIN algorithm |
-| `rms` | 0.0–1.0 | RMS amplitude envelope |
-| `spectral_flatness` | 0.0–1.0 | 0 = tonal, 1 = white noise (Wiener Entropy) |
+| `f0_yin` | Hz | Fundamental frequency via YIN algorithm |
+| `harmonic_ratio` | 0–1 | Autocorrelation-based harmonics-to-noise ratio (HNR) |
+| `inharmonicity` | 0–1 | Average partial deviation from ideal harmonic series |
+| `tristimulus1` | 0–1 | Ratio of fundamental energy to total spectral energy |
+
+*Spectral Magnitude*
+
+| Extractor | Output | Description |
+|---|---|---|
 | `spectral_centroid` | Hz | Spectral center of mass ("brightness") |
+| `spectral_spread` | Hz | Standard deviation of energy around centroid |
+| `spectral_skewness` | — | Asymmetry of spectral distribution (3rd moment) |
+| `spectral_kurtosis` | — | "Tailedness" of spectral distribution (4th moment) |
 | `spectral_rolloff` | Hz | Frequency below which 85% of energy lies |
-| `spectral_crest` | ratio | Peak power / mean power (impulsiveness) |
-| `spectral_flux` | ≥ 0 | Rate of spectral change between frames (onset strength) |
-| `zero_crossing_rate` | 0.0–1.0 | Normalized ZCR per window (noisiness proxy) |
+| `spectral_crest` | ratio | Peak power / mean power |
+| `spectral_flatness` | 0–1 | 0 = tonal, 1 = white noise (Wiener Entropy) |
+| `spectral_entropy` | 0–1 | Information entropy of the normalised spectrum |
+| `spectral_flux` | ≥0 | Half-wave rectified L2 norm of successive spectra |
+| `spectral_contrast` | — | Peak-valley sub-band contrast (6 octave bands) |
+
+*Perceptual (MFCCs)*
+
+| Extractor | Output | Description |
+|---|---|---|
+| `mfcc1`–`mfcc12` | — | Mel-Frequency Cepstral Coefficients 1–12 via 26-band Mel filterbank + DCT-II |
+
+*Dynamics*
+
+| Extractor | Output | Description |
+|---|---|---|
+| `rms` | 0–1 | Root-Mean-Square amplitude envelope |
+| `peak_amplitude` | 0–1 | Per-window absolute peak |
+| `loudness_dbfs` | –96–0 dBFS | RMS-based loudness in decibels |
+| `crest_factor` | ratio | Peak / RMS (impulsiveness) |
+| `log_attack_time` | log(sec) | Log10 of the onset-to-peak attack time (global) |
+
+*Temporal*
+
+| Extractor | Output | Description |
+|---|---|---|
+| `zero_crossing_rate` | 0–1 | Normalized sign changes per window (noisiness proxy) |
+
+*Chroma / Pitch Class*
+
+| Extractor | Output | Description |
+|---|---|---|
+| `chroma_active_class` | 0–11 | Most energetically active pitch class (0=C, 11=B) |
+| `chroma_strength` | ≥0 | Standard deviation across chroma bins (tonality dominance) |
+| `chroma_C` … `chroma_B` | 0–1 | Normalized energy for a specific pitch class (also `chroma_Cs`, `chroma_Ds`, `chroma_Fs`, `chroma_Gs`, `chroma_As`) |
+
 
 **Example — use `A.wav`'s spectral flatness to shape grains on `B.wav`:**
 
