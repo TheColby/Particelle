@@ -1,0 +1,12 @@
+<<<<<<< SEARCH
+    pub fn reset(&mut self) {
+        self.state = 0.0;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_one_pole_new() {
