@@ -292,6 +292,33 @@ fn compile_signal(expr: &particelle_schema::config::SignalExprConfig, base_dir: 
 
                     Ok(ParamSignal::Map { input: Box::new(input), func })
                 }
+                "osc" => {
+                    if op_config.args.len() < 2 || op_config.args.len() > 3 {
+                        anyhow::bail!("'osc' requires 2 or 3 arguments: [shape, frequency, phase?]");
+                    }
+                    let shape_str = if let SignalExprConfig::Ref(s) = &op_config.args[0] { s.to_lowercase() }
+                        else { anyhow::bail!("osc shape must be a string") };
+                        
+                    let shape = match shape_str.as_str() {
+                        "sine" => particelle_params::signal::OscShape::Sine,
+                        "triangle" => particelle_params::signal::OscShape::Triangle,
+                        "saw" => particelle_params::signal::OscShape::Saw,
+                        "square" => particelle_params::signal::OscShape::Square,
+                        "phasor" => particelle_params::signal::OscShape::Phasor,
+                        _ => anyhow::bail!("Unknown osc shape: '{}'", shape_str),
+                    };
+                    
+                    let freq = compile_signal(&op_config.args[1], base_dir)?;
+                    
+                    let phase = if op_config.args.len() == 3 {
+                        if let SignalExprConfig::Const(p) = &op_config.args[2] { *p }
+                        else { anyhow::bail!("osc phase must be a constant number") }
+                    } else {
+                        0.0
+                    };
+                    
+                    Ok(particelle_params::signal::ParamSignal::Oscillator { shape, freq: Box::new(freq), phase })
+                }
                 other => anyhow::bail!("Expr operator '{}' is not supported", other),
             }
         }

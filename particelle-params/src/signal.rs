@@ -2,6 +2,15 @@ use std::sync::Arc;
 use particelle_curve::CompiledCurve;
 use crate::context::SignalContext;
 
+#[derive(Debug, Clone)]
+pub enum OscShape {
+    Sine,
+    Triangle,
+    Saw,
+    Square,
+    Phasor,
+}
+
 /// The universal parameter signal type.
 ///
 /// All engine parameters are expressed as `ParamSignal`. No raw `f64` parameters
@@ -34,6 +43,9 @@ pub enum ParamSignal {
 
     /// Scale and shift: `output = input * scale + offset`.
     ScaleOffset { input: Box<ParamSignal>, scale: f64, offset: f64 },
+
+    /// Programmatic Low Frequency Oscillator (LFO). Outputs between [0.0, 1.0].
+    Oscillator { shape: OscShape, freq: Box<ParamSignal>, phase: f64 },
 }
 
 impl ParamSignal {
@@ -58,6 +70,27 @@ impl ParamSignal {
             }
             ParamSignal::ScaleOffset { input, scale, offset } => {
                 input.eval(ctx) * scale + offset
+            }
+            ParamSignal::Oscillator { shape, freq, phase } => {
+                let t = ctx.frame as f64 / ctx.sample_rate;
+                let hz = freq.eval(ctx);
+                let current_phase = (t * hz + *phase).fract(); // [0.0, 1.0)
+                
+                match shape {
+                    OscShape::Phasor => current_phase,
+                    OscShape::Saw => current_phase, // Same as phasor natively
+                    OscShape::Square => if current_phase < 0.5 { 1.0 } else { 0.0 },
+                    OscShape::Triangle => {
+                        let mut v = current_phase * 4.0;
+                        if v > 2.0 { v = 4.0 - v; }
+                        v * 0.5 // Map from [0, 2] down to [0, 1]
+                    }
+                    OscShape::Sine => {
+                        let phase_rad = current_phase * std::f64::consts::TAU;
+                        let sine_val = phase_rad.sin(); // [-1.0, 1.0]
+                        (sine_val * 0.5) + 0.5 // Remap [-1, 1] to [0, 1]
+                    }
+                }
             }
         }
     }

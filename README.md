@@ -411,6 +411,8 @@ Every grain is multiplied by a *window function* — a bell-shaped curve that sm
 
 ![Hann window — smooth bell-shaped fade used to shape each grain](docs/hann_window.png)
 
+![All Particelle Windows](docs/windows_grid.png)
+
 Different window shapes produce different timbral qualities. A Hann window gives a soft, warm overlap. A Kaiser window with a high beta produces a tighter, more focused grain. Particelle includes **35+ window types** precisely because the window is one of the most expressive parameters in granular synthesis.
 
 ### Where Granular Synthesis Is Used
