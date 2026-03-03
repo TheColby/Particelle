@@ -668,9 +668,9 @@ fn cmd_run(patch: &str) -> Result<()> {
         let out_frames = buffer.len() / n_channels;
         let frames_to_copy = out_frames.min(block.frames);
         
-        for f in 0..frames_to_copy {
+        for (f, chunk) in buffer.chunks_exact_mut(n_channels).enumerate().take(frames_to_copy) {
             for ch in 0..n_channels {
-                buffer[f * n_channels + ch] = block.channels[ch][f] as f32;
+                chunk[ch] = block.channels[ch][f] as f32;
             }
         }
     }).with_context(|| "Audio stream error")?;

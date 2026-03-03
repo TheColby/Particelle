@@ -31,3 +31,10 @@ sha2.workspace      = true
 digest.workspace    = true
 serde_yaml.workspace = true
 notify = "6.1.1"
+
+[[bench]]
+name = "copy_channels"
+harness = false
+
+[dev-dependencies]
+criterion = "0.5.1"
