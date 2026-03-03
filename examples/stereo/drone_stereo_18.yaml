@@ -1,0 +1,27 @@
+# Drone Stereo 18
+# A drone granular patch designed for stereo output.
+engine:
+  sample_rate: 48000
+  block_size: 256
+
+layout:
+  channels:
+    - type: spherical
+      name: L
+      azimuth_deg: -30.0
+      elevation_deg: 0.0
+    - type: spherical
+      name: R
+      azimuth_deg: 30.0
+      elevation_deg: 0.0
+
+clouds:
+  - id: "drone_stereo_18"
+    source: "audio/music_example.wav"
+    density: 15.0
+    duration: 0.5
+    position: 0.11
+    amplitude: 0.8
+    width: 0.5
+    window: { type: tukey }
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }

@@ -1,0 +1,23 @@
+# Texture Mono 10
+# A texture granular patch designed for mono output.
+engine:
+  sample_rate: 48000
+  block_size: 256
+
+layout:
+  channels:
+    - type: spherical
+      name: M
+      azimuth_deg: 0.0
+      elevation_deg: 0.0
+
+clouds:
+  - id: "texture_mono_10"
+    source: "audio/music_example.wav"
+    density: 200.0
+    duration: 0.02
+    position: 0.32
+    amplitude: 0.8
+    width: 0.5
+    window: { type: hann }
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }

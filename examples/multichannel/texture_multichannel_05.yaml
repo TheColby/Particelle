@@ -1,0 +1,51 @@
+# Texture Multichannel 05
+# A texture granular patch designed for multichannel output.
+engine:
+  sample_rate: 48000
+  block_size: 256
+
+layout:
+  channels:
+    - type: spherical
+      name: CH1
+      azimuth_deg: 0.0
+      elevation_deg: 0.0
+    - type: spherical
+      name: CH2
+      azimuth_deg: 45.0
+      elevation_deg: 0.0
+    - type: spherical
+      name: CH3
+      azimuth_deg: 90.0
+      elevation_deg: 0.0
+    - type: spherical
+      name: CH4
+      azimuth_deg: 135.0
+      elevation_deg: 0.0
+    - type: spherical
+      name: CH5
+      azimuth_deg: 180.0
+      elevation_deg: 0.0
+    - type: spherical
+      name: CH6
+      azimuth_deg: 225.0
+      elevation_deg: 0.0
+    - type: spherical
+      name: CH7
+      azimuth_deg: 270.0
+      elevation_deg: 0.0
+    - type: spherical
+      name: CH8
+      azimuth_deg: 315.0
+      elevation_deg: 0.0
+
+clouds:
+  - id: "texture_multichannel_05"
+    source: "audio/music_example.wav"
+    density: 200.0
+    duration: 0.02
+    position: 0.19
+    amplitude: 0.8
+    width: 0.5
+    window: { type: hann }
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }

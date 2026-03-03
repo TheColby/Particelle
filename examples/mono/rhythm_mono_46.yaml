@@ -1,0 +1,23 @@
+# Rhythm Mono 46
+# A rhythm granular patch designed for mono output.
+engine:
+  sample_rate: 48000
+  block_size: 256
+
+layout:
+  channels:
+    - type: spherical
+      name: M
+      azimuth_deg: 0.0
+      elevation_deg: 0.0
+
+clouds:
+  - id: "rhythm_mono_46"
+    source: "audio/music_example.wav"
+    density: 122.8
+    duration: 0.048
+    position: 0.76
+    amplitude: 0.8
+    width: 0.5
+    window: { type: hann }
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }

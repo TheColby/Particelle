@@ -1,0 +1,53 @@
+# Time Stretch Multichannel 19
+# A time stretch granular patch designed for multichannel output. Uses a slow position sweep.
+engine:
+  sample_rate: 48000
+  block_size: 256
+
+layout:
+  channels:
+    - type: spherical
+      name: CH1
+      azimuth_deg: 0.0
+      elevation_deg: 0.0
+    - type: spherical
+      name: CH2
+      azimuth_deg: 45.0
+      elevation_deg: 0.0
+    - type: spherical
+      name: CH3
+      azimuth_deg: 90.0
+      elevation_deg: 0.0
+    - type: spherical
+      name: CH4
+      azimuth_deg: 135.0
+      elevation_deg: 0.0
+    - type: spherical
+      name: CH5
+      azimuth_deg: 180.0
+      elevation_deg: 0.0
+    - type: spherical
+      name: CH6
+      azimuth_deg: 225.0
+      elevation_deg: 0.0
+    - type: spherical
+      name: CH7
+      azimuth_deg: 270.0
+      elevation_deg: 0.0
+    - type: spherical
+      name: CH8
+      azimuth_deg: 315.0
+      elevation_deg: 0.0
+
+clouds:
+  - id: "time_stretch_multichannel_19"
+    source: "audio/music_example.wav"
+    density: 38.3
+    duration: 0.079
+    position: 
+      op: curve
+      ref: "curves/sweep_up.json"
+    amplitude: 0.8
+    width: 0.5
+    window: { type: hann }
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }

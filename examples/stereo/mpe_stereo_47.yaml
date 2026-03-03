@@ -1,0 +1,37 @@
+# MPE Stereo 47
+# A mpe granular patch designed for stereo output. Reacts to MIDI pressure.
+engine:
+  sample_rate: 48000
+  block_size: 256
+
+layout:
+  channels:
+    - type: spherical
+      name: L
+      azimuth_deg: -30.0
+      elevation_deg: 0.0
+    - type: spherical
+      name: R
+      azimuth_deg: 30.0
+      elevation_deg: 0.0
+
+routing:
+  midi_bindings:
+    - source: mpe.pressure
+      target: p_mod
+
+clouds:
+  - id: "mpe_stereo_47"
+    source: "audio/music_example.wav"
+    density: 
+      op: mul
+      args:
+        - 150.0
+        - $p_mod
+
+    duration: 0.058
+    position: 0.85
+    amplitude: 0.8
+    width: 0.5
+    window: { type: hann }
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }

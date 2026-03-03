@@ -1,0 +1,27 @@
+# Chaos Stereo 36
+# A chaos granular patch designed for stereo output.
+engine:
+  sample_rate: 48000
+  block_size: 256
+
+layout:
+  channels:
+    - type: spherical
+      name: L
+      azimuth_deg: -30.0
+      elevation_deg: 0.0
+    - type: spherical
+      name: R
+      azimuth_deg: 30.0
+      elevation_deg: 0.0
+
+clouds:
+  - id: "chaos_stereo_36"
+    source: "audio/music_example.wav"
+    density: 140.6
+    duration: 0.167
+    position: 0.41
+    amplitude: 0.8
+    width: 0.5
+    window: { type: hann }
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }

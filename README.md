@@ -290,42 +290,19 @@ particelle render immersive.yaml -o atmos_orbit.wav --duration 60.0
 
 ## Example Use Cases
 
-Particelle's architecture supports a vast array of granular techniques natively. Here are 30 examples demonstrating its capabilities:
+Particelle's architecture supports a vast array of granular techniques natively. The `examples/` directory contains 150 distinct patch configurations to demonstrate the engine's versatility. They are organized by layout:
 
-| Use Case | Patch File | Description |
-|----------|------------|-------------|
-| **Extreme Time Stretching** | [`time_stretch_extreme.yaml`](examples/time_stretch_extreme.yaml) | Stretching a sample 100x slower without affecting pitch, creating a frozen ambient texture. |
-| **Pitch Shifting (Up)** | [`pitch_shift_up.yaml`](examples/pitch_shift_up.yaml) | Pitch shifting audio up by an octave (+12 semitones) without altering playback speed. |
-| **Pitch Shifting (Down)** | [`pitch_shift_down.yaml`](examples/pitch_shift_down.yaml) | Subterranean pitch shifting (-24 semitones) for deep drone creation. |
-| **Glitch & Stutter** | [`glitch_stutter.yaml`](examples/glitch_stutter.yaml) | Rapid, tempo-synced repetitive grain emission with sharp rectangular windows. |
-| **Ambient Swell** | [`ambient_swell.yaml`](examples/ambient_swell.yaml) | Slow attack/release windowing with high grain density to wash out transients. |
-| **Drone Generator** | [`drone_generator.yaml`](examples/drone_generator.yaml) | Very long grains (500ms+) with low density to create continuously overlapping smooth tones. |
-| **Texture Cloud** | [`texture_cloud.yaml`](examples/texture_cloud.yaml) | Asynchronous granular synthesis scattering grains randomly across the stereo field. |
-| **Pulsar Synthesis** | [`pulsar_synthesis.yaml`](examples/pulsar_synthesis.yaml) | Synchronous granular utilizing impulse trains with varied grain lengths. |
-| **Formant Preservation** | [`formant_preservation.yaml`](examples/formant_preservation.yaml) | Pitch-synchronous overlap-add (PSOLA) style shifting to maintain vocal characteristics. |
-| **Granular Delay** | [`granular_delay.yaml`](examples/granular_delay.yaml) | Simulated delay effect by using low density and long onset delays. |
-| **Shimmer Effect** | [`shimmer_reverb.yaml`](examples/shimmer_reverb.yaml) | Pitch-shifted grains mixed with high-density random positioning to simulate shimmer reverb. |
-| **Chaos Scatter** | [`chaos_scatter.yaml`](examples/chaos_scatter.yaml) | High spatial width and random pitch modulation for chaotic noise generation. |
-| **Rhythmic Chopping** | [`rhythmic_chopping.yaml`](examples/rhythmic_chopping.yaml) | Tempo-synced grain sizes that create rhythmic gating effects on pads. |
-| **Tape Degradation** | [`tape_degradation.yaml`](examples/tape_degradation.yaml) | Wow and flutter emulation via low-frequency sine modulation on grain pitch and position. |
-| **Brass Synthesis** | [`brass_synthesis.yaml`](examples/brass_synthesis.yaml) | Simulating brass instruments using short, dense grains from a generic sawtooth wave. |
-| **Choir Ensemble** | [`choir_ensemble.yaml`](examples/choir_ensemble.yaml) | Multiplying voices by slight pitch detuning and spatial spreading of a single vocal sample. |
-| **Metallic Resonance** | [`metallic_resonance.yaml`](examples/metallic_resonance.yaml) | Inharmonic pitch shifting ratios on short grains to create bell-like textures. |
-| **Wind Noise Simulation** | [`wind_noise.yaml`](examples/wind_noise.yaml) | High density, short duration, stochastic amplitude and pitch modulation on white noise. |
-| **Water Drops** | [`water_drops.yaml`](examples/water_drops.yaml) | Sparse density, randomized high pitch, and short sine-windowed grains. |
-| **Vinyl Scratch Effect** | [`scratch_effect.yaml`](examples/scratch_effect.yaml) | Rapidly oscillating the read position curve to simulate scratching. |
-| **Reverse Playback** | [`reverse_playback.yaml`](examples/reverse_playback.yaml) | Negative playback rate evaluated over a backwards position curve. |
-| **Granular Chorus** | [`granular_chorus.yaml`](examples/granular_chorus.yaml) | Multiple overlapping grains with varying micro-delays and slight detune. |
-| **Spectral Freezing** | [`spectral_freezing.yaml`](examples/spectral_freezing.yaml) | Zero position movement with dense overlap, capturing a single spectral frame. |
-| **Harsh Noise Wall** | [`harsh_noise_wall.yaml`](examples/harsh_noise_wall.yaml) | Maximum density, minimal duration, rectangular windowing to maximize clipping and noise. |
-| **Binaural Beats** | [`binaural_beats.yaml`](examples/binaural_beats.yaml) | Precise panning of slightly detuned grains to left and right ears independently. |
-| **Granular Flanger** | [`flanger_effect.yaml`](examples/flanger_effect.yaml) | Modulating onset delay with an LFO curve to create comb filtering. |
-| **Tremolo Grains** | [`tremolo_grains.yaml`](examples/tremolo_grains.yaml) | Low frequency amplitude modulation on grain clouds. |
-| **Vibrato Grains** | [`vibrato_grains.yaml`](examples/vibrato_grains.yaml) | Low frequency pitch modulation on continuous grain streams. |
-| **Pitch Quantization** | [`pitch_quantization.yaml`](examples/pitch_quantization.yaml) | Using a tuning scale to snap random pitches to a specific musical mode. |
-| **Stochastic Melody** | [`stochastic_melody.yaml`](examples/stochastic_melody.yaml) | Randomly selecting pitch and position parameters mapped to a pentatonic scale. |
+- **[Mono Examples](examples/mono/)**: 50 patches designed for single-channel evaluation or spatial routing preparation.
+- **[Stereo Examples](examples/stereo/)**: 50 patches optimized for standard L/R headphones and speakers.
+- **[Multichannel Examples](examples/multichannel/)**: 50 patches showcasing 8-channel wrap-around spatialization.
 
-
+Each folder contains diverse granular techniques:
+- **Texture**: High-density micro-grains (200+ per second) that dissolve transients.
+- **Drone**: Long, overlapping Tuky-windowed grains (0.5s+) creating sustained ambient beds.
+- **Time Stretch**: Grains that scan the file linearly using custom `curves/sweep_up.json` over long durations.
+- **Pitch Shift**: Static file scanning, but explicit Just Intonation (`ji`) tuning adjustments to shift formants.
+- **MPE**: Signal graphs tied to `$p_mod` (MIDI Polyphonic Expression Pressure) which dynamically scale the density in realtime.
+- **Glitch & Chaos**: Highly randomized parameters using extreme boundary ranges.
 ## Selected References (Top 100 Literature on Granular Synthesis & DSP)
 
 1. Boulanger, Richard & Wishart, Trevor (2023). Stochastic Synthesis: Theory of Communication and Applications. *Journal of the Audio Engineering Society*, 32(1), 50-187.

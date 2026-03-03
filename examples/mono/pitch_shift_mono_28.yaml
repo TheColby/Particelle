@@ -1,0 +1,30 @@
+# Pitch Shift Mono 28
+# A pitch shift granular patch designed for mono output. Uses JI tuning to shift intervals.
+engine:
+  sample_rate: 48000
+  block_size: 256
+
+layout:
+  channels:
+    - type: spherical
+      name: M
+      azimuth_deg: 0.0
+      elevation_deg: 0.0
+
+tuning:
+  mode: ji
+  ratios:
+    - degree: 1
+      num: 5
+      den: 4
+
+clouds:
+  - id: "pitch_shift_mono_28"
+    source: "audio/music_example.wav"
+    density: 121.7
+    duration: 0.176
+    position: 0.3
+    amplitude: 0.8
+    width: 0.5
+    window: { type: hann }
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }
