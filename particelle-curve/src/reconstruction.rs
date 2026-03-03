@@ -127,6 +127,126 @@ impl Reconstructor for OnePoleReconstructor {
     fn reset(&mut self) { self.state = 0.0; }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_zoh_reconstructor() {
+        let mut recon = ZohReconstructor::default();
+
+        // Initial state
+        assert_eq!(recon.next(None), 0.0);
+
+        // Update value
+        assert_eq!(recon.next(Some(1.0)), 1.0);
+
+        // Hold value
+        assert_eq!(recon.next(None), 1.0);
+        assert_eq!(recon.next(None), 1.0);
+
+        // Reset
+        recon.reset();
+        assert_eq!(recon.next(None), 0.0);
+    }
+
+    #[test]
+    fn test_linear_reconstructor() {
+        let mut recon = LinearReconstructor::default();
+
+        // Step size will be 1.0 / 64.0 = 0.015625
+        let first_val = recon.next(Some(1.0));
+        assert_eq!(first_val, 1.0 / 64.0);
+
+        // Move forward a few steps
+        assert_eq!(recon.next(None), 2.0 / 64.0);
+        assert_eq!(recon.next(None), 3.0 / 64.0);
+
+        // Jump to end of 64 steps
+        for _ in 0..60 {
+            recon.next(None);
+        }
+
+        // Last step should reach exactly target (1.0)
+        let last_val = recon.next(None);
+        assert!((last_val - 1.0).abs() < f64::EPSILON);
+
+        // After reaching target, it holds the value
+        assert_eq!(recon.next(None), 1.0);
+
+        // Reset
+        recon.reset();
+        assert_eq!(recon.next(None), 0.0);
+    }
+
+    #[test]
+    fn test_one_pole_reconstructor() {
+        // coeff = 0.5, formula: new_state = v * 0.5 + old_state * 0.5
+        let mut recon = OnePoleReconstructor::new(0.5);
+
+        // First step towards 1.0 from 0.0
+        let val1 = recon.next(Some(1.0));
+        assert_eq!(val1, 0.5);
+
+        // No new control value keeps it at current state (current implementation behavior)
+        let val_held = recon.next(None);
+        assert_eq!(val_held, 0.5);
+
+        // Next step towards 1.0
+        let val2 = recon.next(Some(1.0));
+        assert_eq!(val2, 0.75);
+
+        recon.reset();
+        assert_eq!(recon.next(None), 0.0);
+    }
+
+    #[test]
+    fn test_slew_reconstructor() {
+        // Max rate = 0.1 per sample update
+        let mut recon = SlewReconstructor::new(0.1);
+
+        // Try to jump to 1.0, should be limited to 0.1
+        let val1 = recon.next(Some(1.0));
+        assert_eq!(val1, 0.1);
+
+        // No new control value holds current state
+        let val_held = recon.next(None);
+        assert_eq!(val_held, 0.1);
+
+        // Try to jump to -1.0, should be limited to 0.1 - 0.1 = 0.0
+        let val2 = recon.next(Some(-1.0));
+        assert!(val2.abs() < f64::EPSILON);
+
+        recon.reset();
+        assert_eq!(recon.next(None), 0.0);
+    }
+
+    #[test]
+    fn test_create_reconstructor() {
+        // Test Zoh
+        let mut zoh = create_reconstructor(&ReconstructionMethod::Zoh);
+        assert_eq!(zoh.next(Some(5.0)), 5.0);
+        assert_eq!(zoh.next(None), 5.0);
+
+        // Test Linear
+        let mut linear = create_reconstructor(&ReconstructionMethod::Linear);
+        assert_eq!(linear.next(Some(64.0)), 1.0);
+
+        // Test OnePole
+        let mut onepole = create_reconstructor(&ReconstructionMethod::OnePole { coefficient: 0.9 });
+        let val = onepole.next(Some(1.0));
+        assert!((val - 0.1).abs() < 1e-6); // 1.0*(1-0.9) + 0*0.9 = 0.1
+
+        // Test SlewLimiter
+        let mut slew = create_reconstructor(&ReconstructionMethod::SlewLimiter { max_rate: 0.5 });
+        assert_eq!(slew.next(Some(10.0)), 0.5);
+
+        // Test Fallback (Cubic, etc.) -> should fall back to Linear
+        let mut fallback = create_reconstructor(&ReconstructionMethod::Cubic);
+        assert_eq!(fallback.next(Some(64.0)), 1.0);
+    }
+}
+
 struct SlewReconstructor {
     max_rate: f64,
     state: f64,
