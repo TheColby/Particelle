@@ -45,3 +45,26 @@ pub enum MidiHostError {
     #[error("Failed to open MIDI port: {reason}")]
     OpenFailed { reason: String },
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::atomic::Ordering;
+
+    #[test]
+    fn test_is_running() {
+        let host = RealtimeMidiHost::new();
+
+        // Initially, the host should not be running.
+        assert!(!host.is_running());
+
+        // Manually set the running flag to true to simulate starting.
+        // We avoid calling start() to prevent attempting to open real MIDI ports in tests.
+        host.running.store(true, Ordering::Relaxed);
+        assert!(host.is_running());
+
+        // Stopping the host should set it to not running.
+        host.stop();
+        assert!(!host.is_running());
+    }
+}
