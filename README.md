@@ -616,6 +616,19 @@ For example, sending `12.5` to `/field/density` will override a YAML node parame
 
 ---
 
+## LLM AI Patch Generation (No Code Required)
+
+Particelle was designed with strict mathematical schemas that map perfectly to Large Language Model reasoning. To generate fully-functional, complex granular patches using plain English, supply our official System Prompt to ChatGPT, Claude, or Gemini.
+
+**Instructions:**
+1. Copy the entire contents of [`docs/AI_PATCH_GENERATOR.md`](docs/AI_PATCH_GENERATOR.md).
+2. Paste it into an LLM as "Custom Instructions" or the start of your message.
+3. Ask the LLM to design an audio scene for you:
+   > *"Give me a Particelle configuration for a 60-second drone. Pan it continuously in a circle using an LFO. Map it to 31-EDO tuning. Make the density chaotic."*
+4. Run the resulting `.yaml` file directly in the engine!
+
+---
+
 ## YAML-Centric Workflow
 
 All engine behavior is declared in YAML. There are no hidden parameters. No behavior is configured through code paths that bypass the schema. The YAML file is the complete, reproducible description of a patch.
