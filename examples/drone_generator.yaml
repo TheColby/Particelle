@@ -1,0 +1,26 @@
+engine:
+  sample_rate: 44100
+  block_size: 256
+
+layout:
+  channels:
+    - type: spherical
+      name: L
+      azimuth_deg: -30.0
+      elevation_deg: 0.0
+    - type: spherical
+      name: R
+      azimuth_deg: 30.0
+      elevation_deg: 0.0
+
+clouds:
+  - id: "drone_generator"
+    source: "audio/music_example.wav"
+    density: 50.0
+    duration: 0.1
+    amplitude: 0.8
+    position: 0.5
+    playback_rate: 1.0
+    width: 0.5
+    window:
+      type: hann
