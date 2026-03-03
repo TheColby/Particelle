@@ -600,6 +600,22 @@ The engine runs identically in offline mode (writing to file) and realtime mode 
 
 ---
 
+## OSC (Open Sound Control) Telemetry
+
+To modify engine parameters in realtime from external applications (Max/MSP, SuperCollider, TouchOSC), Particelle provides a lightweight, non-blocking UDP receiver thread that bypasses the parser entirely. 
+
+To enable OSC, launch your patch with the network port flag:
+
+```bash
+particelle run patch.yaml --osc-port 9000
+```
+
+Any OSC messages received at `0.0.0.0:9000` matching the address pattern `/field/<name>` will directly inject their numeric value into the `$name` control field graph, updating instantly on the next audio frame processing tick. 
+
+For example, sending `12.5` to `/field/density` will override a YAML node parameterized as `"$density"`.
+
+---
+
 ## YAML-Centric Workflow
 
 All engine behavior is declared in YAML. There are no hidden parameters. No behavior is configured through code paths that bypass the schema. The YAML file is the complete, reproducible description of a patch.

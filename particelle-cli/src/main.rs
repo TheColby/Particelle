@@ -115,6 +115,10 @@ NOTES:\n\
     Run {
         /// Path to the YAML configuration file.
         patch: String,
+
+        /// Optional UDP port to listen for incoming OSC messages.
+        #[arg(long, help = "UDP port to listen for OSC parameter control (e.g., 9000)")]
+        osc_port: Option<u16>,
     },
 
     /// Generate a default YAML patch to stdout.
@@ -191,8 +195,8 @@ fn main() -> Result<()> {
         Commands::Render { patch, output, duration, hash } => {
             cmd_render(&patch, &output, duration, hash)?;
         }
-        Commands::Run { patch } => {
-            cmd_run(&patch)?;
+        Commands::Run { patch, osc_port } => {
+            cmd_run(&patch, osc_port)?;
         }
         Commands::Init { channels } => {
             cmd_init(channels)?;
@@ -514,7 +518,7 @@ fn cmd_render(patch_path: &str, output_path: &str, duration: f64, emit_hash: boo
     Ok(())
 }
 
-fn cmd_run(patch: &str) -> Result<()> {
+fn cmd_run(patch: &str, osc_port: Option<u16>) -> Result<()> {
     let yaml = std::fs::read_to_string(patch)
         .with_context(|| format!("Cannot read '{}'", patch))?;
     let config: particelle_schema::ParticelleConfig = serde_yaml::from_str(&yaml)
@@ -646,6 +650,61 @@ fn cmd_run(patch: &str) -> Result<()> {
         }
     });
 
+    fn handle_osc_packet(packet: rosc::OscPacket, tx: &std::sync::mpsc::Sender<(String, f64)>) {
+        match packet {
+            rosc::OscPacket::Message(msg) => {
+                if msg.addr.starts_with("/field/") {
+                    let field_name = msg.addr.trim_start_matches("/field/").to_string();
+                    if let Some(arg) = msg.args.first() {
+                        let val = match arg {
+                            rosc::OscType::Float(f) => *f as f64,
+                            rosc::OscType::Double(d) => *d,
+                            rosc::OscType::Int(i) => *i as f64,
+                            _ => return,
+                        };
+                        let _ = tx.send((field_name, val));
+                    }
+                }
+            }
+            rosc::OscPacket::Bundle(bundle) => {
+                for packet in bundle.content {
+                    handle_osc_packet(packet, tx);
+                }
+            }
+        }
+    }
+
+    // Setup OSC UDP Receiver Thread
+    let (osc_tx, osc_rx) = std::sync::mpsc::channel::<(String, f64)>();
+    if let Some(port) = osc_port {
+        std::thread::spawn(move || {
+            let addr = format!("0.0.0.0:{}", port);
+            let sock = match std::net::UdpSocket::bind(&addr) {
+                Ok(s) => s,
+                Err(e) => {
+                    eprintln!("Failed to bind OSC receiver to {}: {}", addr, e);
+                    return;
+                }
+            };
+            eprintln!("→ OSC Receiver listening on udp://{}", addr);
+
+            let mut buf = [0u8; rosc::decoder::MTU];
+            loop {
+                match sock.recv_from(&mut buf) {
+                    Ok((size, _addr)) => {
+                        if let Ok((_, packet)) = rosc::decoder::decode_udp(&buf[..size]) {
+                            handle_osc_packet(packet, &osc_tx);
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("OSC read error: {}", e);
+                        break;
+                    }
+                }
+            }
+        });
+    }
+
     let mut simulated_pressure = 0.0;
     
     let audio_engine = Arc::clone(&safe_engine);
@@ -684,6 +743,11 @@ fn cmd_run(patch: &str) -> Result<()> {
         if let Some(map_provider) = engine_guard.fields.as_any_mut().and_then(|a| a.downcast_mut::<MapProvider>()) {
              for (k, v) in new_fields {
                  map_provider.fields.insert(k, v);
+             }
+             
+             // Drain OSC channel queue every block without blocking
+             for (field_name, val) in osc_rx.try_iter() {
+                 map_provider.fields.insert(field_name, val);
              }
         }
         
