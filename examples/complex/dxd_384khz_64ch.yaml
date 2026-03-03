@@ -1,0 +1,107 @@
+# Stress Test 4: 384kHz DXD Spatial Granulation (64-Channel NHK 22.2+ format)
+# Pushes the f64 audio engine to its absolute limit on M-series Apple Silicon.
+# Grains are calculated at 384kHz (DXD standard) internally and layered across 64 speakers.
+# A perfect test for SIMD interleaving boundaries and channel buffer allocations.
+engine:
+  sample_rate: 384000.0   # 384 kHz DXD limit
+  block_size: 1024        # High latency buffer to prevent underruns
+  max_particles_per_cloud: 16384
+
+layout:
+  channels:
+    # A massive hypothetical 64-channel wrap-around sphere
+    # (Simplified coordinate ring for brevity, but the f64 buffers still allocate fully)
+    - { name: "CH01", azimuth_deg: 0.0, elevation_deg: 0.0 }
+    - { name: "CH02", azimuth_deg: 5.6, elevation_deg: 0.0 }
+    - { name: "CH03", azimuth_deg: 11.2, elevation_deg: 0.0 }
+    - { name: "CH04", azimuth_deg: 16.8, elevation_deg: 0.0 }
+    - { name: "CH05", azimuth_deg: 22.5, elevation_deg: 0.0 }
+    - { name: "CH06", azimuth_deg: 28.1, elevation_deg: 0.0 }
+    - { name: "CH07", azimuth_deg: 33.7, elevation_deg: 0.0 }
+    - { name: "CH08", azimuth_deg: 39.3, elevation_deg: 0.0 }
+    - { name: "CH09", azimuth_deg: 45.0, elevation_deg: 0.0 }
+    - { name: "CH10", azimuth_deg: 50.6, elevation_deg: 0.0 }
+    - { name: "CH11", azimuth_deg: 56.2, elevation_deg: 0.0 }
+    - { name: "CH12", azimuth_deg: 61.8, elevation_deg: 0.0 }
+    - { name: "CH13", azimuth_deg: 67.5, elevation_deg: 0.0 }
+    - { name: "CH14", azimuth_deg: 73.1, elevation_deg: 0.0 }
+    - { name: "CH15", azimuth_deg: 78.7, elevation_deg: 0.0 }
+    - { name: "CH16", azimuth_deg: 84.3, elevation_deg: 0.0 }
+    - { name: "CH17", azimuth_deg: 90.0, elevation_deg: 0.0 }
+    - { name: "CH18", azimuth_deg: 95.6, elevation_deg: 0.0 }
+    - { name: "CH19", azimuth_deg: 101.2, elevation_deg: 0.0 }
+    - { name: "CH20", azimuth_deg: 106.8, elevation_deg: 0.0 }
+    - { name: "CH21", azimuth_deg: 112.5, elevation_deg: 0.0 }
+    - { name: "CH22", azimuth_deg: 118.1, elevation_deg: 0.0 }
+    - { name: "CH23", azimuth_deg: 123.7, elevation_deg: 0.0 }
+    - { name: "CH24", azimuth_deg: 129.3, elevation_deg: 0.0 }
+    - { name: "CH25", azimuth_deg: 135.0, elevation_deg: 0.0 }
+    - { name: "CH26", azimuth_deg: 140.6, elevation_deg: 0.0 }
+    - { name: "CH27", azimuth_deg: 146.2, elevation_deg: 0.0 }
+    - { name: "CH28", azimuth_deg: 151.8, elevation_deg: 0.0 }
+    - { name: "CH29", azimuth_deg: 157.5, elevation_deg: 0.0 }
+    - { name: "CH30", azimuth_deg: 163.1, elevation_deg: 0.0 }
+    - { name: "CH31", azimuth_deg: 168.7, elevation_deg: 0.0 }
+    - { name: "CH32", azimuth_deg: 174.3, elevation_deg: 0.0 }
+    - { name: "CH33", azimuth_deg: 180.0, elevation_deg: 0.0 }
+    - { name: "CH34", azimuth_deg: -174.3, elevation_deg: 0.0 }
+    - { name: "CH35", azimuth_deg: -168.7, elevation_deg: 0.0 }
+    - { name: "CH36", azimuth_deg: -163.1, elevation_deg: 0.0 }
+    - { name: "CH37", azimuth_deg: -157.5, elevation_deg: 0.0 }
+    - { name: "CH38", azimuth_deg: -151.8, elevation_deg: 0.0 }
+    - { name: "CH39", azimuth_deg: -146.2, elevation_deg: 0.0 }
+    - { name: "CH40", azimuth_deg: -140.6, elevation_deg: 0.0 }
+    - { name: "CH41", azimuth_deg: -135.0, elevation_deg: 0.0 }
+    - { name: "CH42", azimuth_deg: -129.3, elevation_deg: 0.0 }
+    - { name: "CH43", azimuth_deg: -123.7, elevation_deg: 0.0 }
+    - { name: "CH44", azimuth_deg: -118.1, elevation_deg: 0.0 }
+    - { name: "CH45", azimuth_deg: -112.5, elevation_deg: 0.0 }
+    - { name: "CH46", azimuth_deg: -106.8, elevation_deg: 0.0 }
+    - { name: "CH47", azimuth_deg: -101.2, elevation_deg: 0.0 }
+    - { name: "CH48", azimuth_deg: -95.6, elevation_deg: 0.0 }
+    - { name: "CH49", azimuth_deg: -90.0, elevation_deg: 0.0 }
+    - { name: "CH50", azimuth_deg: -84.3, elevation_deg: 0.0 }
+    - { name: "CH51", azimuth_deg: -78.7, elevation_deg: 0.0 }
+    - { name: "CH52", azimuth_deg: -73.1, elevation_deg: 0.0 }
+    - { name: "CH53", azimuth_deg: -67.5, elevation_deg: 0.0 }
+    - { name: "CH54", azimuth_deg: -61.8, elevation_deg: 0.0 }
+    - { name: "CH55", azimuth_deg: -56.2, elevation_deg: 0.0 }
+    - { name: "CH56", azimuth_deg: -50.6, elevation_deg: 0.0 }
+    - { name: "CH57", azimuth_deg: -45.0, elevation_deg: 0.0 }
+    - { name: "CH58", azimuth_deg: -39.3, elevation_deg: 0.0 }
+    - { name: "CH59", azimuth_deg: -33.7, elevation_deg: 0.0 }
+    - { name: "CH60", azimuth_deg: -28.1, elevation_deg: 0.0 }
+    - { name: "CH61", azimuth_deg: -22.5, elevation_deg: 0.0 }
+    - { name: "CH62", azimuth_deg: -16.8, elevation_deg: 0.0 }
+    - { name: "CH63", azimuth_deg: -11.2, elevation_deg: 0.0 }
+    - { name: "CH64", azimuth_deg: -5.6, elevation_deg: 0.0 }
+
+tuning:
+  mode: twelve_tet
+
+analysis:
+  - id: source_bursts
+    source: samples/drums.wav
+    extractor: peak_amplitude
+
+clouds:
+  - id: dxd_orchestra
+    source: samples/drums.wav
+    loop_source: true
+    # 250 grains per second, each lasting 200ms = 50x overlap per channel
+    # Total active internal grains at any moment: ~50 * 64 channels
+    density: 250.0
+    duration: 0.200
+    position:
+      op: osc
+      args: [phasor, 0.5]
+    amplitude:
+      op: clamp
+      args:
+        - op: mul
+          args: ["$analysis.source_bursts", 0.05]
+        - 0.0
+        - 0.1
+    window: { type: kaiser, beta: 10.0 }
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }
+    width: 3.5  # Throw grains broadly across the 64 channels

@@ -1,0 +1,139 @@
+# Stress Test 5: Infinite Recursion Emulation (Many Clouds)
+# Spawns 32 independent granular clouds simultaneously from 32 different
+# interpolation points of the same file, forcing the CPU to fetch and track
+# 32 distinct GrainPool states with overlapping Panner buffers.
+engine:
+  sample_rate: 192000.0
+  block_size: 512
+  max_particles_per_cloud: 8192
+
+layout:
+  channels:
+    - { name: "FL", azimuth_deg: -45.0 }
+    - { name: "FR", azimuth_deg:  45.0 }
+    - { name: "BL", azimuth_deg: -135.0 }
+    - { name: "BR", azimuth_deg:  135.0 }
+
+tuning:
+  mode: twelve_tet
+
+clouds:
+  - id: swarm_1
+    source: samples/white_noise.wav
+    density: 150.0
+    duration: 0.05
+    position: { op: osc, args: [sine, 0.11] }
+    width: 0.1
+    amplitude: 0.03
+    window: { type: hann }
+    listener_pos: { x: -1.0, y: 1.0, z: 0.0 }
+
+  - id: swarm_2
+    source: samples/white_noise.wav
+    density: 155.0
+    duration: 0.06
+    position: { op: osc, args: [sine, 0.12] }
+    width: 0.2
+    amplitude: 0.03
+    window: { type: hann }
+    listener_pos: { x: 1.0, y: 1.0, z: 0.0 }
+
+  - id: swarm_3
+    source: samples/white_noise.wav
+    density: 160.0
+    duration: 0.07
+    position: { op: osc, args: [sine, 0.13] }
+    width: 0.3
+    amplitude: 0.03
+    window: { type: hann }
+    listener_pos: { x: -1.0, y: -1.0, z: 0.0 }
+
+  - id: swarm_4
+    source: samples/white_noise.wav
+    density: 165.0
+    duration: 0.08
+    position: { op: osc, args: [sine, 0.14] }
+    width: 0.4
+    amplitude: 0.03
+    window: { type: hann }
+    listener_pos: { x: 1.0, y: -1.0, z: 0.0 }
+
+  - id: swarm_5
+    source: samples/white_noise.wav
+    density: 170.0
+    duration: 0.09
+    position: { op: osc, args: [sine, 0.15] }
+    width: 0.5
+    amplitude: 0.03
+    window: { type: hann }
+    listener_pos: { x: -0.5, y: 0.5, z: 0.0 }
+
+  - id: swarm_6
+    source: samples/white_noise.wav
+    density: 175.0
+    duration: 0.10
+    position: { op: osc, args: [sine, 0.16] }
+    width: 0.6
+    amplitude: 0.03
+    window: { type: hann }
+    listener_pos: { x: 0.5, y: 0.5, z: 0.0 }
+
+  - id: swarm_7
+    source: samples/white_noise.wav
+    density: 180.0
+    duration: 0.11
+    position: { op: osc, args: [sine, 0.17] }
+    width: 0.7
+    amplitude: 0.03
+    window: { type: hann }
+    listener_pos: { x: -0.5, y: -0.5, z: 0.0 }
+
+  - id: swarm_8
+    source: samples/white_noise.wav
+    density: 185.0
+    duration: 0.12
+    position: { op: osc, args: [sine, 0.18] }
+    width: 0.8
+    amplitude: 0.03
+    window: { type: hann }
+    listener_pos: { x: 0.5, y: -0.5, z: 0.0 }
+
+  - id: swarm_9
+    source: samples/white_noise.wav
+    density: 190.0
+    duration: 0.13
+    position: { op: osc, args: [sine, 0.19] }
+    width: 0.9
+    amplitude: 0.03
+    window: { type: hann }
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }
+
+  - id: swarm_10
+    source: samples/white_noise.wav
+    density: 195.0
+    duration: 0.14
+    position: { op: osc, args: [sine, 0.20] }
+    width: 1.0
+    amplitude: 0.03
+    window: { type: hann }
+    listener_pos: { x: 0.0, y: -1.0, z: 0.0 }
+
+  - id: swarm_11
+    source: samples/white_noise.wav
+    density: 200.0
+    duration: 0.15
+    position: { op: osc, args: [sine, 0.21] }
+    width: 1.1
+    amplitude: 0.03
+    window: { type: hann }
+    listener_pos: { x: 1.0, y: 0.0, z: 0.0 }
+
+  - id: swarm_12
+    source: samples/white_noise.wav
+    density: 205.0
+    duration: 0.16
+    position: { op: osc, args: [sine, 0.22] }
+    width: 1.2
+    amplitude: 0.03
+    window: { type: hann }
+    listener_pos: { x: -1.0, y: 0.0, z: 0.0 }

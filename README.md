@@ -334,6 +334,47 @@ clouds:
 particelle render immersive.yaml -o atmos_orbit.wav --duration 60.0
 ```
 
+### 🏎️ Example 5 — 384kHz DXD 64-Channel Stress Test
+
+To truly test multicore hardware limits (like Apple M-Series chips), Particelle scales effortlessly to massive spatial arrays and extreme sample rates. This patch generates 250 grains per second per channel, calculating all mixing in 64-bit float across 64 discrete outputs at 384,000 Hz:
+
+```yaml
+engine:
+  sample_rate: 384000.0   # 384 kHz DXD limit
+  block_size: 1024
+  max_particles_per_cloud: 16384
+
+layout:
+  channels:
+    - { name: "CH01", azimuth_deg: 0.0, elevation_deg: 0.0 }
+    - { name: "CH02", azimuth_deg: 5.6, elevation_deg: 0.0 }
+    # ... 62 more channels spanning a 360-degree sphere ...
+
+tuning:
+  mode: twelve_tet
+
+analysis:
+  - id: source_bursts
+    source: samples/drums.wav
+    extractor: peak_amplitude
+
+clouds:
+  - id: dxd_orchestra
+    source: samples/drums.wav
+    density: 250.0   # 250 grains per second
+    duration: 0.200  # 50x overlap per channel
+    position: { op: osc, args: [phasor, 0.5] }
+    amplitude:
+      op: clamp
+      args:
+        - { op: mul, args: ["$analysis.source_bursts", 0.05] }
+        - 0.0
+        - 0.1
+    window: { type: kaiser, beta: 10.0 }
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }
+    width: 3.5  # Wide 64-channel dispersion
+```
+
 ## 🗺️ Example Use Cases
 
 Particelle's architecture supports a vast array of granular techniques natively. The `examples/` directory contains 150 distinct patch configurations to demonstrate the engine's versatility. They are organized by layout:
