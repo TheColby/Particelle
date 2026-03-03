@@ -1,0 +1,63 @@
+# Stress Test 3: Multi-Extractor Orchestra
+# Tests the offline analysis interpolated vector lookup heavily.
+# 3 different extractors from 3 different files cross-modulating 3 dense clouds.
+engine:
+  sample_rate: 96000
+  block_size: 128
+
+layout:
+  channels:
+    - { name: "L", azimuth_deg: -30.0 }
+    - { name: "R", azimuth_deg:  30.0 }
+
+tuning:
+  mode: twelve_tet
+
+analysis:
+  - id: f0_track
+    source: samples/vocal.wav
+    extractor: f0_yin
+  - id: flux_track
+    source: samples/drums.wav
+    extractor: spectral_flux
+  - id: entropy_track
+    source: samples/crowd.wav
+    extractor: spectral_entropy
+
+clouds:
+  - id: cloud_1
+    source: samples/vocal.wav
+    position: { op: osc, args: [phasor, 0.05] }
+    density: 120.0
+    duration:
+      op: clamp
+      args:
+        - { op: map, args: ["$analysis.f0_track", recip] }
+        - 0.01
+        - 0.5
+    amplitude: 0.3
+    window: { type: hann }
+    listener_pos: { x: -1.0, y: 0.0, z: 0.0 }
+    width: 1.0
+
+  - id: cloud_2
+    source: samples/drums.wav
+    position: { op: osc, args: [phasor, 0.1] }
+    density:
+      op: mul
+      args: ["$analysis.flux_track", 20.0]
+    duration: 0.05
+    amplitude: 0.3
+    window: { type: tukey, alpha: 0.2 }
+    listener_pos: { x: 1.0, y: 0.0, z: 0.0 }
+    width: 1.0
+
+  - id: cloud_3
+    source: samples/crowd.wav
+    position: { op: osc, args: [phasor, 0.01] }
+    density: 80.0
+    duration: 0.1
+    width: { op: mul, args: ["$analysis.entropy_track", 3.0] }
+    amplitude: 0.3
+    window: { type: gaussian, sigma: 0.4 }
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }

@@ -1,0 +1,32 @@
+# Stress Test 1: Max Density Swarm
+# 1000 grains per second across 8 channels.
+# Tests the GrainPool allocator and amplitude panning efficiency at extreme scales.
+engine:
+  sample_rate: 96000
+  block_size: 256
+  max_particles_per_cloud: 8192
+
+layout:
+  channels:
+    - { name: "FL", azimuth_deg: -45.0 }
+    - { name: "FR", azimuth_deg:  45.0 }
+    - { name: "BL", azimuth_deg: -135.0 }
+    - { name: "BR", azimuth_deg:  135.0 }
+    - { name: "TFL", azimuth_deg: -45.0, elevation_deg: 45.0 }
+    - { name: "TFR", azimuth_deg:  45.0, elevation_deg: 45.0 }
+    - { name: "TBL", azimuth_deg: -135.0, elevation_deg: 45.0 }
+    - { name: "TBR", azimuth_deg:  135.0, elevation_deg: 45.0 }
+
+tuning:
+  mode: twelve_tet
+
+clouds:
+  - id: swarm
+    source: samples/white_noise.wav
+    density: 1000.0  # 1 grain every 1ms
+    duration: 0.100  # 100ms grains = 100x overlap
+    position: { op: osc, args: [phasor, 0.1] }
+    amplitude: 0.05
+    window: { type: hann }
+    listener_pos: { x: 0.0, y: 0.0, z: 0.0 }
+    width: 2.0  # Omni spread
