@@ -359,9 +359,11 @@ Granular synthesis is a method of sound generation that operates on a fundamenta
 
 ### 🌾 The Grain
 
-A grain is a short snippet of audio, typically between **1 and 200 milliseconds** long. Each grain is extracted from a source recording (or generated from an oscillator), shaped by a windowing function (like a Hann or Gaussian curve) that fades it smoothly in and out, and then placed at a specific position in time and space.
+A grain is a short snippet of audio, typically between **1 and 200 milliseconds** long. Mathematically, a grain $g(t)$ is formed by multiplying a segment of source audio $x(t)$ starting at read position $\tau$ by a bell-shaped window function $w(t)$ over a duration $D$:
 
-A single grain sounds like almost nothing — a brief click or a wisp of tone. But when hundreds of grains are layered together per second, something remarkable happens: a continuous, evolving texture emerges from the aggregate. This is the central insight of granular synthesis.
+$$ g(t) = x(t + \tau) \cdot w\left(\frac{t}{D}\right) \quad \text{for } 0 \le t \le D $$
+
+This windowing fades the grain smoothly in and out, preventing harsh clicks at the boundaries. A single grain sounds like almost nothing — a brief click or a wisp of tone. But when hundreds of grains are layered together per second, something remarkable happens: a continuous, evolving texture emerges from the aggregate. This is the central insight of granular synthesis.
 
 ![Granular synthesis: a mono waveform segmented into five overlapping Hann-windowed grains with labeled hop size and grain duration](docs/grain_hopping_windows.png)
 
@@ -385,11 +387,15 @@ A *cloud* is a stream of grains emitted over time. A cloud has parameters that c
 
 #### The Hop Size and Overlap Factor
 
-The **hop size** is the time interval between successive grain onsets — essentially, how far the window "slides" between one grain and the next. It is the single most important parameter governing the character of a grain cloud.
+The **hop size** ($H_s$) is the time interval between successive grain onsets — essentially, how far the window "slides" between one grain and the next. In Particelle, hop size is the inverse of the **density** ($\delta$) parameter (grains per second):
 
-The **overlap factor** is the ratio of grain duration to hop size. At 50% overlap (hop = half the grain length), adjacent grains cross-fade smoothly through each other, producing a continuous, artifact-free texture — this is the regime shown in the plot above. The relationship:
+$$ H_s = \frac{1}{\delta} $$
 
-> **overlap factor = grain_duration / hop_size**
+The **overlap factor** ($O$) is the ratio of grain duration ($D_g$) to hop size. It represents the average number of grains playing simultaneously:
+
+$$ O = \frac{D_g}{H_s} = D_g \cdot \delta $$
+
+At 50% overlap ($O = 2.0$), adjacent grains cross-fade smoothly through each other, producing a continuous, artifact-free texture — this is the regime shown in the plot above.
 
 | Overlap Factor | Hop Size (for 50ms grain) | Sonic Character |
 |:-:|:-:|---|
@@ -924,6 +930,14 @@ flowchart LR
     C --> D(Modulation Field):::process
     D -->|Final Hz| E[Playback Ratio]:::output
 ```
+
+Continuous pitch logic is maintained throughout. For an $E$-EDO system, the base frequency $f(n)$ for a fractional scale degree $n$ relative to a reference frequency $f_{\text{ref}}$ is:
+
+$$ f(n) = f_{\text{ref}} \cdot 2^{\frac{n}{E}} $$
+
+Modulation ($\Delta$, in cents) from MIDI pitchbend or parameter curves is applied exponentially:
+
+$$ f_{\text{final}} = f(n) \cdot 2^{\frac{\Delta}{1200}} $$
 
 All arithmetic is `f64`. No conversion to `f32` occurs before the hardware boundary.
 
