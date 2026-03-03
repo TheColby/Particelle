@@ -63,3 +63,48 @@ impl Default for MpeConfig {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_is_member_channel_lower_zone() {
+        let zone = MpeZone::lower_zone(48.0);
+
+        // Master channel is not a member
+        assert!(!zone.is_member_channel(1));
+
+        // Channels 2-15 are members
+        for ch in 2..=15 {
+            assert!(zone.is_member_channel(ch));
+        }
+
+        // Channel 16 is not a member in lower zone
+        assert!(!zone.is_member_channel(16));
+
+        // Out of bounds channels
+        assert!(!zone.is_member_channel(0));
+        assert!(!zone.is_member_channel(17));
+    }
+
+    #[test]
+    fn test_is_member_channel_upper_zone() {
+        let zone = MpeZone::upper_zone(48.0);
+
+        // Master channel is not a member
+        assert!(!zone.is_member_channel(16));
+
+        // Channels 2-15 are members
+        for ch in 2..=15 {
+            assert!(zone.is_member_channel(ch));
+        }
+
+        // Channel 1 is not a member in upper zone
+        assert!(!zone.is_member_channel(1));
+
+        // Out of bounds channels
+        assert!(!zone.is_member_channel(0));
+        assert!(!zone.is_member_channel(17));
+    }
+}
