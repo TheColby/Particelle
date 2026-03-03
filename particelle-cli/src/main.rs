@@ -656,7 +656,7 @@ fn cmd_run(patch: &str) -> Result<()> {
         
         if let Some(map_provider) = engine_guard.fields.as_any_mut().and_then(|a| a.downcast_mut::<MapProvider>()) {
              for (k, v) in new_fields {
-                 map_provider.fields.insert(k, v);
+                 map_provider.fields.insert(k.to_string(), v);
              }
         }
         
