@@ -199,6 +199,48 @@ clouds:
 
 The curve `curves/stretch_pos.json` maps 16s of clock time to 4s of file position:
 
+### Example 3 — Steve Reich Phase Effect
+
+Granulate a mono sound file and pan two duplicate clouds hard left and right. Use programmatic `phasor` oscillators running at *slightly* different rates (0.100 Hz vs 0.101 Hz) to control the `position` parameter. The left and right channels will drift out of phase exactly like early Steve Reich tape experiments. No JSON curves required.
+
+```yaml
+engine:
+  sample_rate: 48000
+  block_size: 256
+
+layout:
+  channels:
+    - { name: "L", type: spherical, azimuth_deg: -30.0, elevation_deg: 0.0 }
+    - { name: "R", type: spherical, azimuth_deg:  30.0, elevation_deg: 0.0 }
+
+clouds:
+  - id: "left_phase"
+    source: "audio/music_example.wav"
+    density: 20.0
+    duration: 0.2
+    position:
+      op: osc
+      args: ["phasor", 0.100] # 10-second loop
+    amplitude: 0.8
+    window: { type: hann }
+    listener_pos: { x: -1.0, y: 1.0, z: 0.0 } # Hard Left
+
+  - id: "right_phase"
+    source: "audio/music_example.wav"
+    density: 20.0
+    duration: 0.2
+    position:
+      op: osc
+      args: ["phasor", 0.101] # Slightly faster loop
+    amplitude: 0.8
+    window: { type: hann }
+    listener_pos: { x: 1.0, y: 1.0, z: 0.0 } # Hard Right
+```
+
+```sh
+particelle render steve_reich_phase.yaml -o phased.wav --duration 60.0
+```
+
 ```json
 {
   "segments": [

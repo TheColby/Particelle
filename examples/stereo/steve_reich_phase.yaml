@@ -1,0 +1,47 @@
+# Steve Reich Phasing
+# A classic tape-phasing technique applied to granular synthesis.
+# Two identical clouds read from the same source file and are panned hard left and right.
+# Their read positions are driven by programmatic 'phasor' LFOs that loop continuously
+# from 0.0 to 1.0. The right channel's phasor is slightly faster (0.101 Hz) than 
+# the left channel's (0.100 Hz), causing the playback to drift out of phase and 
+# eventually lock back together over time.
+
+engine:
+  sample_rate: 48000
+  block_size: 256
+
+layout:
+  channels:
+    - type: spherical
+      name: L
+      azimuth_deg: -30.0
+      elevation_deg: 0.0
+    - type: spherical
+      name: R
+      azimuth_deg: 30.0
+      elevation_deg: 0.0
+
+clouds:
+  - id: "left_phase"
+    source: "audio/music_example.wav" # Acts as our mono/stereo source
+    density: 20.0
+    duration: 0.2
+    position:
+      op: osc
+      args: ["phasor", 0.100] # 10-second loop
+    amplitude: 0.8
+    width: 0.0
+    window: { type: hann }
+    listener_pos: { x: -1.0, y: 1.0, z: 0.0 } # Panned hard left
+
+  - id: "right_phase"
+    source: "audio/music_example.wav"
+    density: 20.0
+    duration: 0.2
+    position:
+      op: osc
+      args: ["phasor", 0.101] # Slightly faster loop, causing the phasing effect
+    amplitude: 0.8
+    width: 0.0
+    window: { type: hann }
+    listener_pos: { x: 1.0, y: 1.0, z: 0.0 } # Panned hard right
