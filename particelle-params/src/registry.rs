@@ -80,3 +80,16 @@ pub enum RegistryError {
     #[error("Parameter not found: '{path}'")]
     NotFound { path: String },
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_new() {
+        let registry = ParamRegistry::new();
+        assert!(registry.descriptors.is_empty(), "Descriptors should be empty on initialization");
+        assert!(registry.signals.is_empty(), "Signals should be empty on initialization");
+        assert_eq!(registry.all_paths().count(), 0, "There should be no paths initially");
+    }
+}
