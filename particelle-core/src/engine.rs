@@ -63,15 +63,22 @@ pub struct GranularEngine {
     pub state: EngineState,
     pub clouds: Vec<Cloud>,
     pub spatializer: Box<dyn Spatializer>,
+    pub fields: Box<dyn particelle_params::context::FieldProvider>,
 }
 
 impl GranularEngine {
-    pub fn new(config: EngineConfig, layout: AudioLayout, spatializer: Box<dyn Spatializer>) -> Result<Self, CoreError> {
+    pub fn new(
+        config: EngineConfig, 
+        layout: AudioLayout, 
+        spatializer: Box<dyn Spatializer>,
+        fields: Box<dyn particelle_params::context::FieldProvider>
+    ) -> Result<Self, CoreError> {
         let state = EngineState::new(config, layout);
         Ok(Self {
             state,
             clouds: Vec::new(),
             spatializer,
+            fields,
         })
     }
 
@@ -86,7 +93,6 @@ impl Engine for GranularEngine {
         
         let sample_rate = self.state.config.sample_rate;
         let start_frame = self.state.frame;
-        let null_fields = particelle_params::context::NullFields;
         
         for cloud in &mut self.clouds {
             // For now, we update onset delay by the block size.
@@ -95,7 +101,7 @@ impl Engine for GranularEngine {
                 let ctx = particelle_params::context::SignalContext {
                     frame: start_frame + i as crate::FrameCount,
                     sample_rate,
-                    fields: &null_fields,
+                    fields: self.fields.as_ref(),
                     custom_resolver: None,
                 };
                 cloud.update(sample_rate, self.spatializer.as_ref(), &ctx);
@@ -126,7 +132,12 @@ mod tests {
         let config = EngineConfig::new(44100.0, 256)?;
         let layout = crate::layout::AudioLayout::stereo();
         let panner = Box::new(AmplitudePanner::new(layout.clone()));
-        let mut engine = GranularEngine::new(config, layout, panner)?;
+        let mut engine = GranularEngine::new(
+            config, 
+            layout, 
+            panner,
+            Box::new(particelle_params::context::NullFields)
+        )?;
 
         // Dummy source: 1 second of 1.0 (constant signal)
         let source = Arc::new(vec![vec![1.0; 44100]]);

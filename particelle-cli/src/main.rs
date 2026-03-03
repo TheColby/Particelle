@@ -298,6 +298,19 @@ fn compile_signal(expr: &particelle_schema::config::SignalExprConfig, base_dir: 
     }
 }
 
+pub struct MapProvider {
+    pub fields: std::collections::HashMap<String, f64>,
+}
+
+impl particelle_params::context::FieldProvider for MapProvider {
+    fn get(&self, path: &str) -> Option<f64> {
+        self.fields.get(path).copied()
+    }
+    fn as_any_mut(&mut self) -> Option<&mut dyn std::any::Any> {
+        Some(self)
+    }
+}
+
 fn build_engine(config: &ParticelleConfig) -> Result<GranularEngine> {
     let sample_rate = config.engine.sample_rate as f64;
     let block_size = config.engine.block_size;
@@ -329,7 +342,8 @@ fn build_engine(config: &ParticelleConfig) -> Result<GranularEngine> {
     let n_channels = layout.channels.len();
     
     let panner = Box::new(AmplitudePanner::new(layout.clone()));
-    let mut engine = GranularEngine::new(engine_config, layout, panner)
+    let fields = Box::new(particelle_params::context::NullFields);
+    let mut engine = GranularEngine::new(engine_config, layout, panner, fields)
         .with_context(|| "Failed to create engine")?;
         
     let window_cache = particelle_dsp::window::WindowCache::new();
@@ -498,11 +512,46 @@ fn cmd_run(patch_path: &str) -> Result<()> {
         ..Default::default()
     };
 
+    let mut rules = Vec::new();
+    for b in config.routing.midi_bindings.iter() {
+        rules.push(particelle_midi::routing::RoutingRule::direct(&b.source, &b.target));
+    }
+    let router = particelle_midi::routing::MidiRouter::new(rules);
+    
+    // We recreate the engine here to inject our router's fields. But we don't have realtime MIDI hookups yet.
+    // As a placeholder for Phase 14 validation, we will just simulate a pressure curve!
     let mut engine = build_engine(&config)?;
     let mut block = particelle_core::audio_block::AudioBlock::new(n_channels, block_size);
 
     let host = particelle_io::HardwareHost::new(hw_config);
+    
+    // Simple pressure simulator for the test patch
+    let mut simulated_pressure = 0.0;
+    
     host.run(move |buffer: &mut [f32]| {
+        simulated_pressure += 0.005;
+        if simulated_pressure > 1.0 { simulated_pressure = 0.0; }
+        
+        let sim_events = vec![particelle_midi::events::MidiEvent {
+            frame_offset: 0,
+            kind: particelle_midi::events::MidiEventKind::Expression(
+                particelle_midi::events::ExpressionEvent {
+                    channel: 0,
+                    note: 60,
+                    kind: particelle_midi::events::ExpressionKind::Pressure,
+                    value: simulated_pressure,
+                }
+            )
+        }];
+        
+        // Dynamically typecast and update the engine's FieldProvider map
+        if let Some(map_provider) = engine.fields.as_any_mut().and_then(|a| a.downcast_mut::<MapProvider>()) {
+             let new_fields = router.process(&sim_events);
+             for (k, v) in new_fields {
+                 map_provider.fields.insert(k, v);
+             }
+        }
+        
         // Process next block of audio
         if let Err(e) = engine.process(&mut block) {
             eprintln!("Engine error: {}", e);

@@ -33,6 +33,7 @@ pub trait CustomResolver: Send + Sync {
 /// Field lookup must not allocate.
 pub trait FieldProvider: Send + Sync {
     fn get(&self, path: &str) -> Option<f64>;
+    fn as_any_mut(&mut self) -> Option<&mut dyn std::any::Any> { None }
 }
 
 /// A `FieldProvider` that always returns `None`. Useful in tests and offline stubs.
