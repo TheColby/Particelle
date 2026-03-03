@@ -1,0 +1,171 @@
+#!/usr/bin/env python3
+"""
+ai2yaml — Natural Language → Particelle Patch Generator
+
+Usage:
+    ai2yaml "<plain English description>" output.yaml [OPTIONS]
+
+Examples:
+    ai2yaml "granulate A.wav using its pitch analysis to control hop size" patch.yaml
+    ai2yaml "60-second drone in 31-EDO, panning in a slow circle" atmos.yaml --model gpt-4o
+    ai2yaml "choir.wav granulated by its own spectral flatness curve" flatness.yaml --api gemini
+
+Requires:
+    pip install openai          # for OpenAI (default)
+    pip install google-genai    # for Gemini (--api gemini)
+    pip install anthropic       # for Claude (--api claude)
+
+API Key Setup:
+    export OPENAI_API_KEY="sk-..."
+    export GEMINI_API_KEY="AIza..."
+    export ANTHROPIC_API_KEY="sk-ant-..."
+"""
+
+import sys
+import os
+import re
+import argparse
+from pathlib import Path
+
+
+SYSTEM_PROMPT_PATH = Path(__file__).parent / "docs" / "AI_PATCH_GENERATOR.md"
+
+
+def load_system_prompt() -> str:
+    if not SYSTEM_PROMPT_PATH.exists():
+        print(f"Error: System prompt not found at {SYSTEM_PROMPT_PATH}", file=sys.stderr)
+        sys.exit(1)
+    return SYSTEM_PROMPT_PATH.read_text()
+
+
+def call_openai(prompt: str, system: str, model: str) -> str:
+    try:
+        import openai
+    except ImportError:
+        print("Error: OpenAI not installed. Run: pip install openai", file=sys.stderr)
+        sys.exit(1)
+
+    client = openai.OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+    response = client.chat.completions.create(
+        model=model or "gpt-4o",
+        messages=[
+            {"role": "system", "content": system},
+            {"role": "user", "content": prompt},
+        ],
+        temperature=0.3,
+    )
+    return response.choices[0].message.content
+
+
+def call_gemini(prompt: str, system: str, model: str) -> str:
+    try:
+        import google.genai as genai
+    except ImportError:
+        print("Error: google-genai not installed. Run: pip install google-genai", file=sys.stderr)
+        sys.exit(1)
+
+    client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
+    full_prompt = f"{system}\n\n---\n\n{prompt}"
+    response = client.models.generate_content(
+        model=model or "gemini-2.0-flash",
+        contents=full_prompt,
+    )
+    return response.text
+
+
+def call_claude(prompt: str, system: str, model: str) -> str:
+    try:
+        import anthropic
+    except ImportError:
+        print("Error: anthropic not installed. Run: pip install anthropic", file=sys.stderr)
+        sys.exit(1)
+
+    client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+    response = client.messages.create(
+        model=model or "claude-opus-4-5",
+        max_tokens=4096,
+        system=system,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    return response.content[0].text
+
+
+def extract_yaml_block(text: str) -> str:
+    """
+    Strip any surrounding explanation text and return ONLY the YAML block
+    that the LLM returned.
+    """
+    # Try to find a ```yaml ... ``` block
+    match = re.search(r"```(?:yaml|YAML)?\s*\n(.*?)```", text, re.DOTALL)
+    if match:
+        return match.group(1).strip()
+
+    # Fallback: try to find raw YAML starting from first key
+    lines = text.splitlines()
+    start = None
+    for i, line in enumerate(lines):
+        if re.match(r"^(engine|layout|tuning|clouds|analysis):", line):
+            start = i
+            break
+
+    if start is not None:
+        return "\n".join(lines[start:]).strip()
+
+    # Last resort: return everything
+    return text.strip()
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="ai2yaml — Generate a Particelle YAML patch from plain English using an LLM.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=__doc__,
+    )
+    parser.add_argument("prompt", help="Plain-English description of the patch you want.")
+    parser.add_argument("output", help="Output YAML file path (e.g. patch.yaml).")
+    parser.add_argument(
+        "--api",
+        choices=["openai", "gemini", "claude"],
+        default="openai",
+        help="Which LLM API backend to use (default: openai).",
+    )
+    parser.add_argument(
+        "--model",
+        default=None,
+        help="Override the model name (e.g. gpt-4o, gemini-2.0-flash, claude-opus-4-5).",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Print the extracted YAML to stdout instead of writing to file.",
+    )
+
+    args = parser.parse_args()
+    system = load_system_prompt()
+
+    print(f"⚙ Generating YAML via {args.api}…", file=sys.stderr)
+
+    if args.api == "openai":
+        raw = call_openai(args.prompt, system, args.model)
+    elif args.api == "gemini":
+        raw = call_gemini(args.prompt, system, args.model)
+    elif args.api == "claude":
+        raw = call_claude(args.prompt, system, args.model)
+    else:
+        print(f"Unknown API: {args.api}", file=sys.stderr)
+        sys.exit(1)
+
+    yaml_content = extract_yaml_block(raw)
+
+    if args.dry_run:
+        print(yaml_content)
+    else:
+        out = Path(args.output)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(yaml_content + "\n")
+        print(f"✓ Wrote {out}", file=sys.stderr)
+        print(f"\nValidate with:\n  particelle validate {out}", file=sys.stderr)
+
+
+if __name__ == "__main__":
+    main()

@@ -7,3 +7,4 @@ license.workspace = true
 
 [dependencies]
 particelle-core.workspace = true
+rustfft = "6.1.0"

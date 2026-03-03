@@ -1,0 +1,58 @@
+# Cross-File Feature Mapping: Spectral Flatness → Window Size
+#
+# Answer to the question: "Can I let the time-varying spectral flatness of one
+# file (A.wav) control the window size when granulating another file (B.wav)?"
+#
+# YES. The `analysis` block can point to ANY file independently of the cloud's
+# source. Any extractor result is available as `$analysis.<id>`.
+#
+# In this example:
+#   - `spectral_flatness` is extracted from the TEXTURE source (A.wav)
+#   - This noisy-to-tonal ratio drives the `duration` (grain window size)
+#     when granulating a MELODIC source (B.wav) 
+#   - High flatness (noise) → long grains (dense, cloudy texture)
+#   - Low flatness (tonal) → short grains (tight, pitched articulation)
+
+engine:
+  sample_rate: 48000
+  block_size: 256
+
+layout:
+  channels:
+    - { name: "L", azimuth_deg: -30.0, elevation_deg: 0.0 }
+    - { name: "R", azimuth_deg: 30.0, elevation_deg: 0.0 }
+
+tuning:
+  mode: twelve_tet
+
+# Step 1: Declare which files to analyze and what to extract.
+# A.wav and B.wav can be totally different files.
+analysis:
+  - id: texture_flatness
+    source: samples/A.wav
+    extractor: spectral_flatness  # Output range: ~0.0 (tonal) to ~1.0 (noise)
+
+clouds:
+  - id: melodic_granulated
+    source: samples/B.wav  # Granulate THIS file...
+
+    density: 80.0
+    
+    # ...but let A.wav's current spectral flatness control the grain duration.
+    # Scale and shift: flatness [0.0, 1.0] → duration [0.04, 0.5] seconds
+    duration:
+      op: add
+      args:
+        - 0.04  # minimum duration 40ms
+        - op: mul
+          args:
+            - "$analysis.texture_flatness"
+            - 0.46  # scale up to 460ms at maximum flatness
+
+    # Scan slowly through B.wav
+    position: { op: "$osc", args: ["phasor", 0.04] }
+    amplitude: 0.65
+    window:
+      type: hann
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }
+    width: 1.0

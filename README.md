@@ -616,16 +616,88 @@ For example, sending `12.5` to `/field/density` will override a YAML node parame
 
 ---
 
-## LLM AI Patch Generation (No Code Required)
+## AI-Assisted Patch Generation
 
-Particelle was designed with strict mathematical schemas that map perfectly to Large Language Model reasoning. To generate fully-functional, complex granular patches using plain English, supply our official System Prompt to ChatGPT, Claude, or Gemini.
+Particelle's YAML schema is precisely documented to work seamlessly with Large Language Models. There are two ways to use this:
 
-**Instructions:**
-1. Copy the entire contents of [`docs/AI_PATCH_GENERATOR.md`](docs/AI_PATCH_GENERATOR.md).
-2. Paste it into an LLM as "Custom Instructions" or the start of your message.
-3. Ask the LLM to design an audio scene for you:
-   > *"Give me a Particelle configuration for a 60-second drone. Pan it continuously in a circle using an LFO. Map it to 31-EDO tuning. Make the density chaotic."*
-4. Run the resulting `.yaml` file directly in the engine!
+### Option A: `ai2yaml` CLI (Recommended)
+
+The included `ai2yaml` script wraps the system prompt automatically, calls your LLM of choice, extracts the YAML from the response, and writes it directly to a file:
+
+```bash
+# Install one API client
+pip install openai           # for OpenAI (default)
+pip install google-genai     # for Gemini (--api gemini)
+pip install anthropic        # for Claude (--api claude)
+
+# Set your API key
+export OPENAI_API_KEY="sk-..."
+
+# Generate a patch from a plain-English description
+./ai2yaml "granulate A.wav using its pitch analysis to control hop size" my_patch.yaml
+
+# Validate the generated file
+particelle validate my_patch.yaml
+
+# Render it
+particelle render my_patch.yaml -o output.wav --duration 30.0
+```
+
+Supported backends and models:
+
+```bash
+./ai2yaml "dense 31-EDO drone panning in a circle" patch.yaml --api openai --model gpt-4o
+./ai2yaml "choir granulated by its own flatness curve" patch.yaml --api gemini --model gemini-2.0-flash
+./ai2yaml "textural wash from piano samples" patch.yaml --api claude --model claude-opus-4-5
+```
+
+### Option B: Copy-Paste Prompt (Browser / Chat UIs)
+
+Paste the contents of [`docs/AI_PATCH_GENERATOR.md`](docs/AI_PATCH_GENERATOR.md) into any LLM's custom instructions or first message, then describe your desired patch in natural language:
+
+> *"Give me a Particelle configuration for a 60-second drone. Pan it continuously in a circle using an LFO. Map it to 31-EDO tuning. Make the density chaotic."*
+
+---
+
+## Offline Audio Feature Analysis
+
+The `analysis` block extracts time-varying acoustic feature vectors from source files offline (before rendering begins). These vectors are then interpolated at audio rate and exposed as `$analysis.<id>` references anywhere in the parameter graph. The source file in `analysis` blocks is independent of — and can be completely different from — the cloud's granular source.
+
+**Supported extractors:**
+
+| Extractor | Output | Description |
+|---|---|---|
+| `f0_yin` | Hz (40–2000 Hz) | Fundamental frequency via YIN algorithm |
+| `rms` | 0.0–1.0 | RMS amplitude envelope |
+| `spectral_flatness` | 0.0–1.0 | 0 = tonal, 1 = white noise (Wiener Entropy) |
+| `spectral_centroid` | Hz | Spectral center of mass ("brightness") |
+| `spectral_rolloff` | Hz | Frequency below which 85% of energy lies |
+| `spectral_crest` | ratio | Peak power / mean power (impulsiveness) |
+| `spectral_flux` | ≥ 0 | Rate of spectral change between frames (onset strength) |
+| `zero_crossing_rate` | 0.0–1.0 | Normalized ZCR per window (noisiness proxy) |
+
+**Example — use `A.wav`'s spectral flatness to shape grains on `B.wav`:**
+
+```yaml
+analysis:
+  - id: texture_flatness
+    source: samples/A.wav
+    extractor: spectral_flatness
+
+clouds:
+  - id: melodic_granulated
+    source: samples/B.wav
+    duration:
+      op: add
+      args:
+        - 0.04                          # 40ms minimum
+        - op: mul
+          args:
+            - "$analysis.texture_flatness"
+            - 0.46                      # scale to 460ms at max flatness
+```
+
+See more examples in `examples/analysis/`.
 
 ---
 
@@ -859,20 +931,26 @@ Offline and realtime modes share the same engine core. A deterministic offline r
 
 ---
 
-
----
-
-
 ## Selected References (Foundational Literature)
-
 
 1. **Gabor, Dennis (1946)** — *Theory of communication. Part 1: The analysis of information*. Journal of the Institution of Electrical Engineers. [DOI: 10.1049/ji-3-2.1946.0074](https://doi.org/10.1049/ji-3-2.1946.0074)
 2. **Xenakis, Iannis (1971)** — *Formalized Music: Thought and Mathematics in Composition*. Pendragon Press. ISBN: 1576470792
 3. **Roads, Curtis (1978)** — *Automated Granular Synthesis of Sound*. Computer Music Journal, Vol. 2, No. 2. [DOI: 10.2307/3679443](https://doi.org/10.2307/3679443)
 4. **Truax, Barry (1988)** — *Real-Time Granular Synthesis with a Digital Signal Processor*. Computer Music Journal, Vol. 12, No. 2. [DOI: 10.2307/3680233](https://doi.org/10.2307/3680233)
-5. **De Poli, Giovanni; Piccialli, Aldo; Roads, Curtis (1991)** — *Representations of Musical Signals*. MIT Press. ISBN: 026204126X
+5. **De Poli, Giovanni; Piccialli, Aldo; Roads, Curtis (Eds.) (1991)** — *Representations of Musical Signals*. MIT Press. ISBN: 026204126X
 6. **Wishart, Trevor (1996)** — *On Sonic Art*. Routledge. ISBN: 371865847X
 7. **Roads, Curtis (2001)** — *Microsound*. MIT Press. ISBN: 0262182157
+8. **Bregman, Albert S. (1990)** — *Auditory Scene Analysis: The Perceptual Organization of Sound*. MIT Press. ISBN: 0262521954
+9. **Moore, F. Richard (1990)** — *Elements of Computer Music*. Prentice Hall. ISBN: 0132525526
+10. **Puckette, Miller S. (2007)** — *The Theory and Technique of Electronic Music*. World Scientific. [DOI: 10.1142/6277](https://doi.org/10.1142/6277)
+11. **Smith, Julius O. (2010)** — *Physical Audio Signal Processing*. W3K Publishing. ISBN: 978-0974560724. [Online](https://ccrma.stanford.edu/~jos/pasp/)
+12. **De Cheveigné, Alain; Kawahara, Hideki (2002)** — *YIN, a fundamental frequency estimator for speech and music*. Journal of the Acoustical Society of America. [DOI: 10.1121/1.1458024](https://doi.org/10.1121/1.1458024)
+13. **Müller, Meinard (2015)** — *Fundamentals of Music Processing: Audio, Analysis, Algorithms, Applications*. Springer. [DOI: 10.1007/978-3-319-21945-5](https://doi.org/10.1007/978-3-319-21945-5)
+14. **Zölzer, Udo (Ed.) (2011)** — *DAFX: Digital Audio Effects* (2nd ed.). Wiley. ISBN: 9780470665992
+15. **Klapuri, Anssi; Davy, Manuel (Eds.) (2006)** — *Signal Processing Methods for Music Transcription*. Springer. [DOI: 10.1007/0-387-32845-9](https://doi.org/10.1007/0-387-32845-9)
+16. **Berg, Paul (1979)** — *Poc: A composer's approach to computer music*. Interface: Journal of New Music Research, Vol. 8, No. 3. [DOI: 10.1080/09298217908570353](https://doi.org/10.1080/09298217908570353)
+17. **Roads, Curtis; Strawn, John (1996)** — *The Computer Music Tutorial*. MIT Press. ISBN: 0262680823
+
 ## License
 
 MIT

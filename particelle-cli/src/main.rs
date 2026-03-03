@@ -400,8 +400,59 @@ fn build_engine(config: &ParticelleConfig) -> Result<GranularEngine> {
                     hop_size: (reader.sample_rate as f64 / 100.0) as usize,
                 };
                 particelle_analysis::extract_rms_envelope(&env_config, &mono)
+            },
+            "spectral_flatness" => {
+                let spec_config = particelle_analysis::SpectralConfig {
+                    window_size: 2048,
+                    hop_size: (reader.sample_rate as f64 / 100.0) as usize,
+                    sample_rate: reader.sample_rate as f64,
+                };
+                particelle_analysis::extract_spectral_flatness(&spec_config, &mono)
+            },
+            "spectral_centroid" => {
+                let spec_config = particelle_analysis::SpectralConfig {
+                    window_size: 2048,
+                    hop_size: (reader.sample_rate as f64 / 100.0) as usize,
+                    sample_rate: reader.sample_rate as f64,
+                };
+                particelle_analysis::extract_spectral_centroid(&spec_config, &mono)
+            },
+            "spectral_rolloff" => {
+                let spec_config = particelle_analysis::SpectralConfig {
+                    window_size: 2048,
+                    hop_size: (reader.sample_rate as f64 / 100.0) as usize,
+                    sample_rate: reader.sample_rate as f64,
+                };
+                particelle_analysis::extract_spectral_rolloff(&spec_config, &mono)
+            },
+            "spectral_crest" => {
+                let spec_config = particelle_analysis::SpectralConfig {
+                    window_size: 2048,
+                    hop_size: (reader.sample_rate as f64 / 100.0) as usize,
+                    sample_rate: reader.sample_rate as f64,
+                };
+                particelle_analysis::extract_spectral_crest(&spec_config, &mono)
+            },
+            "spectral_flux" => {
+                let spec_config = particelle_analysis::SpectralConfig {
+                    window_size: 2048,
+                    hop_size: (reader.sample_rate as f64 / 100.0) as usize,
+                    sample_rate: reader.sample_rate as f64,
+                };
+                particelle_analysis::extract_spectral_flux(&spec_config, &mono)
+            },
+            "zero_crossing_rate" => {
+                let t_config = particelle_analysis::TemporalConfig {
+                    window_size: 1024,
+                    hop_size: (reader.sample_rate as f64 / 100.0) as usize,
+                    sample_rate: reader.sample_rate as f64,
+                };
+                particelle_analysis::extract_zero_crossing_rate(&t_config, &mono)
             }
-            other => anyhow::bail!("Unknown extractor '{}'", other),
+            other => anyhow::bail!(
+                "Unknown extractor '{}'. Valid: f0_yin, rms, spectral_flatness, spectral_centroid, spectral_rolloff, spectral_crest, spectral_flux, zero_crossing_rate",
+                other
+            ),
         };
         analysis_buffers.insert(a.id.clone(), Arc::new(vec));
     }
