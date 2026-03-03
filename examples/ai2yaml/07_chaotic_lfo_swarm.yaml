@@ -1,0 +1,72 @@
+# ai2yaml prompt:
+# "Create a chaotic granular swarm using three interlocking phasor LFOs
+#  running at prime ratios (2 Hz, 3 Hz, 5 Hz) controlling grain density.
+#  Each LFO should modulate a different cloud of the same source pad.wav.
+#  Total density hovers around 40–120 grains/sec. Stereo output."
+
+engine:
+  sample_rate: 48000
+  block_size: 256
+
+layout:
+  channels:
+    - { name: "L", azimuth_deg: -30.0, elevation_deg: 0.0 }
+    - { name: "R", azimuth_deg:  30.0, elevation_deg: 0.0 }
+
+tuning:
+  mode: twelve_tet
+
+clouds:
+  - id: swarm_2hz
+    source: samples/pad.wav
+    # density: 40 + 40 × phasor(2 Hz) → beats at 2 Hz
+    density:
+      op: add
+      args:
+        - 40.0
+        - op: mul
+          args:
+            - { op: osc, args: [phasor, 2.0] }
+            - 40.0
+    duration: 0.12
+    amplitude: 0.30
+    position: { op: osc, args: [phasor, 0.03] }
+    window: { type: hann }
+    listener_pos: { x: -0.5, y: 1.0, z: 0.0 }
+    width: 0.9
+
+  - id: swarm_3hz
+    source: samples/pad.wav
+    # beats at 3 Hz
+    density:
+      op: add
+      args:
+        - 40.0
+        - op: mul
+          args:
+            - { op: osc, args: [phasor, 3.0] }
+            - 40.0
+    duration: 0.09
+    amplitude: 0.25
+    position: { op: osc, args: [phasor, 0.05] }
+    window: { type: hann }
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }
+    width: 1.1
+
+  - id: swarm_5hz
+    source: samples/pad.wav
+    # beats at 5 Hz
+    density:
+      op: add
+      args:
+        - 40.0
+        - op: mul
+          args:
+            - { op: osc, args: [phasor, 5.0] }
+            - 40.0
+    duration: 0.07
+    amplitude: 0.20
+    position: { op: osc, args: [phasor, 0.08] }
+    window: { type: hann }
+    listener_pos: { x: 0.5, y: 1.0, z: 0.0 }
+    width: 0.8

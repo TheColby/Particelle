@@ -1,0 +1,52 @@
+# ai2yaml prompt:
+# "Take two audio sources: kick.wav and pad.wav.
+#  Extract the RMS envelope of kick.wav.
+#  Use that sidechain signal to gate the amplitude of the granulated pad.
+#  When kick RMS is high (near 1.0), pad grains should be near-silent.
+#  When kick RMS is low (decay), pad grains open up at full amplitude 0.8.
+#  This is a 'ducking sidechain' effect. Stereo output."
+
+engine:
+  sample_rate: 48000
+  block_size: 256
+
+layout:
+  channels:
+    - { name: "L", azimuth_deg: -30.0, elevation_deg: 0.0 }
+    - { name: "R", azimuth_deg:  30.0, elevation_deg: 0.0 }
+
+tuning:
+  mode: twelve_tet
+
+analysis:
+  - id: kick_rms
+    source: samples/kick.wav
+    extractor: rms             # Range 0–1 (silence → full amplitude)
+
+clouds:
+  - id: sidechain_pad
+    source: samples/pad.wav
+
+    density: 80.0
+    
+    # Invert kick RMS: amplitude = 0.8 × (1 - kick_rms)
+    amplitude:
+      op: mul
+      args:
+        - 0.80
+        - op: add
+          args:
+            - 1.0
+            - op: mul
+              args:
+                - "$analysis.kick_rms"
+                - -1.0   # negate (1 - kick_rms)
+
+    duration: 0.28
+    position: { op: osc, args: [phasor, 0.02] }
+
+    window:
+      type: hann
+
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }
+    width: 1.0

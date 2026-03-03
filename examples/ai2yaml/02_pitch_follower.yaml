@@ -1,0 +1,47 @@
+# ai2yaml prompt:
+# "Take a mono vocal recording vocal.wav and extract its fundamental frequency.
+#  Use that F0 contour to control the grain duration when granulating the same file —
+#  shorter grains at high pitches (high F0), longer grains at low pitches (low F0).
+#  Map the inverse (reciprocal) of the pitch in Hz to the duration.
+#  Keep grain density constant at 60, amplitude at 0.7."
+
+engine:
+  sample_rate: 48000
+  block_size: 256
+
+layout:
+  channels:
+    - { name: "L", azimuth_deg: -30.0, elevation_deg: 0.0 }
+    - { name: "R", azimuth_deg:  30.0, elevation_deg: 0.0 }
+
+tuning:
+  mode: twelve_tet
+
+analysis:
+  - id: vocal_f0
+    source: samples/vocal.wav
+    extractor: f0_yin           # Outputs Hz. Typical range: 80–1200 Hz
+
+clouds:
+  - id: pitch_follower
+    source: samples/vocal.wav
+
+    density: 60.0
+
+    # duration = 1.0 / F0 (one cycle period).
+    # Clamp to [0.001, 0.5] so silence/unvoiced frames don't blow up.
+    duration:
+      op: clamp
+      args:
+        - { op: map, args: ["$analysis.vocal_f0", recip] }
+        - 0.001
+        - 0.5
+
+    amplitude: 0.70
+    position: { op: osc, args: [phasor, 0.025] }
+
+    window:
+      type: hann
+
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }
+    width: 1.0

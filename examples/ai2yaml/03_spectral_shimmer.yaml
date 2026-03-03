@@ -1,0 +1,48 @@
+# ai2yaml prompt:
+# "Use the spectral flatness contour of noise_texture.wav to drive the grain window size
+#  of a completely different orchestral sample orchestra.wav.
+#  When the texture file is noisy (flatness → 1), use large grains (0.5s).
+#  When it is tonal (flatness → 0), use very short grains (0.02s).
+#  Density at 90 grains/sec, stereo output."
+
+engine:
+  sample_rate: 48000
+  block_size: 256
+
+layout:
+  channels:
+    - { name: "L", azimuth_deg: -30.0, elevation_deg: 0.0 }
+    - { name: "R", azimuth_deg:  30.0, elevation_deg: 0.0 }
+
+tuning:
+  mode: twelve_tet
+
+analysis:
+  - id: noise_flatness
+    source: samples/noise_texture.wav
+    extractor: spectral_flatness   # Range: 0 (tonal) → 1 (noise)
+
+clouds:
+  - id: orchestral_shimmer
+    source: samples/orchestra.wav
+
+    density: 90.0
+
+    # duration = 0.02 + flatness × 0.48 → range [0.02, 0.5]
+    duration:
+      op: add
+      args:
+        - 0.02
+        - op: mul
+          args:
+            - "$analysis.noise_flatness"
+            - 0.48
+
+    amplitude: 0.65
+    position: { op: osc, args: [phasor, 0.015] }
+
+    window:
+      type: hann
+
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }
+    width: 1.2

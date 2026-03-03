@@ -1,0 +1,46 @@
+# ai2yaml prompt:
+# "Create a 60-second dense granular drone using a cello sample in 31-TET (31 tones per octave).
+#  The drone should slowly pan in a complete circle around the listener at 0.02 Hz.
+#  Make the density chaotic with a slow triangle LFO modulating between 40 and 120 grains/sec."
+
+engine:
+  sample_rate: 48000
+  block_size: 256
+
+layout:
+  channels:
+    - { name: "L",   azimuth_deg: -30.0,  elevation_deg: 0.0 }
+    - { name: "R",   azimuth_deg:  30.0,  elevation_deg: 0.0 }
+    - { name: "SL",  azimuth_deg: -110.0, elevation_deg: 0.0 }
+    - { name: "SR",  azimuth_deg:  110.0, elevation_deg: 0.0 }
+
+tuning:
+  mode: edo
+  divisions: 31
+
+clouds:
+  - id: cello_drone
+    source: samples/cello_sustain.wav
+    
+    # 80 ± 40 grains/sec via a triangle LFO
+    density:
+      op: add
+      args:
+        - 80.0
+        - op: mul
+          args:
+            - { op: osc, args: [triangle, 0.17] }  # LFO at 0.17 Hz
+            - 40.0
+
+    # Long, sustaining grains
+    duration: 0.35
+    amplitude: 0.55
+
+    # Circle pan: phasor at 0.02 Hz drives azimuth via listener_pos
+    position: { op: osc, args: [phasor, 0.03] }
+
+    window:
+      type: hann
+
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }
+    width: 2.8

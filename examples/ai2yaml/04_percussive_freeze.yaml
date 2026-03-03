@@ -1,0 +1,47 @@
+# ai2yaml prompt:
+# "Freeze and dramatically time-stretch a percussive rimshot sample rim.wav.
+#  Hold position fixed at the attack transient (position = 0.05).
+#  Use very high density (200 grains/sec) and very short grains (8ms).
+#  Slowly open the grain duration from 0.008 to 0.8 over the course of the render
+#  using a rising curve-shaped ramp (phasor at very low rate) to simulate a freeze-bloom.
+#  Output stereo."
+
+engine:
+  sample_rate: 48000
+  block_size: 256
+
+layout:
+  channels:
+    - { name: "L", azimuth_deg: -30.0, elevation_deg: 0.0 }
+    - { name: "R", azimuth_deg:  30.0, elevation_deg: 0.0 }
+
+tuning:
+  mode: twelve_tet
+
+clouds:
+  - id: percussive_freeze
+    source: samples/rim.wav
+
+    # Dense, stuttering grain spray
+    density: 200.0
+
+    # Duration blooms from 8ms → 800ms over ~60 seconds (phasor at 0.017 Hz)
+    duration:
+      op: add
+      args:
+        - 0.008
+        - op: mul
+          args:
+            - { op: osc, args: [phasor, 0.017] }
+            - 0.792
+
+    amplitude: 0.80
+
+    # Fixed scrub position at attack transient
+    position: 0.05
+
+    window:
+      type: planck_taper
+
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }
+    width: 1.8

@@ -1,0 +1,65 @@
+# ai2yaml prompt:
+# "Analyze violin.wav for its dominant chroma pitch class (0=C, 11=B).
+#  Map that 0–11 chroma index, normalized to [0, 1], to the spatial width
+#  parameter so the grains spread widely when C is dominant and narrowly when B is.
+#  Also use chroma_strength to gate amplitude — when one pitch class is clearly
+#  dominant, the grain is louder; when ambiguous, quieter. Stereo output."
+
+engine:
+  sample_rate: 48000
+  block_size: 256
+
+layout:
+  channels:
+    - { name: "L", azimuth_deg: -30.0, elevation_deg: 0.0 }
+    - { name: "R", azimuth_deg:  30.0, elevation_deg: 0.0 }
+
+tuning:
+  mode: twelve_tet
+
+analysis:
+  - id: dominant_pitch_class
+    source: samples/violin.wav
+    extractor: chroma_active_class   # Range 0–11
+
+  - id: pitch_certainty
+    source: samples/violin.wav
+    extractor: chroma_strength       # Higher = one pitch class clearly dominant
+
+clouds:
+  - id: chroma_driven
+    source: samples/violin.wav
+
+    density: 70.0
+    duration: 0.18
+
+    # Width: map dominant pitch class (0–11) to (0.3–2.2)
+    width:
+      op: add
+      args:
+        - 0.30
+        - op: mul
+          args:
+            - op: mul
+              args:
+                - "$analysis.dominant_pitch_class"
+                - 0.0909             # 1/11 to normalize 0–11 → 0–1
+            - 1.90
+
+    # Amplitude: clamp chroma_strength to [0, 1] scaled to [0.3, 0.85]
+    amplitude:
+      op: add
+      args:
+        - 0.30
+        - op: mul
+          args:
+            - op: clamp
+              args:
+                - "$analysis.pitch_certainty"
+                - 0.0
+                - 1.0
+            - 0.55
+
+    position: { op: osc, args: [phasor, 0.02] }
+    window: { type: hann }
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }

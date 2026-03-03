@@ -1,0 +1,55 @@
+# ai2yaml prompt:
+# "Create three simultaneous granular clouds from the same source strings.wav,
+#  each running at a different prime density ratio: 2, 3, and 5 grains per second
+#  times a shared base of 20. They should spatially diverge — cloud 1 at -60°, 
+#  cloud 2 at 0° (center), cloud 3 at +60°. Use Just Intonation (rational) tuning.
+#  Grain duration for each cloud should be its reciprocal density-multiple (so
+#  'faster' clouds use shorter grains). Amplitude at 0.5 for each."
+
+engine:
+  sample_rate: 48000
+  block_size: 256
+
+layout:
+  channels:
+    - { name: "L",  azimuth_deg: -30.0, elevation_deg: 0.0 }
+    - { name: "R",  azimuth_deg:  30.0, elevation_deg: 0.0 }
+    - { name: "C",  azimuth_deg:   0.0, elevation_deg: 0.0 }
+
+tuning:
+  mode: just_intonation
+  ratios: [1/1, 9/8, 5/4, 4/3, 3/2, 5/3, 15/8]
+
+clouds:
+  # Cloud α — prime 2 × base 20 = 40 grains/sec, 1/40 = 25ms grains
+  - id: poly_cloud_2
+    source: samples/strings.wav
+    density: 40.0
+    duration: 0.025
+    amplitude: 0.50
+    position: { op: osc, args: [phasor, 0.009] }
+    window: { type: hann }
+    listener_pos: { x: -0.8, y: 1.0, z: 0.0 }
+    width: 0.6
+
+  # Cloud β — prime 3 × base 20 = 60 grains/sec, 1/60 ≈ 17ms grains
+  - id: poly_cloud_3
+    source: samples/strings.wav
+    density: 60.0
+    duration: 0.017
+    amplitude: 0.50
+    position: { op: osc, args: [phasor, 0.011] }
+    window: { type: hann }
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }
+    width: 0.6
+
+  # Cloud γ — prime 5 × base 20 = 100 grains/sec, 1/100 = 10ms grains
+  - id: poly_cloud_5
+    source: samples/strings.wav
+    density: 100.0
+    duration: 0.010
+    amplitude: 0.50
+    position: { op: osc, args: [phasor, 0.013] }
+    window: { type: hann }
+    listener_pos: { x: 0.8, y: 1.0, z: 0.0 }
+    width: 0.6

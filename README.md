@@ -657,6 +657,28 @@ Paste the contents of [`docs/AI_PATCH_GENERATOR.md`](docs/AI_PATCH_GENERATOR.md)
 
 > *"Give me a Particelle configuration for a 60-second drone. Pan it continuously in a circle using an LFO. Map it to 31-EDO tuning. Make the density chaotic."*
 
+### Recipe Gallery (`examples/ai2yaml/`)
+
+The `examples/ai2yaml/` folder contains 10 fully-annotated, ready-to-run patches — each includes the original plain-English prompt that generated it:
+
+| File | Prompt Concept |
+|---|---|
+| [`01_31edo_drone.yaml`](examples/ai2yaml/01_31edo_drone.yaml) | Dense 31-EDO cello drone circling in 4-channel surround |
+| [`02_pitch_follower.yaml`](examples/ai2yaml/02_pitch_follower.yaml) | Grain duration driven by F0 of the same vocal source |
+| [`03_spectral_shimmer.yaml`](examples/ai2yaml/03_spectral_shimmer.yaml) | Cross-file: noise file's spectral flatness shapes orchestral grain size |
+| [`04_percussive_freeze.yaml`](examples/ai2yaml/04_percussive_freeze.yaml) | Percussive transient freeze-bloom (8ms → 800ms grain morph) |
+| [`05_atmos_rain.yaml`](examples/ai2yaml/05_atmos_rain.yaml) | 12-channel 7.1.4 spatial rain cloud |
+| [`06_sidechain_gate.yaml`](examples/ai2yaml/06_sidechain_gate.yaml) | Kick drum RMS ducks the amplitude of a granulated pad |
+| [`07_chaotic_lfo_swarm.yaml`](examples/ai2yaml/07_chaotic_lfo_swarm.yaml) | Three interlocking prime-ratio phasor LFOs controlling three separate clouds |
+| [`08_chroma_driven_pan.yaml`](examples/ai2yaml/08_chroma_driven_pan.yaml) | Dominant chroma pitch class sweeps spatial width and amplitude |
+| [`09_mfcc_texture.yaml`](examples/ai2yaml/09_mfcc_texture.yaml) | MFCC-3 drives grain width for dynamic timbral morphing |
+| [`10_polyrhythmic_bursts.yaml`](examples/ai2yaml/10_polyrhythmic_bursts.yaml) | Three simultaneous clouds at prime density ratios in Just Intonation |
+
+To regenerate any recipe from its prompt:
+```bash
+./ai2yaml "<prompt from top of file>" my_version.yaml
+```
+
 ---
 
 ## Offline Audio Feature Analysis

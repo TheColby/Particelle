@@ -1,0 +1,55 @@
+# ai2yaml prompt:
+# "Extract MFCC coefficient 3 from piano.wav (a perceptual timbral shape descriptor).
+#  Use it to modulate grain width — MFCC3 is the upper spectral slope, so higher 
+#  values = brighter attack, wider spread. Normalize to get a useful [0.2, 2.0] range
+#  assuming MFCC3 typically ranges from -20 to +20.
+#  Keep density at 55, duration at 0.15. Stereo output."
+
+engine:
+  sample_rate: 48000
+  block_size: 256
+
+layout:
+  channels:
+    - { name: "L", azimuth_deg: -30.0, elevation_deg: 0.0 }
+    - { name: "R", azimuth_deg:  30.0, elevation_deg: 0.0 }
+
+tuning:
+  mode: twelve_tet
+
+analysis:
+  - id: timbral_shape
+    source: samples/piano.wav
+    extractor: mfcc3          # Raw range typically -30 to +30
+
+clouds:
+  - id: mfcc_texture
+    source: samples/piano.wav
+
+    density: 55.0
+    duration: 0.15
+
+    # Normalize MFCC3 from [-20, +20] → [0, 1], then scale width [0.2, 2.0]
+    width:
+      op: add
+      args:
+        - 0.20
+        - op: mul
+          args:
+            - op: clamp
+              args:
+                - op: mul
+                  args:
+                    - op: add
+                      args:
+                        - "$analysis.timbral_shape"
+                        - 20.0         # shift from [-20,+20] → [0,40]
+                    - 0.025            # scale [0,40] → [0,1]
+                - 0.0
+                - 1.0
+            - 1.80                     # scale [0,1] → [0,1.8]
+
+    amplitude: 0.65
+    position: { op: osc, args: [phasor, 0.025] }
+    window: { type: hann }
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }

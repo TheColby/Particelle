@@ -1,0 +1,54 @@
+# ai2yaml prompt:
+# "Create a 12-channel Dolby Atmos spatial rain cloud using rain.wav.
+#  Spread the grains randomly across all 12 channels including overhead speakers.
+#  Use high density (150 grains/sec), short grains (30–80ms), low amplitude (0.4).
+#  Position slowly drifts. Output in 7.1.4 layout (12 channels)."
+
+engine:
+  sample_rate: 48000
+  block_size: 256
+
+layout:
+  channels:
+    # Floor ring — ITU-R BS.2051 7.1.4 layout
+    - { name: "L",    azimuth_deg: -30.0,  elevation_deg:  0.0 }
+    - { name: "R",    azimuth_deg:  30.0,  elevation_deg:  0.0 }
+    - { name: "C",    azimuth_deg:   0.0,  elevation_deg:  0.0 }
+    - { name: "LFE",  azimuth_deg:  45.0,  elevation_deg: -30.0 }
+    - { name: "LsS",  azimuth_deg: -110.0, elevation_deg:  0.0 }
+    - { name: "RsS",  azimuth_deg:  110.0, elevation_deg:  0.0 }
+    - { name: "LbS",  azimuth_deg: -145.0, elevation_deg:  0.0 }
+    - { name: "RbS",  azimuth_deg:  145.0, elevation_deg:  0.0 }
+    # Overhead ring (elevation ~45°)
+    - { name: "TFL",  azimuth_deg: -45.0,  elevation_deg: 45.0 }
+    - { name: "TFR",  azimuth_deg:  45.0,  elevation_deg: 45.0 }
+    - { name: "TBL",  azimuth_deg: -135.0, elevation_deg: 45.0 }
+    - { name: "TBR",  azimuth_deg:  135.0, elevation_deg: 45.0 }
+
+tuning:
+  mode: twelve_tet
+
+clouds:
+  - id: atmos_rain
+    source: samples/rain.wav
+
+    density: 150.0
+
+    # Duration randomized 30–80ms
+    duration:
+      op: add
+      args:
+        - 0.030
+        - op: mul
+          args:
+            - { op: osc, args: [phasor, 5.3] }   # 5 Hz randomizes duration bin
+            - 0.050
+
+    amplitude: 0.40
+    position: { op: osc, args: [phasor, 0.004] }  # very slow scrub
+
+    window:
+      type: hann
+
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }
+    width: 6.28   # Full sphere spread
