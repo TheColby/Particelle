@@ -53,16 +53,15 @@ impl MidiRouter {
     /// Process a batch of MIDI events and return a map of field name → value.
     ///
     /// If multiple events map to the same field within one block, the last value wins.
-    pub fn process(&self, events: &[MidiEvent]) -> HashMap<String, f64> {
+    pub fn process<'a>(&'a self, events: &[MidiEvent]) -> HashMap<&'a str, f64> {
         let mut fields = HashMap::new();
 
         for event in events {
-            let source_key = event_to_source_key(&event.kind);
             let value = event_to_value(&event.kind);
 
             for rule in &self.rules {
-                if rule.source == source_key {
-                    fields.insert(rule.target.clone(), rule.apply(value));
+                if matches_source(&rule.source, &event.kind) {
+                    fields.insert(rule.target.as_str(), rule.apply(value));
                 }
             }
         }
@@ -71,18 +70,25 @@ impl MidiRouter {
     }
 }
 
-/// Convert a MidiEventKind to its canonical source path string.
-fn event_to_source_key(kind: &MidiEventKind) -> String {
+/// Check if a canonical source path string matches a MidiEventKind.
+fn matches_source(source: &str, kind: &MidiEventKind) -> bool {
     match kind {
-        MidiEventKind::ControlChange { cc, .. } => format!("midi.cc.{}", cc),
-        MidiEventKind::PitchBend { .. } => "midi.pitchbend".to_string(),
-        MidiEventKind::ChannelPressure { .. } => "midi.pressure".to_string(),
-        MidiEventKind::Note(_) => "midi.note".to_string(),
-        MidiEventKind::ProgramChange { .. } => "midi.program".to_string(),
+        MidiEventKind::ControlChange { cc, .. } => {
+            if let Some(cc_str) = source.strip_prefix("midi.cc.") {
+                if let Ok(rule_cc) = cc_str.parse::<u8>() {
+                    return rule_cc == *cc;
+                }
+            }
+            false
+        }
+        MidiEventKind::PitchBend { .. } => source == "midi.pitchbend",
+        MidiEventKind::ChannelPressure { .. } => source == "midi.pressure",
+        MidiEventKind::Note(_) => source == "midi.note",
+        MidiEventKind::ProgramChange { .. } => source == "midi.program",
         MidiEventKind::Expression(expr) => match expr.kind {
-            ExpressionKind::PitchBend => "mpe.pitchbend".to_string(),
-            ExpressionKind::Pressure => "mpe.pressure".to_string(),
-            ExpressionKind::Timbre => "mpe.timbre".to_string(),
+            ExpressionKind::PitchBend => source == "mpe.pitchbend",
+            ExpressionKind::Pressure => source == "mpe.pressure",
+            ExpressionKind::Timbre => source == "mpe.timbre",
         },
     }
 }
