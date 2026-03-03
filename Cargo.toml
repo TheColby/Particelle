@@ -38,9 +38,6 @@ serde_json = "1"
 thiserror = "2"
 anyhow    = "1"
 
-# Concurrency / lock-free
-ringbuf = "0.4"
-
 # CLI
 clap = { version = "4", features = ["derive"] }
 
@@ -56,9 +53,3 @@ libm = "0.2"
 
 # Audio file IO (WAV)
 hound = "3.5"
-
-# Audio hardware backend (optional)
-cpal = "0.15"
-
-# MIDI realtime (optional)
-midir = "0.10"
