@@ -989,12 +989,14 @@ Signal expressions compose. Here is a visual representation of how a density par
 graph TD
     classDef curve fill:#3f51b5,stroke:#c5cae9,stroke-width:2px,color:#fff,rx:8,ry:8
     classDef control fill:#7b1fa2,stroke:#e1bee7,stroke-width:2px,color:#fff,rx:8,ry:8
+    classDef osc fill:#0284c7,stroke:#bae6fd,stroke-width:2px,color:#fff,rx:8,ry:8
     classDef const fill:#424242,stroke:#bdbdbd,stroke-width:1px,color:#fff,rx:4,ry:4
     classDef op fill:#f57f17,stroke:#fff9c4,stroke-width:2px,color:#fff,rx:8,ry:8
     classDef output fill:#1b5e20,stroke:#c8e6c9,stroke-width:2px,color:#fff,rx:8,ry:8
 
     A[curves/density_env.json]:::curve -->|Curve Block| B(Mul Node):::op
     C[Field: $midi_cc1]:::control -->|Direct Value| B
+    H[OSC: /field/density_mod]:::osc -->|Network Float| B
     B -->|Product| D(Clamp Node):::op
     E[Const: 1.0]:::const -->|Min| D
     F[Const: 64.0]:::const -->|Max| D
