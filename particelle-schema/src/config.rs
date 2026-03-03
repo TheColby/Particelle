@@ -28,7 +28,9 @@ pub struct EngineConfig {
     pub max_particles_per_cloud: usize,
 }
 
-fn default_max_particles() -> usize { 4096 }
+fn default_max_particles() -> usize {
+    4096
+}
 
 /// Hardware audio device configuration (realtime mode only).
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -40,7 +42,9 @@ pub struct HardwareConfig {
     pub duplex: bool,
 }
 
-fn default_latency_ms() -> f64 { 10.0 }
+fn default_latency_ms() -> f64 {
+    10.0
+}
 
 /// Declarative multichannel output layout.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -63,7 +67,7 @@ pub enum ChannelConfig {
         x: f64,
         y: f64,
         z: f64,
-    }
+    },
 }
 
 /// Tuning system selection and configuration.
@@ -78,7 +82,10 @@ pub enum TuningConfig {
     /// Fixed Just Intonation via rational ratios.
     Ji { ratios: Vec<JiRatioConfig> },
     /// Scala .scl and optional .kbm files.
-    Scala { scl_path: String, kbm_path: Option<String> },
+    Scala {
+        scl_path: String,
+        kbm_path: Option<String>,
+    },
 }
 
 /// A single JI ratio entry for TuningConfig::Ji.
@@ -95,13 +102,13 @@ pub struct CloudConfig {
     pub id: String,
     /// Source audio: a file path or `"input"` for duplex.
     pub source: String,
-    pub density:      SignalExprConfig,
-    pub duration:     SignalExprConfig,
-    pub position:     SignalExprConfig,
-    pub amplitude:    SignalExprConfig,
-    pub window:       WindowSpecConfig,
+    pub density: SignalExprConfig,
+    pub duration: SignalExprConfig,
+    pub position: SignalExprConfig,
+    pub amplitude: SignalExprConfig,
+    pub window: WindowSpecConfig,
     pub listener_pos: Vec3Config,
-    pub width:        SignalExprConfig,
+    pub width: SignalExprConfig,
     #[serde(default)]
     pub max_particles: Option<usize>,
 }
@@ -111,7 +118,7 @@ pub struct CloudConfig {
 #[serde(untagged)]
 pub enum SignalExprConfig {
     Const(f64),
-    Ref(String),          // e.g. "$midi_cc1" or "curves/density.json"
+    Ref(String), // e.g. "$midi_cc1" or "curves/density.json"
     Expr(SignalOpConfig),
 }
 

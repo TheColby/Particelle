@@ -42,8 +42,12 @@ pub fn create_reconstructor(method: &ReconstructionMethod) -> Box<dyn Reconstruc
     match method {
         ReconstructionMethod::Zoh => Box::new(ZohReconstructor::default()),
         ReconstructionMethod::Linear => Box::new(LinearReconstructor::default()),
-        ReconstructionMethod::OnePole { coefficient } => Box::new(OnePoleReconstructor::new(*coefficient)),
-        ReconstructionMethod::SlewLimiter { max_rate } => Box::new(SlewReconstructor::new(*max_rate)),
+        ReconstructionMethod::OnePole { coefficient } => {
+            Box::new(OnePoleReconstructor::new(*coefficient))
+        }
+        ReconstructionMethod::SlewLimiter { max_rate } => {
+            Box::new(SlewReconstructor::new(*max_rate))
+        }
         // fallback to Linear for more complex variants not yet fully implemented
         _ => Box::new(LinearReconstructor::default()),
     }
@@ -61,7 +65,9 @@ impl Reconstructor for ZohReconstructor {
         }
         self.value
     }
-    fn reset(&mut self) { self.value = 0.0; }
+    fn reset(&mut self) {
+        self.value = 0.0;
+    }
 }
 
 #[derive(Default)]
@@ -107,7 +113,10 @@ struct OnePoleReconstructor {
 
 impl OnePoleReconstructor {
     fn new(coeff: f64) -> Self {
-        Self { coeff: coeff.clamp(0.0, 0.9999), state: 0.0 }
+        Self {
+            coeff: coeff.clamp(0.0, 0.9999),
+            state: 0.0,
+        }
     }
 }
 
@@ -124,7 +133,9 @@ impl Reconstructor for OnePoleReconstructor {
         }
         self.state
     }
-    fn reset(&mut self) { self.state = 0.0; }
+    fn reset(&mut self) {
+        self.state = 0.0;
+    }
 }
 
 struct SlewReconstructor {
@@ -134,7 +145,10 @@ struct SlewReconstructor {
 
 impl SlewReconstructor {
     fn new(max_rate: f64) -> Self {
-        Self { max_rate, state: 0.0 }
+        Self {
+            max_rate,
+            state: 0.0,
+        }
     }
 }
 
@@ -146,5 +160,7 @@ impl Reconstructor for SlewReconstructor {
         }
         self.state
     }
-    fn reset(&mut self) { self.state = 0.0; }
+    fn reset(&mut self) {
+        self.state = 0.0;
+    }
 }

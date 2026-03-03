@@ -1,6 +1,6 @@
-use std::sync::Arc;
-use particelle_curve::CompiledCurve;
 use crate::context::SignalContext;
+use particelle_curve::CompiledCurve;
+use std::sync::Arc;
 
 /// The universal parameter signal type.
 ///
@@ -27,13 +27,24 @@ pub enum ParamSignal {
     Mul(Box<ParamSignal>, Box<ParamSignal>),
 
     /// Apply a named transformation function to an input signal.
-    Map { input: Box<ParamSignal>, func: MapFunc },
+    Map {
+        input: Box<ParamSignal>,
+        func: MapFunc,
+    },
 
     /// Clamp a signal to [min, max].
-    Clamp { input: Box<ParamSignal>, min: f64, max: f64 },
+    Clamp {
+        input: Box<ParamSignal>,
+        min: f64,
+        max: f64,
+    },
 
     /// Scale and shift: `output = input * scale + offset`.
-    ScaleOffset { input: Box<ParamSignal>, scale: f64, offset: f64 },
+    ScaleOffset {
+        input: Box<ParamSignal>,
+        scale: f64,
+        offset: f64,
+    },
 }
 
 impl ParamSignal {
@@ -47,18 +58,16 @@ impl ParamSignal {
                 let t = ctx.frame as f64 / ctx.sample_rate;
                 curve.eval(t)
             }
-            ParamSignal::Control { field } => {
-                ctx.fields.get(field).unwrap_or(0.0)
-            }
+            ParamSignal::Control { field } => ctx.fields.get(field).unwrap_or(0.0),
             ParamSignal::Sum(a, b) => a.eval(ctx) + b.eval(ctx),
             ParamSignal::Mul(a, b) => a.eval(ctx) * b.eval(ctx),
             ParamSignal::Map { input, func } => func.apply(input.eval(ctx), ctx),
-            ParamSignal::Clamp { input, min, max } => {
-                input.eval(ctx).clamp(*min, *max)
-            }
-            ParamSignal::ScaleOffset { input, scale, offset } => {
-                input.eval(ctx) * scale + offset
-            }
+            ParamSignal::Clamp { input, min, max } => input.eval(ctx).clamp(*min, *max),
+            ParamSignal::ScaleOffset {
+                input,
+                scale,
+                offset,
+            } => input.eval(ctx) * scale + offset,
         }
     }
 }
@@ -75,7 +84,9 @@ pub enum MapFunc {
     Negate,
     Recip,
     /// Custom named transformer; implementation resolved at engine setup.
-    Custom { name: String },
+    Custom {
+        name: String,
+    },
 }
 
 impl MapFunc {
@@ -87,10 +98,14 @@ impl MapFunc {
             MapFunc::HzToMidiNote => 69.0 + 12.0 * (v / 440.0).log2(),
             MapFunc::Abs => v.abs(),
             MapFunc::Negate => -v,
-            MapFunc::Recip => if v == 0.0 { 0.0 } else { 1.0 / v },
-            MapFunc::Custom { name } => {
-                ctx.resolve_custom_map(name, v)
+            MapFunc::Recip => {
+                if v == 0.0 {
+                    0.0
+                } else {
+                    1.0 / v
+                }
             }
+            MapFunc::Custom { name } => ctx.resolve_custom_map(name, v),
         }
     }
 }
@@ -98,10 +113,15 @@ impl MapFunc {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::context::{SignalContext, NullFields};
+    use crate::context::{NullFields, SignalContext};
 
     fn ctx() -> SignalContext<'static> {
-        SignalContext { frame: 0, sample_rate: 48000.0, fields: &NullFields, custom_resolver: None }
+        SignalContext {
+            frame: 0,
+            sample_rate: 48000.0,
+            fields: &NullFields,
+            custom_resolver: None,
+        }
     }
 
     #[test]

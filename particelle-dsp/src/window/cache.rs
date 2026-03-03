@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-use super::schema::{WindowSpec, WindowNormalization};
 use super::generator::generate;
 use super::normalization::apply_normalization;
+use super::schema::{WindowNormalization, WindowSpec};
 
 /// Cache key: serialized spec string + length/// Cache key definition for identical windows.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -35,16 +35,13 @@ pub struct WindowCache {
 
 impl WindowCache {
     pub fn new() -> Self {
-        Self { cache: Mutex::new(HashMap::new()) }
+        Self {
+            cache: Mutex::new(HashMap::new()),
+        }
     }
 
     /// Retrieve a window, computing and caching it if not already present.
-    pub fn get(
-        &self,
-        spec: &WindowSpec,
-        length: usize,
-        norm: WindowNormalization,
-    ) -> Arc<[f64]> {
+    pub fn get(&self, spec: &WindowSpec, length: usize, norm: WindowNormalization) -> Arc<[f64]> {
         let key = CacheKey::new(spec, length, norm);
 
         let mut cache = self.cache.lock().expect("WindowCache lock poisoned");

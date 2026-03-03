@@ -1,5 +1,5 @@
-use std::sync::Arc;
 use crate::audio_block::AudioBlock;
+use std::sync::Arc;
 
 /// State of a single active grain.
 #[derive(Clone, Debug)]
@@ -75,18 +75,21 @@ impl Grain {
             // Source position interpolation (linear)
             let src_idx = self.current_frame.floor() as usize;
             let src_fract = self.current_frame - (src_idx as f64);
-            
+
             let mut mixed_sample = 0.0;
             for ch in 0..n_src_ch {
                 let src_buf = &self.source[ch];
                 let s1 = src_buf.get(src_idx % src_buf.len()).copied().unwrap_or(0.0);
-                let s2 = src_buf.get((src_idx + 1) % src_buf.len()).copied().unwrap_or(0.0);
+                let s2 = src_buf
+                    .get((src_idx + 1) % src_buf.len())
+                    .copied()
+                    .unwrap_or(0.0);
                 mixed_sample += s1 + src_fract * (s2 - s1);
             }
             if n_src_ch > 1 {
                 mixed_sample /= n_src_ch as f64;
             }
-            
+
             let windowed = mixed_sample * win_val;
 
             // Apply panning gains to output channels
@@ -114,8 +117,8 @@ pub struct GrainParams {
     pub amplitude: f64,
 }
 
-use particelle_params::signal::ParamSignal;
 use particelle_params::context::SignalContext;
+use particelle_params::signal::ParamSignal;
 
 /// A high-level grain cloud managing a pool of grains.
 pub struct Cloud {
@@ -123,7 +126,7 @@ pub struct Cloud {
     pub pool: crate::pool::GrainPool,
     /// Time until the next grain onset in frames.
     pub onset_delay: f64,
-    
+
     // Dynamic Parameter Signals
     pub density: ParamSignal,
     pub duration: ParamSignal,
@@ -163,26 +166,26 @@ impl Cloud {
         }
 
         let avg_delay = sample_rate / density_val;
-        
+
         if self.onset_delay <= 0.0 {
             if let Some(grain) = self.pool.acquire() {
                 let mut gains = vec![0.0; grain.output_gains.len()];
-                
+
                 let width_val = self.width.eval(ctx);
                 let amplitude_val = self.amplitude.eval(ctx);
-                
+
                 // Calculate spatial distribution
                 spatializer.distribute(self.listener_pos, width_val, &mut gains);
-                
+
                 // Apply overall amplitude
                 for g in &mut gains {
                     *g *= amplitude_val;
                 }
-                
+
                 let position_val = self.position.eval(ctx);
                 let duration_val = self.duration.eval(ctx);
                 let playback_rate_val = self.playback_rate.eval(ctx);
-                
+
                 let start_frame = position_val * sample_rate; // simplistic mapping
                 let dur_frames = duration_val * sample_rate;
                 grain.activate(start_frame, dur_frames, playback_rate_val, &gains);

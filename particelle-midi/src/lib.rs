@@ -11,7 +11,7 @@ pub mod routing;
 #[cfg(feature = "realtime")]
 pub mod realtime;
 
-pub use events::{MidiEvent, MidiEventKind, NoteEvent, ExpressionEvent, ExpressionKind};
-pub use mpe::{MpeConfig, MpeZone, MpeVoiceState};
+pub use events::{ExpressionEvent, ExpressionKind, MidiEvent, MidiEventKind, NoteEvent};
+pub use mpe::{MpeConfig, MpeVoiceState, MpeZone};
 pub use offline::OfflineMidiReader;
-pub use routing::{MidiRouter, RoutingRule, parse_midi_bytes};
+pub use routing::{parse_midi_bytes, MidiRouter, RoutingRule};

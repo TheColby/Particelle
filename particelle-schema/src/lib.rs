@@ -8,9 +8,8 @@ pub mod config;
 pub mod validation;
 
 pub use config::{
-    ParticelleConfig, EngineConfig, LayoutConfig, ChannelConfig,
-    HardwareConfig, TuningConfig, JiRatioConfig, CloudConfig,
-    SignalExprConfig, SignalOpConfig, WindowSpecConfig, Vec3Config,
-    RoutingConfig, MidiBindingConfig,
+    ChannelConfig, CloudConfig, EngineConfig, HardwareConfig, JiRatioConfig, LayoutConfig,
+    MidiBindingConfig, ParticelleConfig, RoutingConfig, SignalExprConfig, SignalOpConfig,
+    TuningConfig, Vec3Config, WindowSpecConfig,
 };
 pub use validation::{validate, ValidationError};

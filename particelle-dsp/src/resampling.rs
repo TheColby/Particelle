@@ -1,6 +1,6 @@
-use rubato::{Resampler as RubatoResamplerTrait, Fft, FixedSync};
 use audioadapter::Adapter;
 use audioadapter_buffers::direct::SequentialSliceOfVecs;
+use rubato::{Fft, FixedSync, Resampler as RubatoResamplerTrait};
 
 /// Resampler trait: converts a planar f64 buffer from one sample rate to another.
 pub trait Resampler: Send {
@@ -51,14 +51,17 @@ impl Resampler for RubatoResampler {
         let need_new = self.resampler.is_none() || self.last_rates != (input_rate, output_rate);
 
         if need_new {
-            self.resampler = Some(rubato::Fft::<f64>::new(
-                input_rate as usize,
-                output_rate as usize,
-                chunk_size,
-                1,
-                self.channels,
-                FixedSync::Input,
-            ).map_err(|e| e.to_string())?);
+            self.resampler = Some(
+                rubato::Fft::<f64>::new(
+                    input_rate as usize,
+                    output_rate as usize,
+                    chunk_size,
+                    1,
+                    self.channels,
+                    FixedSync::Input,
+                )
+                .map_err(|e| e.to_string())?,
+            );
             self.last_rates = (input_rate, output_rate);
         }
 
@@ -71,13 +74,15 @@ impl Resampler for RubatoResampler {
             .map_err(|e| e.to_string())?;
 
         // Rubato expects buffers in a specific format
-        let out = resampler.process(&multislice, 0, None).map_err(|e| e.to_string())?;
+        let out = resampler
+            .process(&multislice, 0, None)
+            .map_err(|e| e.to_string())?;
 
         // `InterleavedOwned` contains `channels` and interleaved data
         let frames = out.frames();
         let interleaved_data = out.take_data();
         let mut final_out = vec![vec![0.0; frames]; self.channels];
-        
+
         for frame in 0..frames {
             for ch in 0..self.channels {
                 final_out[ch][frame] = interleaved_data[frame * self.channels + ch];

@@ -1,5 +1,5 @@
-use thiserror::Error;
 use particelle_core::audio_block::AudioBlock;
+use thiserror::Error;
 
 /// Audio file reader.
 ///
@@ -29,17 +29,17 @@ impl AudioFileReader {
         let interleaved: Vec<f64> = match spec.sample_format {
             hound::SampleFormat::Int => {
                 let max_val = (1i64 << (spec.bits_per_sample - 1)) as f64;
-                reader.into_samples::<i32>()
+                reader
+                    .into_samples::<i32>()
                     .map(|s| s.map(|v| v as f64 / max_val))
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(|e| FileError::Read(e.to_string()))?
             }
-            hound::SampleFormat::Float => {
-                reader.into_samples::<f32>()
-                    .map(|s| s.map(|v| v as f64))
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(|e| FileError::Read(e.to_string()))?
-            }
+            hound::SampleFormat::Float => reader
+                .into_samples::<f32>()
+                .map(|s| s.map(|v| v as f64))
+                .collect::<Result<Vec<_>, _>>()
+                .map_err(|e| FileError::Read(e.to_string()))?,
         };
 
         let n_frames = interleaved.len() / n_channels;
@@ -155,27 +155,35 @@ impl AudioFileWriter {
 
         for f in 0..frames {
             for ch in 0..self.n_channels {
-                let sample = if ch < n_ch { block.channels[ch][f] } else { 0.0 };
+                let sample = if ch < n_ch {
+                    block.channels[ch][f]
+                } else {
+                    0.0
+                };
                 match self.bit_depth {
                     16 => {
                         let val = (sample.clamp(-1.0, 1.0) * i16::MAX as f64) as i16;
-                        self.writer.write_sample(val)
+                        self.writer
+                            .write_sample(val)
                             .map_err(|e| FileError::Write(e.to_string()))?;
                     }
                     24 => {
                         let val = (sample.clamp(-1.0, 1.0) * 8388607.0) as i32;
-                        self.writer.write_sample(val)
+                        self.writer
+                            .write_sample(val)
                             .map_err(|e| FileError::Write(e.to_string()))?;
                     }
                     32 => {
                         let val = sample as f32;
-                        self.writer.write_sample(val)
+                        self.writer
+                            .write_sample(val)
                             .map_err(|e| FileError::Write(e.to_string()))?;
                     }
                     _ => {
-                        return Err(FileError::UnsupportedFormat(
-                            format!("Unsupported bit depth: {}", self.bit_depth),
-                        ));
+                        return Err(FileError::UnsupportedFormat(format!(
+                            "Unsupported bit depth: {}",
+                            self.bit_depth
+                        )));
                     }
                 }
             }
@@ -188,7 +196,8 @@ impl AudioFileWriter {
     /// Finalize and close the WAV file (flushes the header).
     pub fn finalize(self) -> Result<u64, FileError> {
         let frames = self.frames_written;
-        self.writer.finalize()
+        self.writer
+            .finalize()
             .map_err(|e| FileError::Write(e.to_string()))?;
         Ok(frames)
     }

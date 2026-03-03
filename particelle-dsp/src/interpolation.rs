@@ -49,11 +49,19 @@ pub fn monotone_cubic(p0: f64, p1: f64, p2: f64, p3: f64, t: f64) -> f64 {
     // Fritsch-Carlson tangent conditions
     let m1 = {
         let s = 0.5 * (h0 + h1);
-        if s.abs() < 1e-15 { 0.0 } else { 0.5 * (delta1 + 1.0) * h0 / s }
+        if s.abs() < 1e-15 {
+            0.0
+        } else {
+            0.5 * (delta1 + 1.0) * h0 / s
+        }
     };
     let m2 = {
         let s = 0.5 * (h1 + h2);
-        if s.abs() < 1e-15 { 0.0 } else { 0.5 * (1.0 + delta2) * h2 / s }
+        if s.abs() < 1e-15 {
+            0.0
+        } else {
+            0.5 * (1.0 + delta2) * h2 / s
+        }
     };
 
     cubic_hermite(p1, m1, p2, m2, t)

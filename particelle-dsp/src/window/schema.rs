@@ -18,27 +18,67 @@ pub enum WindowSpec {
     Cosine,
     Sine,
     Lanczos,
-    Gaussian { sigma: f64 },
-    Tukey { alpha: f64 },
-    PlanckTaper { epsilon: f64 },
-    PlanckBessel { epsilon: f64, alpha: f64 },
-    Kaiser { beta: f64 },
-    DolphChebyshev { attenuation_db: f64 },
-    Poisson { alpha: f64 },
-    HannPoisson { alpha: f64 },
-    Cauchy { alpha: f64 },
+    Gaussian {
+        sigma: f64,
+    },
+    Tukey {
+        alpha: f64,
+    },
+    PlanckTaper {
+        epsilon: f64,
+    },
+    PlanckBessel {
+        epsilon: f64,
+        alpha: f64,
+    },
+    Kaiser {
+        beta: f64,
+    },
+    DolphChebyshev {
+        attenuation_db: f64,
+    },
+    Poisson {
+        alpha: f64,
+    },
+    HannPoisson {
+        alpha: f64,
+    },
+    Cauchy {
+        alpha: f64,
+    },
     Welch,
     Parzen,
-    TukeyHarris { alpha: f64 },
-    NuttallGaussian { sigma: f64 },
-    RifeVincent1 { order: usize },
-    RifeVincent2 { order: usize },
-    RifeVincent3 { order: usize },
-    GeneralizedCosine { coeffs: Vec<f64> },
-    Symmetric { base: Box<WindowSpec> },
-    Asymmetric { left: Box<WindowSpec>, right: Box<WindowSpec> },
-    HalfLeft { base: Box<WindowSpec> },
-    HalfRight { base: Box<WindowSpec> },
+    TukeyHarris {
+        alpha: f64,
+    },
+    NuttallGaussian {
+        sigma: f64,
+    },
+    RifeVincent1 {
+        order: usize,
+    },
+    RifeVincent2 {
+        order: usize,
+    },
+    RifeVincent3 {
+        order: usize,
+    },
+    GeneralizedCosine {
+        coeffs: Vec<f64>,
+    },
+    Symmetric {
+        base: Box<WindowSpec>,
+    },
+    Asymmetric {
+        left: Box<WindowSpec>,
+        right: Box<WindowSpec>,
+    },
+    HalfLeft {
+        base: Box<WindowSpec>,
+    },
+    HalfRight {
+        base: Box<WindowSpec>,
+    },
 }
 
 impl Default for WindowSpec {
@@ -56,7 +96,7 @@ pub enum WindowNormalization {
     /// Scale so the maximum peak is exactly 1.0 (Default).
     #[default]
     Peak,
-    /// Scale so the Area Under Curve (Sum) is exactly 1.0. 
+    /// Scale so the Area Under Curve (Sum) is exactly 1.0.
     /// Common in spectral analysis to preserve energy.
     Sum,
     /// Scale so the Root Mean Square is 1.0.

@@ -4,10 +4,10 @@
 //! This crate has no dependency on other `particelle-*` crates.
 //! It can be compiled and tested in isolation.
 
-pub mod schema;
 pub mod evaluator;
 pub mod reconstruction;
+pub mod schema;
 
-pub use schema::{CurveSchema, Segment, SegmentShape, EaseDir, Extrapolation, ExtrapolationMode};
 pub use evaluator::CompiledCurve;
 pub use reconstruction::ReconstructionMethod;
+pub use schema::{CurveSchema, EaseDir, Extrapolation, ExtrapolationMode, Segment, SegmentShape};

@@ -8,7 +8,10 @@ pub struct OnePole {
 
 impl OnePole {
     pub fn new(coeff: f64) -> Self {
-        assert!((0.0..=1.0).contains(&coeff), "OnePole coeff must be in [0, 1]");
+        assert!(
+            (0.0..=1.0).contains(&coeff),
+            "OnePole coeff must be in [0, 1]"
+        );
         Self { coeff, state: 0.0 }
     }
 
@@ -41,7 +44,11 @@ pub struct SlewLimiter {
 
 impl SlewLimiter {
     pub fn new(max_rise: f64, max_fall: f64) -> Self {
-        Self { max_rise, max_fall, state: 0.0 }
+        Self {
+            max_rise,
+            max_fall,
+            state: 0.0,
+        }
     }
 
     pub fn process(&mut self, target: f64) -> f64 {
