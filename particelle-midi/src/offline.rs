@@ -30,8 +30,13 @@ impl OfflineMidiReader {
     }
 
     /// Events in the range [frame_start, frame_end).
-    pub fn events_in_range(&self, frame_start: u64, frame_end: u64) -> impl Iterator<Item = &TimedMidiEvent> {
-        self.events.iter()
+    pub fn events_in_range(
+        &self,
+        frame_start: u64,
+        frame_end: u64,
+    ) -> impl Iterator<Item = &TimedMidiEvent> {
+        self.events
+            .iter()
             .filter(move |e| e.frame >= frame_start && e.frame < frame_end)
     }
 }

@@ -1,20 +1,26 @@
 /// The position of a speaker in space.
 #[derive(Debug, Clone, PartialEq)]
 pub enum SpeakerPosition {
-    Spherical { azimuth_deg: f64, elevation_deg: f64 },
-    Cartesian { x: f64, y: f64, z: f64 },
+    Spherical {
+        azimuth_deg: f64,
+        elevation_deg: f64,
+    },
+    Cartesian {
+        x: f64,
+        y: f64,
+        z: f64,
+    },
 }
 
 impl SpeakerPosition {
     /// Compute the equivalent 3D Cartesian vector
     pub fn to_vec3(&self) -> crate::spatializer::Vec3 {
         match self {
-            Self::Spherical { azimuth_deg, elevation_deg } => {
-                crate::spatializer::Vec3::from_az_el(*azimuth_deg, *elevation_deg)
-            }
-            Self::Cartesian { x, y, z } => {
-                crate::spatializer::Vec3::new(*x, *y, *z)
-            }
+            Self::Spherical {
+                azimuth_deg,
+                elevation_deg,
+            } => crate::spatializer::Vec3::from_az_el(*azimuth_deg, *elevation_deg),
+            Self::Cartesian { x, y, z } => crate::spatializer::Vec3::new(*x, *y, *z),
         }
     }
 }
@@ -50,15 +56,31 @@ impl AudioLayout {
     /// Convenience constructor for stereo (L/R at ±30°).
     pub fn stereo() -> Self {
         Self::new(vec![
-            ChannelMeta { name: "L".into(), position: SpeakerPosition::Spherical { azimuth_deg: -30.0, elevation_deg: 0.0 } },
-            ChannelMeta { name: "R".into(), position: SpeakerPosition::Spherical { azimuth_deg:  30.0, elevation_deg: 0.0 } },
+            ChannelMeta {
+                name: "L".into(),
+                position: SpeakerPosition::Spherical {
+                    azimuth_deg: -30.0,
+                    elevation_deg: 0.0,
+                },
+            },
+            ChannelMeta {
+                name: "R".into(),
+                position: SpeakerPosition::Spherical {
+                    azimuth_deg: 30.0,
+                    elevation_deg: 0.0,
+                },
+            },
         ])
     }
 
     /// Convenience constructor for mono.
     pub fn mono() -> Self {
-        Self::new(vec![
-            ChannelMeta { name: "M".into(), position: SpeakerPosition::Spherical { azimuth_deg: 0.0, elevation_deg: 0.0 } },
-        ])
+        Self::new(vec![ChannelMeta {
+            name: "M".into(),
+            position: SpeakerPosition::Spherical {
+                azimuth_deg: 0.0,
+                elevation_deg: 0.0,
+            },
+        }])
     }
 }

@@ -15,8 +15,8 @@ pub struct MidiEvent {
 pub enum MidiEventKind {
     Note(NoteEvent),
     Expression(ExpressionEvent),
-    PitchBend { channel: u8, value: f64 },        // [-1, 1]
-    ChannelPressure { channel: u8, value: f64 },   // [0, 1]
+    PitchBend { channel: u8, value: f64 },       // [-1, 1]
+    ChannelPressure { channel: u8, value: f64 }, // [0, 1]
     ProgramChange { channel: u8, program: u8 },
     ControlChange { channel: u8, cc: u8, value: f64 }, // [0, 1]
 }
@@ -25,8 +25,8 @@ pub enum MidiEventKind {
 #[derive(Debug, Clone)]
 pub struct NoteEvent {
     pub channel: u8,
-    pub note: u8,        // 0–127
-    pub velocity: f64,   // [0, 1] (0.0 = note off)
+    pub note: u8,      // 0–127
+    pub velocity: f64, // [0, 1] (0.0 = note off)
     pub is_on: bool,
 }
 
@@ -36,7 +36,7 @@ pub struct ExpressionEvent {
     pub channel: u8,
     pub note: u8,
     pub kind: ExpressionKind,
-    pub value: f64,      // [0, 1] for pressure/timbre, [-1, 1] for pitchbend
+    pub value: f64, // [0, 1] for pressure/timbre, [-1, 1] for pitchbend
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

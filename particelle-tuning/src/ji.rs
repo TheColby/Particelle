@@ -62,7 +62,8 @@ impl Tuning for JiTuning {
         };
 
         // Find the ratio for this degree within the octave
-        let ratio = self.ratios
+        let ratio = self
+            .ratios
             .iter()
             .find(|r| r.degree == octave_degree as u32)
             .map(|r| r.ratio())
@@ -83,13 +84,41 @@ mod tests {
         // A simple 7-note JI scale
         JiTuning::new(
             vec![
-                JiRatio { degree: 0, num: 1, den: 1 },   // Unison
-                JiRatio { degree: 1, num: 9, den: 8 },   // Major second
-                JiRatio { degree: 2, num: 5, den: 4 },   // Major third
-                JiRatio { degree: 3, num: 4, den: 3 },   // Perfect fourth
-                JiRatio { degree: 4, num: 3, den: 2 },   // Perfect fifth
-                JiRatio { degree: 5, num: 5, den: 3 },   // Major sixth
-                JiRatio { degree: 6, num: 15, den: 8 },  // Major seventh
+                JiRatio {
+                    degree: 0,
+                    num: 1,
+                    den: 1,
+                }, // Unison
+                JiRatio {
+                    degree: 1,
+                    num: 9,
+                    den: 8,
+                }, // Major second
+                JiRatio {
+                    degree: 2,
+                    num: 5,
+                    den: 4,
+                }, // Major third
+                JiRatio {
+                    degree: 3,
+                    num: 4,
+                    den: 3,
+                }, // Perfect fourth
+                JiRatio {
+                    degree: 4,
+                    num: 3,
+                    den: 2,
+                }, // Perfect fifth
+                JiRatio {
+                    degree: 5,
+                    num: 5,
+                    den: 3,
+                }, // Major sixth
+                JiRatio {
+                    degree: 6,
+                    num: 15,
+                    den: 8,
+                }, // Major seventh
             ],
             261.625, // C4
         )

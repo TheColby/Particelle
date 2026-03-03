@@ -12,8 +12,16 @@ pub struct Vec3 {
 }
 
 impl Vec3 {
-    pub const ORIGIN: Vec3 = Vec3 { x: 0.0, y: 0.0, z: 0.0 };
-    pub const FORWARD: Vec3 = Vec3 { x: 0.0, y: 1.0, z: 0.0 };
+    pub const ORIGIN: Vec3 = Vec3 {
+        x: 0.0,
+        y: 0.0,
+        z: 0.0,
+    };
+    pub const FORWARD: Vec3 = Vec3 {
+        x: 0.0,
+        y: 1.0,
+        z: 0.0,
+    };
 
     pub fn new(x: f64, y: f64, z: f64) -> Self {
         Self { x, y, z }
@@ -82,10 +90,15 @@ pub struct AmplitudePanner {
 
 impl AmplitudePanner {
     pub fn new(layout: AudioLayout) -> Self {
-        let speaker_vecs = layout.channels.iter()
+        let speaker_vecs = layout
+            .channels
+            .iter()
             .map(|ch| ch.position.to_vec3().normalize())
             .collect();
-        Self { layout, speaker_vecs }
+        Self {
+            layout,
+            speaker_vecs,
+        }
     }
 }
 
@@ -93,10 +106,14 @@ impl Spatializer for AmplitudePanner {
     fn distribute(&self, position: Vec3, width: f64, out_gains: &mut [f64]) {
         let n = out_gains.len().min(self.speaker_vecs.len());
         let source_dir = position.normalize();
-        
+
         // Spread exponent controlled by width
-        let p = if width >= 0.99 { 0.0 } else { 1.0 / (width.max(0.01) * 2.0) };
-        
+        let p = if width >= 0.99 {
+            0.0
+        } else {
+            1.0 / (width.max(0.01) * 2.0)
+        };
+
         let mut sum_sq = 0.0;
         for i in 0..n {
             let dot = source_dir.dot(&self.speaker_vecs[i]);
@@ -105,9 +122,13 @@ impl Spatializer for AmplitudePanner {
             out_gains[i] = gain;
             sum_sq += gain * gain;
         }
-        
+
         // Constant power normalization
-        let norm = if sum_sq > f64::EPSILON { 1.0 / sum_sq.sqrt() } else { 0.0 };
+        let norm = if sum_sq > f64::EPSILON {
+            1.0 / sum_sq.sqrt()
+        } else {
+            0.0
+        };
         for g in out_gains[..n].iter_mut() {
             *g *= norm;
         }
@@ -139,7 +160,7 @@ mod tests {
         let layout = AudioLayout::stereo();
         let panner = AmplitudePanner::new(layout);
         let mut gains = vec![0.0; 2];
-        
+
         panner.distribute(Vec3::from_az_el(-30.0, 0.0), 0.1, &mut gains);
         assert!(gains[0] > gains[1]); // Left speaker louder than right
 

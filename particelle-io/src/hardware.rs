@@ -64,16 +64,16 @@ impl HardwareHost {
             let host = cpal::default_host();
 
             let device = match &self.config.device_name {
-                Some(name) => {
-                    host.output_devices()
-                        .map_err(|e| HardwareError::StreamOpenFailed { reason: e.to_string() })?
-                        .find(|d| d.name().map(|n| n == *name).unwrap_or(false))
-                        .ok_or_else(|| HardwareError::DeviceNotFound { name: name.clone() })?
-                }
-                None => {
-                    host.default_output_device()
-                        .ok_or(HardwareError::NoDefaultDevice)?
-                }
+                Some(name) => host
+                    .output_devices()
+                    .map_err(|e| HardwareError::StreamOpenFailed {
+                        reason: e.to_string(),
+                    })?
+                    .find(|d| d.name().map(|n| n == *name).unwrap_or(false))
+                    .ok_or_else(|| HardwareError::DeviceNotFound { name: name.clone() })?,
+                None => host
+                    .default_output_device()
+                    .ok_or(HardwareError::NoDefaultDevice)?,
             };
 
             let device_name = device.name().unwrap_or_else(|_| "Unknown".to_string());
@@ -87,19 +87,24 @@ impl HardwareHost {
 
             let mut callback = _callback;
 
-            let stream = device.build_output_stream(
-                &stream_config,
-                move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
-                    callback(data);
-                },
-                |err| {
-                    eprintln!("Audio stream error: {}", err);
-                },
-                None,
-            ).map_err(|e| HardwareError::StreamOpenFailed { reason: e.to_string() })?;
+            let stream = device
+                .build_output_stream(
+                    &stream_config,
+                    move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
+                        callback(data);
+                    },
+                    |err| {
+                        eprintln!("Audio stream error: {}", err);
+                    },
+                    None,
+                )
+                .map_err(|e| HardwareError::StreamOpenFailed {
+                    reason: e.to_string(),
+                })?;
 
-            stream.play()
-                .map_err(|e| HardwareError::StreamOpenFailed { reason: e.to_string() })?;
+            stream.play().map_err(|e| HardwareError::StreamOpenFailed {
+                reason: e.to_string(),
+            })?;
 
             eprintln!(
                 "→ Streaming to \"{}\" @ {}Hz, {} ch, {} block (Ctrl+C to stop)",
@@ -129,11 +134,12 @@ impl HardwareHost {
         {
             use cpal::traits::{DeviceTrait, HostTrait};
             let host = cpal::default_host();
-            let devices = host.output_devices()
-                .map_err(|e| HardwareError::StreamOpenFailed { reason: e.to_string() })?;
-            let names: Vec<String> = devices
-                .filter_map(|d| d.name().ok())
-                .collect();
+            let devices = host
+                .output_devices()
+                .map_err(|e| HardwareError::StreamOpenFailed {
+                    reason: e.to_string(),
+                })?;
+            let names: Vec<String> = devices.filter_map(|d| d.name().ok()).collect();
             Ok(names)
         }
     }

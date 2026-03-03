@@ -31,7 +31,12 @@ impl RoutingRule {
         }
     }
 
-    pub fn with_transform(source: impl Into<String>, target: impl Into<String>, scale: f64, offset: f64) -> Self {
+    pub fn with_transform(
+        source: impl Into<String>,
+        target: impl Into<String>,
+        scale: f64,
+        offset: f64,
+    ) -> Self {
         Self {
             source: source.into(),
             target: target.into(),
@@ -243,11 +248,19 @@ mod tests {
         let events = vec![
             MidiEvent {
                 frame_offset: 0,
-                kind: MidiEventKind::ControlChange { channel: 1, cc: 1, value: 0.5 },
+                kind: MidiEventKind::ControlChange {
+                    channel: 1,
+                    cc: 1,
+                    value: 0.5,
+                },
             },
             MidiEvent {
                 frame_offset: 10,
-                kind: MidiEventKind::ControlChange { channel: 1, cc: 74, value: 1.0 },
+                kind: MidiEventKind::ControlChange {
+                    channel: 1,
+                    cc: 74,
+                    value: 1.0,
+                },
             },
         ];
 

@@ -53,29 +53,30 @@ pub struct KbmMapping {
 
 /// Parse a .scl string into an SclScale.
 pub fn parse_scl(input: &str) -> Result<SclScale, String> {
-    let mut lines = input.lines()
+    let mut lines = input
+        .lines()
         .map(|l| l.trim())
         .filter(|l| !l.starts_with('!') && !l.is_empty());
 
-    let description = lines.next()
-        .ok_or("Missing description line")?
-        .to_string();
+    let description = lines.next().ok_or("Missing description line")?.to_string();
 
-    let count_str = lines.next()
-        .ok_or("Missing note count line")?;
-    let count: usize = count_str.parse()
+    let count_str = lines.next().ok_or("Missing note count line")?;
+    let count: usize = count_str
+        .parse()
         .map_err(|_| format!("Invalid note count: '{}'", count_str))?;
 
     let mut intervals = Vec::with_capacity(count);
     for _ in 0..count {
-        let line = lines.next()
-            .ok_or("Not enough interval lines")?;
-        let token = line.split_whitespace().next()
+        let line = lines.next().ok_or("Not enough interval lines")?;
+        let token = line
+            .split_whitespace()
+            .next()
             .ok_or("Empty interval line")?;
 
         if token.contains('.') {
             // Cents format
-            let cents: f64 = token.parse()
+            let cents: f64 = token
+                .parse()
                 .map_err(|_| format!("Invalid cents value: '{}'", token))?;
             intervals.push(SclInterval::Cents(cents));
         } else if token.contains('/') {
@@ -84,9 +85,11 @@ pub fn parse_scl(input: &str) -> Result<SclScale, String> {
             if parts.len() != 2 {
                 return Err(format!("Invalid ratio: '{}'", token));
             }
-            let num: u64 = parts[0].parse()
+            let num: u64 = parts[0]
+                .parse()
                 .map_err(|_| format!("Invalid ratio numerator: '{}'", parts[0]))?;
-            let den: u64 = parts[1].parse()
+            let den: u64 = parts[1]
+                .parse()
                 .map_err(|_| format!("Invalid ratio denominator: '{}'", parts[1]))?;
             if den == 0 {
                 return Err(format!("Zero denominator in ratio: '{}'", token));
@@ -94,18 +97,23 @@ pub fn parse_scl(input: &str) -> Result<SclScale, String> {
             intervals.push(SclInterval::Ratio { num, den });
         } else {
             // Integer — treat as ratio N/1
-            let num: u64 = token.parse()
+            let num: u64 = token
+                .parse()
                 .map_err(|_| format!("Invalid interval value: '{}'", token))?;
             intervals.push(SclInterval::Ratio { num, den: 1 });
         }
     }
 
-    Ok(SclScale { description, intervals })
+    Ok(SclScale {
+        description,
+        intervals,
+    })
 }
 
 /// Parse a .kbm string into a KbmMapping.
 pub fn parse_kbm(input: &str) -> Result<KbmMapping, String> {
-    let mut lines = input.lines()
+    let mut lines = input
+        .lines()
         .map(|l| l.trim())
         .filter(|l| !l.starts_with('!') && !l.is_empty());
 
@@ -119,7 +127,8 @@ pub fn parse_kbm(input: &str) -> Result<KbmMapping, String> {
     let last_note = parse_int(&mut lines, "last note")? as u8;
     let _middle_note = parse_int(&mut lines, "middle note")?;
     let reference_note = parse_int(&mut lines, "reference note")? as u8;
-    let reference_frequency: f64 = lines.next()
+    let reference_frequency: f64 = lines
+        .next()
         .ok_or("Missing reference frequency")?
         .parse()
         .map_err(|_| "Invalid reference frequency".to_string())?;
@@ -131,7 +140,8 @@ pub fn parse_kbm(input: &str) -> Result<KbmMapping, String> {
         if s == "x" || s == "X" {
             key_map.push(None);
         } else {
-            let d: u32 = s.parse()
+            let d: u32 = s
+                .parse()
                 .map_err(|_| format!("Invalid key map entry: '{}'", s))?;
             key_map.push(Some(d));
         }
@@ -180,7 +190,11 @@ impl ScalaTuning {
     }
 
     /// Construct from raw .scl text and optional .kbm text.
-    pub fn from_text(scl_text: &str, _kbm_text: Option<&str>, base_frequency: f64) -> Result<Self, String> {
+    pub fn from_text(
+        scl_text: &str,
+        _kbm_text: Option<&str>,
+        base_frequency: f64,
+    ) -> Result<Self, String> {
         let scl = parse_scl(scl_text)?;
         Ok(Self::from_scl(&scl, base_frequency))
     }
