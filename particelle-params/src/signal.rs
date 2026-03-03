@@ -46,6 +46,10 @@ pub enum ParamSignal {
 
     /// Programmatic Low Frequency Oscillator (LFO). Outputs between [0.0, 1.0].
     Oscillator { shape: OscShape, freq: Box<ParamSignal>, phase: f64 },
+
+    /// Offline audio feature analysis vector mapping (e.g. F0, RMS).
+    /// Linearly interpolated at the audio `hop_rate` resolution.
+    Analysis { buffer: Arc<Vec<f64>>, hop_rate: f64 },
 }
 
 impl ParamSignal {
@@ -91,6 +95,27 @@ impl ParamSignal {
                         (sine_val * 0.5) + 0.5 // Remap [-1, 1] to [0, 1]
                     }
                 }
+            }
+            ParamSignal::Analysis { buffer, hop_rate } => {
+                if buffer.is_empty() {
+                    return 0.0;
+                }
+                
+                let time_sec = ctx.frame as f64 / ctx.sample_rate;
+                let exact_idx = time_sec * hop_rate;
+                
+                let idx_floor = exact_idx.floor() as usize;
+                let idx_ceil = idx_floor + 1;
+                
+                if idx_ceil >= buffer.len() {
+                    return *buffer.last().unwrap_or(&0.0);
+                }
+                
+                let frac = exact_idx - exact_idx.floor();
+                let val_a = buffer[idx_floor];
+                let val_b = buffer[idx_ceil];
+                
+                val_a + (val_b - val_a) * frac
             }
         }
     }

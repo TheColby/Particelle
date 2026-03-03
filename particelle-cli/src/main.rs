@@ -211,12 +211,23 @@ fn main() -> Result<()> {
 
     Ok(())
 }
-fn compile_signal(expr: &particelle_schema::config::SignalExprConfig, base_dir: Option<&std::path::Path>) -> Result<particelle_params::signal::ParamSignal> {
+fn compile_signal(
+    expr: &particelle_schema::config::SignalExprConfig, 
+    base_dir: Option<&std::path::Path>,
+    analysis_buffers: &std::collections::HashMap<String, std::sync::Arc<Vec<f64>>>,
+) -> Result<particelle_params::signal::ParamSignal> {
     use particelle_schema::config::SignalExprConfig;
     use particelle_params::signal::ParamSignal;
     match expr {
         SignalExprConfig::Const(val) => Ok(ParamSignal::Const(*val)),
         SignalExprConfig::Ref(path_str) => {
+            // Check for analysis vectors
+            if let Some(analysis_id) = path_str.strip_prefix("$analysis.") {
+                if let Some(buf) = analysis_buffers.get(analysis_id) {
+                    return Ok(ParamSignal::Analysis { buffer: buf.clone(), hop_rate: 100.0 }); // Hardcode 100hz tracking for now
+                }
+            }
+            
             // If it starts with $, it's a control field
             if path_str.starts_with('$') {
                 return Ok(ParamSignal::Control { field: path_str[1..].to_string() });
@@ -245,23 +256,23 @@ fn compile_signal(expr: &particelle_schema::config::SignalExprConfig, base_dir: 
                     if op_config.args.len() != 2 {
                         anyhow::bail!("'{}' requires exactly 2 arguments", op_config.op);
                     }
-                    let a = compile_signal(&op_config.args[0], base_dir)?;
-                    let b = compile_signal(&op_config.args[1], base_dir)?;
+                    let a = compile_signal(&op_config.args[0], base_dir, analysis_buffers)?;
+                    let b = compile_signal(&op_config.args[1], base_dir, analysis_buffers)?;
                     Ok(ParamSignal::Sum(Box::new(a), Box::new(b)))
                 }
                 "mul" | "multiply" => {
                     if op_config.args.len() != 2 {
                         anyhow::bail!("'{}' requires exactly 2 arguments", op_config.op);
                     }
-                    let a = compile_signal(&op_config.args[0], base_dir)?;
-                    let b = compile_signal(&op_config.args[1], base_dir)?;
+                    let a = compile_signal(&op_config.args[0], base_dir, analysis_buffers)?;
+                    let b = compile_signal(&op_config.args[1], base_dir, analysis_buffers)?;
                     Ok(ParamSignal::Mul(Box::new(a), Box::new(b)))
                 }
                 "clamp" => {
                     if op_config.args.len() != 3 {
                         anyhow::bail!("'clamp' requires exactly 3 arguments: [input, min, max]");
                     }
-                    let input = compile_signal(&op_config.args[0], base_dir)?;
+                    let input = compile_signal(&op_config.args[0], base_dir, analysis_buffers)?;
                     
                     // We expect min and max to be parsed as Const configurations 
                     let min_val = if let SignalExprConfig::Const(v) = &op_config.args[1] { *v } 
@@ -279,7 +290,7 @@ fn compile_signal(expr: &particelle_schema::config::SignalExprConfig, base_dir: 
                     if op_config.args.len() != 2 {
                         anyhow::bail!("'map' requires exactly 2 arguments: [input, func_name]");
                     }
-                    let input = compile_signal(&op_config.args[0], base_dir)?;
+                    let input = compile_signal(&op_config.args[0], base_dir, analysis_buffers)?;
                     let func_str = if let SignalExprConfig::Ref(s) = &op_config.args[1] { s } 
                         else { anyhow::bail!("map func_name must be a reference string") };
 
@@ -312,7 +323,7 @@ fn compile_signal(expr: &particelle_schema::config::SignalExprConfig, base_dir: 
                         _ => anyhow::bail!("Unknown osc shape: '{}'", shape_str),
                     };
                     
-                    let freq = compile_signal(&op_config.args[1], base_dir)?;
+                    let freq = compile_signal(&op_config.args[1], base_dir, analysis_buffers)?;
                     
                     let phase = if op_config.args.len() == 3 {
                         if let SignalExprConfig::Const(p) = &op_config.args[2] { *p }
@@ -348,6 +359,52 @@ fn build_engine(config: &ParticelleConfig) -> Result<GranularEngine> {
     
     let engine_config = EngineConfig::new(sample_rate, block_size)
         .with_context(|| "Invalid engine config")?;
+        
+    let mut analysis_buffers = std::collections::HashMap::new();
+    for a in &config.analysis {
+        let mut reader = particelle_io::AudioFileReader::open(&a.source)
+            .with_context(|| format!("Cannot open analysis source '{}'", a.source))?;
+        let mut mono = Vec::with_capacity(reader.n_frames as usize);
+        let mut block = particelle_core::audio_block::AudioBlock::new(reader.n_channels, 1024);
+        loop {
+            let read = reader.read_block(&mut block).unwrap();
+            if read == 0 { break; }
+            for i in 0..read {
+                mono.push(block.channels[0][i]); // Just use left channel for analysis
+            }
+        }
+        
+        let vec = match a.extractor.as_str() {
+            "f0_yin" => {
+                let mut yin_config = particelle_analysis::YinConfig::default();
+                yin_config.sample_rate = reader.sample_rate as f64;
+                let mut yin = particelle_analysis::YinBuffer::new(&yin_config);
+                
+                let hop_size = (reader.sample_rate as f64 / 100.0) as usize; // 100 Hz tracking
+                let mut f0_vec = Vec::new();
+                let mut start = 0;
+                while start < mono.len() {
+                    let end = (start + 2048).min(mono.len());
+                    if let Some(f0) = yin.estimate(&yin_config, &mono[start..end]) {
+                        f0_vec.push(f0);
+                    } else {
+                        f0_vec.push(0.0);
+                    }
+                    start += hop_size;
+                }
+                f0_vec
+            },
+            "rms" => {
+                let env_config = particelle_analysis::EnvConfig {
+                    window_size: 1024,
+                    hop_size: (reader.sample_rate as f64 / 100.0) as usize,
+                };
+                particelle_analysis::extract_rms_envelope(&env_config, &mono)
+            }
+            other => anyhow::bail!("Unknown extractor '{}'", other),
+        };
+        analysis_buffers.insert(a.id.clone(), Arc::new(vec));
+    }
         
     let mut core_channels = Vec::new();
     for ch in &config.layout.channels {
@@ -410,11 +467,11 @@ fn build_engine(config: &ParticelleConfig) -> Result<GranularEngine> {
         
         // Compile Signal Expressions
         let base_dir = std::path::Path::new(".").canonicalize().ok();
-        cloud.density   = compile_signal(&c.density, base_dir.as_deref())?;
-        cloud.duration  = compile_signal(&c.duration, base_dir.as_deref())?;
-        cloud.amplitude = compile_signal(&c.amplitude, base_dir.as_deref())?;
-        cloud.position  = compile_signal(&c.position, base_dir.as_deref())?;
-        cloud.width     = compile_signal(&c.width, base_dir.as_deref())?;
+        cloud.density   = compile_signal(&c.density, base_dir.as_deref(), &analysis_buffers)?;
+        cloud.duration  = compile_signal(&c.duration, base_dir.as_deref(), &analysis_buffers)?;
+        cloud.amplitude = compile_signal(&c.amplitude, base_dir.as_deref(), &analysis_buffers)?;
+        cloud.position  = compile_signal(&c.position, base_dir.as_deref(), &analysis_buffers)?;
+        cloud.width     = compile_signal(&c.width, base_dir.as_deref(), &analysis_buffers)?;
         
         let pos = &c.listener_pos;
         cloud.listener_pos = particelle_core::spatializer::Vec3::new(pos.x, pos.y, pos.z);

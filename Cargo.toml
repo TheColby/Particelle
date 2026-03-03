@@ -8,7 +8,7 @@ members = [
     "particelle-midi",
     "particelle-io",
     "particelle-schema",
-    "particelle-cli",
+    "particelle-cli", "particelle-analysis",
 ]
 resolver = "2"
 
@@ -21,10 +21,11 @@ license   = "MIT"
 [workspace.dependencies]
 # Internal crates
 particelle-core   = { path = "particelle-core" }
-particelle-dsp    = { path = "particelle-dsp" }
+particelle-dsp    = { path = "particelle-dsp", version = "0.1.0" }
 particelle-curve  = { path = "particelle-curve" }
-particelle-params = { path = "particelle-params" }
+particelle-params = { path = "particelle-params", version = "0.1.0" }
 particelle-tuning = { path = "particelle-tuning" }
+particelle-analysis = { path = "particelle-analysis", version = "0.1.0" }
 particelle-midi   = { path = "particelle-midi" }
 particelle-io     = { path = "particelle-io" }
 particelle-schema = { path = "particelle-schema" }

@@ -17,6 +17,8 @@ pub struct ParticelleConfig {
     pub clouds: Vec<CloudConfig>,
     #[serde(default)]
     pub routing: RoutingConfig,
+    #[serde(default)]
+    pub analysis: Vec<AnalysisConfig>,
 }
 
 /// Core engine configuration. Fixed at initialization.
@@ -138,6 +140,14 @@ pub struct Vec3Config {
     pub x: f64,
     pub y: f64,
     pub z: f64,
+}
+
+/// An offline audio feature analysis block.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AnalysisConfig {
+    pub id: String,
+    pub source: String,
+    pub extractor: String,
 }
 
 /// MIDI/control routing configuration.
