@@ -139,6 +139,7 @@ mod tests {
             },
             tuning: TuningConfig::TwelveTet,
             clouds: vec![],
+            analysis: vec![],
             routing: RoutingConfig::default(),
         }
     }

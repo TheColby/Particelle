@@ -2,17 +2,21 @@
   <img src="assets/logo.svg" alt="Particelle Logo" width="700">
 </p>
 
-# Particelle
+# 🌬️ Particelle
 
-Sound, atomized.
+**Sound, atomized. Every parameter a signal. Every result reproducible.**
 
-**A modern granular synthesis engine for immersive and microtonal composition.**
+Particelle is a 64-bit, research-grade, surround-native, microtonal-first granular synthesis engine written entirely in Rust. Not a plugin. Not GUI-driven. Pure infrastructure — controlled through YAML and a CLI. Scatter thousands of grains across a 12-channel Dolby Atmos space. Cross-couple any audio file's spectral features to any cloud's density. Tune in 31-EDO or load a Scala scale. Render deterministically to 64-bit float WAV or run live against your audio interface.
 
-Particelle is a 64-bit, research-grade, surround-native, microtonal-first granular synthesis engine written entirely in Rust. It is not a plugin. It is not GUI-driven. It operates as infrastructure-level audio software, fully controlled through YAML configuration files and a command-line interface. Every parameter is a signal. Every result is reproducible.
+```sh
+# 60 seconds to granular sound — no toolchain required
+git clone https://github.com/TheColby/Particelle.git && cd Particelle && ./install.sh
+particelle init > patch.yaml && particelle render patch.yaml -o out.wav --duration 10.0
+```
 
 ---
 
-## Development Philosophy
+## 🧭 Development Philosophy
 
 Particelle is designed under two constraints that admit no exception:
 
@@ -26,15 +30,15 @@ This is a long-horizon platform. Compatibility, correctness, and architectural c
 
 ---
 
-## Installation
+## 📦 Installation
 
-### One-Liner
+### ⚡ One-Liner
 
 ```sh
 git clone https://github.com/TheColby/Particelle.git && cd Particelle && ./install.sh
 ```
 
-### From Source (manual)
+### 🔧 From Source (manual)
 
 ```sh
 # Clone the repository
@@ -49,12 +53,12 @@ cargo build --release
 cp target/release/particelle /usr/local/bin/
 ```
 
-### Requirements
+### 📋 Requirements
 
 - **Rust 1.70+** (install via [rustup.rs](https://rustup.rs/)). On mac, you can install [Homebrew](https://brew.sh) and do `brew install rust`.
 - A C compiler for native audio dependencies (Xcode CLT on macOS, `build-essential` on Linux)
 
-### Verify Installation
+### ✅ Verify Installation
 
 ```sh
 particelle --version
@@ -63,7 +67,7 @@ particelle --version
 
 ---
 
-## Help
+## 🆘 Help
 
 Every subcommand has built-in help:
 
@@ -96,9 +100,9 @@ particelle curve --help
 
 ---
 
-## 60-Second Quick Start
+## 🚀 60-Second Quick Start
 
-### 1. Generate a starter patch
+### 🌱 1. Generate a starter patch
 
 ```sh
 particelle init > my_first_patch.yaml
@@ -106,28 +110,28 @@ particelle init > my_first_patch.yaml
 
 This writes a complete, valid YAML patch with sensible defaults (stereo, 48kHz, Hann window, single cloud).
 
-### 2. Validate it
+### ✔️ 2. Validate it
 
 ```sh
 particelle validate my_first_patch.yaml
 # → ✓ Patch is valid. 1 cloud, 2 channels, 12-TET tuning.
 ```
 
-### 3. Render to file
+### 🔊 3. Render to file
 
 ```sh
 particelle render my_first_patch.yaml -o output.wav --duration 10.0
 # → Rendering 10.0s @ 48000Hz … done. Wrote output.wav (960000 frames, 2 channels)
 ```
 
-### 4. Play in realtime
+### ▶️ 4. Play in realtime
 
 ```sh
 particelle run my_first_patch.yaml
 # → Streaming to "Default Output" @ 48000Hz, 256 block … (Ctrl+C to stop)
 ```
 
-### Rapid Prototyping (No YAML Required)
+### ⚡ Rapid Prototyping (No YAML Required)
 
 For fast experimentation, you can pipe `particelle init` directly into `particelle render` using `sed` or `yq` to override parameters on the fly without writing any files to disk.
 
@@ -148,9 +152,9 @@ particelle init \
 ---
 
 
-## Example Patches
+## 🎛️ Example Patches
 
-### Example 1 — Stereo Shimmer
+### ✨ Example 1 — Stereo Shimmer
 
 ```yaml
 engine:
@@ -178,7 +182,7 @@ clouds:
 particelle render shimmer.yaml -o shimmer.wav --duration 8.0
 ```
 
-### Example 2 — 4× Timestretch
+### ⏩ Example 2 — 4× Timestretch
 
 Slow down a 4-second file to 16 seconds without changing pitch. The grain read position is driven by a linear curve that advances 4× slower than realtime:
 
@@ -199,7 +203,7 @@ clouds:
 
 The curve `curves/stretch_pos.json` maps 16s of clock time to 4s of file position:
 
-### Example 3 — Steve Reich Phase Effect
+### 🎹 Example 3 — Steve Reich Phase Effect
 
 Granulate a mono sound file and pan two duplicate clouds hard left and right. Use programmatic `phasor` oscillators running at *slightly* different rates (0.100 Hz vs 0.101 Hz) to control the `position` parameter. The left and right channels will drift out of phase exactly like early Steve Reich tape experiments. No JSON curves required.
 
@@ -254,7 +258,7 @@ particelle render steve_reich_phase.yaml -o phased.wav --duration 60.0
 particelle render examples/stretch_4x.yaml -o stretched.wav --duration 16.0
 ```
 
-### Example 3 — 31-EDO Microtonal Drone
+### 🎼 Example 3 — 31-EDO Microtonal Drone
 
 A dense grain cloud tuned to 31 equal divisions of the octave:
 
@@ -288,7 +292,7 @@ clouds:
 particelle render drone_31edo.yaml -o drone.wav --duration 30.0
 ```
 
-### Example 4 — 7.1.4 Immersive Spatialization
+### 🔊 Example 4 — 7.1.4 Immersive Spatialization
 
 12-channel Atmos-compatible layout with grains drifting through 3D space:
 
@@ -330,7 +334,7 @@ clouds:
 particelle render immersive.yaml -o atmos_orbit.wav --duration 60.0
 ```
 
-## Example Use Cases
+## 🗺️ Example Use Cases
 
 Particelle's architecture supports a vast array of granular techniques natively. The `examples/` directory contains 150 distinct patch configurations to demonstrate the engine's versatility. They are organized by layout:
 
@@ -349,11 +353,11 @@ Each folder contains diverse granular techniques:
 
 ---
 
-## Hold Up! What Is Granular Synthesis?
+## 🤔 Hold Up! What Is Granular Synthesis?
 
 Granular synthesis is a method of sound generation that operates on a fundamentally different principle than traditional synthesis or sampling. Instead of playing back audio as a continuous stream, granular synthesis **breaks sound into hundreds or thousands or more of tiny fragments** — called *grains* — and reassembles them in new configurations.
 
-### The Grain
+### 🌾 The Grain
 
 A grain is a short snippet of audio, typically between **1 and 200 milliseconds** long. Each grain is extracted from a source recording (or generated from an oscillator), shaped by a windowing function (like a Hann or Gaussian curve) that fades it smoothly in and out, and then placed at a specific position in time and space.
 
@@ -365,7 +369,7 @@ A single grain sounds like almost nothing — a brief click or a wisp of tone. B
 
 ![Granular synthesis explained: source audio, windowed grains, and overlap-add reconstruction](docs/granular_synthesis_explained.png)
 
-### How It Works: The Cloud
+### ☁️ How It Works: The Cloud
 
 A *cloud* is a stream of grains emitted over time. A cloud has parameters that control:
 
@@ -408,7 +412,7 @@ In Particelle, hop size is derived from the **density** parameter (grains per se
 
 When density is high and duration is long enough for grains to overlap, the output sounds like a sustained, shimmering texture. When density is low, individual grains become audible as discrete sonic events — like raindrops on glass.
 
-### Creating Stutter Effects
+### 🪄 Creating Stutter Effects
 
 Stutter and glitch effects in Particelle are created by manipulating **overlap** and **position**:
 
@@ -429,7 +433,7 @@ clouds:
       type: "rectangular" # sharp edges for clicky stutters
 ```
 
-### Why Is It Powerful?
+### 💡 Why Is It Powerful?
 
 Granular synthesis decouples properties that are normally locked together in recorded audio:
 
@@ -439,7 +443,7 @@ Granular synthesis decouples properties that are normally locked together in rec
 
 **Space becomes a compositional dimension.** Each grain can be placed independently in a 3D listener space. A single source file can be scattered across a 12-channel speaker array, with each grain arriving from a different direction. Sound becomes sculptural.
 
-### A Simple Analogy
+### 🖼️ A Simple Analogy
 
 Think of a photograph. Granular synthesis is like cutting the photograph into thousands of tiny tiles, then reassembling them — but now you can:
 
@@ -451,7 +455,7 @@ Think of a photograph. Granular synthesis is like cutting the photograph into th
 
 The source material is still recognizable, but you have total control over its micro-structure.
 
-### The Role of the Window Function
+### 🪟 The Role of the Window Function
 
 Every grain is multiplied by a *window function* — a bell-shaped curve that smoothly fades the grain in and out. Without windowing, each grain would start and stop abruptly, producing harsh clicks at the boundaries.
 
@@ -461,7 +465,7 @@ Every grain is multiplied by a *window function* — a bell-shaped curve that sm
 
 Different window shapes produce different timbral qualities. A Hann window gives a soft, warm overlap. A Kaiser window with a high beta produces a tighter, more focused grain. Particelle includes **35+ window types** precisely because the window is one of the most expressive parameters in granular synthesis.
 
-### Where Granular Synthesis Is Used
+### 🌍 Where Granular Synthesis Is Used
 
 - **Ambient and electroacoustic music** — timestretching, texture generation, spectral freezing
 - **Film and game audio** — creating evolving atmospheric soundscapes from short recordings
@@ -470,45 +474,45 @@ Different window shapes produce different timbral qualities. A Hann window gives
 - **Live performance** — real-time granular processing of live instruments or voice
 - **Installation art** — long-duration generative pieces running unattended for hours or days
 
-### Granular Synthesis in Particelle
+### 🌀 Granular Synthesis in Particelle
 
 Particelle takes these ideas and builds them into a **production-grade, multichannel, microtonal, deterministic engine**. Every parameter listed above — density, duration, position, amplitude, pitch, window, spatial position — is a full signal in Particelle. That means each parameter can be a constant, a time-varying curve, a MIDI controller, an MPE expression, or an arithmetic combination of all of the above. There are no fixed parameters and no special cases.
 
 ---
 
-## What Makes Particelle Different
+## 🦄 What Makes Particelle Different
 
-### Surround-Native from the First Buffer
+### 🔈 Surround-Native from the First Buffer
 
 Particelle does not retrofit stereo to surround. The internal audio model is multichannel-native at the type level. Channels carry metadata — name, azimuth, elevation — and the engine operates over arbitrary discrete layouts including 2ch, 5.1, 7.1.4, and custom configurations up to any channel count. Grain positioning is computed in 3D listener space and distributed across channels via a `Spatializer` trait. There is no stereo assumption anywhere in the codebase.
 
-### Microtonal-First
+### 🎵 Microtonal-First
 
 The tuning subsystem is not an add-on. It is a load-bearing part of the signal chain. Supported tuning models include arbitrary EDO systems, fixed Just Intonation via rational ratios, and Scala format (`.scl` and `.kbm`). The complete pitch pipeline — from scale degree through pitchbend, curve offsets, and modulation — operates in `f64` at every step. There is no rounding in the frequency domain.
 
 MPE (MIDI Polyphonic Expression) integrates natively: per-note pitchbend, pressure, and timbre are first-class signals routed directly into the parameter graph.
 
-### Full Parameter Signal Graph
+### 📡 Full Parameter Signal Graph
 
 In Particelle, parameters are not values. They are signals. `ParamSignal` is a composable expression graph: constants, curves, control inputs, sums, products, maps, and clamps all compose into a unified signal that resolves to `f64` at render time. There are no special-cased parameters. No parameter bypasses the graph.
 
 YAML declares every parameter. JSON control-point curves express temporal behavior. Control-rate values are upsampled to audio rate through configurable reconstruction methods including ZOH, linear, cubic, monotone cubic, sinc interpolation, one-pole and two-pole filters, slew limiters, and MinBLEP step reconstruction.
 
-### Deterministic Offline Rendering
+### 🔁 Deterministic Offline Rendering
 
 Any patch that runs in realtime can run offline with byte-identical output given equal inputs. Randomness is seeded and deterministic. Offline renders are batchable and scriptable. Hash-based regression testing is a first-class part of the test suite.
 
-### 35+ Window Types
+### 🪗 35+ Window Types
 
 The windowing system covers standard research windows (Hann, Hamming, Blackman-Harris, Kaiser, DPSS, Dolph-Chebyshev) and specialized variants (Planck taper, KBD, asymmetric Tukey, Rife-Vincent, user-defined cosine sum). All windows are generated in `f64`, cached by spec and length, and normalized by peak, RMS, or sum as specified. No window is computed more than once per session.
 
-### Rust Architecture
+### 🦀 Rust Architecture
 
 Particelle is written entirely in Rust. The realtime audio callback performs zero heap allocation. Lock-free queues separate the audio thread from all I/O. Internal precision is `f64` throughout. The hardware boundary converts to `f32` only at the device interface, if required by the driver. Thread safety is guaranteed by the type system.
 
 ---
 
-## Who Particelle Is For
+## 🎯 Who Particelle Is For
 
 Particelle is designed for:
 
@@ -528,7 +532,7 @@ If you are looking for a visual instrument, Particelle is not the right tool. If
 
 ---
 
-## Core Concepts
+## 📚 Core Concepts
 
 | Concept | Description |
 |---------|-------------|
@@ -543,7 +547,7 @@ If you are looking for a visual instrument, Particelle is not the right tool. If
 
 ---
 
-## Architecture Overview
+## 🏗️ Architecture Overview
 
 ```mermaid
 graph TD
@@ -604,7 +608,7 @@ The engine runs identically in offline mode (writing to file) and realtime mode 
 
 ---
 
-## OSC (Open Sound Control) Telemetry
+## 📡 OSC (Open Sound Control) Telemetry
 
 To modify engine parameters in realtime from external applications (Max/MSP, SuperCollider, TouchOSC), Particelle provides a lightweight, non-blocking UDP receiver thread that bypasses the parser entirely. 
 
@@ -620,11 +624,11 @@ For example, sending `12.5` to `/field/density` will override a YAML node parame
 
 ---
 
-## AI-Assisted Patch Generation
+## 🤖 AI-Assisted Patch Generation
 
 Particelle's YAML schema is precisely documented to work seamlessly with Large Language Models. There are two ways to use this:
 
-### Option A: `ai2yaml` CLI (Recommended)
+### 🖥️ Option A: `ai2yaml` CLI (Recommended)
 
 The included `ai2yaml` script wraps the system prompt automatically, calls your LLM of choice, extracts the YAML from the response, and writes it directly to a file:
 
@@ -655,13 +659,13 @@ Supported backends and models:
 ./ai2yaml "textural wash from piano samples" patch.yaml --api claude --model claude-opus-4-5
 ```
 
-### Option B: Copy-Paste Prompt (Browser / Chat UIs)
+### 📋 Option B: Copy-Paste Prompt (Browser / Chat UIs)
 
 Paste the contents of [`docs/AI_PATCH_GENERATOR.md`](docs/AI_PATCH_GENERATOR.md) into any LLM's custom instructions or first message, then describe your desired patch in natural language:
 
 > *"Give me a Particelle configuration for a 60-second drone. Pan it continuously in a circle using an LFO. Map it to 31-EDO tuning. Make the density chaotic."*
 
-### Recipe Gallery (`examples/ai2yaml/`)
+### 🍳 Recipe Gallery (`examples/ai2yaml/`)
 
 The `examples/ai2yaml/` folder contains 10 fully-annotated, ready-to-run patches — each includes the original plain-English prompt that generated it:
 
@@ -706,7 +710,7 @@ To regenerate any recipe from its prompt:
 
 ---
 
-## Offline Audio Feature Analysis
+## 🔬 Offline Audio Feature Analysis
 
 The `analysis` block extracts time-varying acoustic feature vectors from source files offline (before rendering begins). These vectors are then interpolated at audio rate and exposed as `$analysis.<id>` references anywhere in the parameter graph. The source file in `analysis` blocks is independent of — and can be completely different from — the cloud's granular source.
 
@@ -800,7 +804,7 @@ See more examples in `examples/analysis/`.
 
 ---
 
-## YAML-Centric Workflow
+## 📝 YAML-Centric Workflow
 
 All engine behavior is declared in YAML. There are no hidden parameters. No behavior is configured through code paths that bypass the schema. The YAML file is the complete, reproducible description of a patch.
 
@@ -867,7 +871,7 @@ particelle curve curves/density.json --resolution 1000
 
 ---
 
-## Microtonal Workflow
+## 🎶 Microtonal Workflow
 
 Particelle treats tuning as a structural element, not a parameter. The scale is declared in YAML and applies globally to all clouds that reference degrees rather than raw frequencies.
 
@@ -923,7 +927,7 @@ MPE pitchbend range is configurable per voice. Per-note pressure and timbre are 
 
 ---
 
-## Surround and Spatial Workflow
+## 🌐 Surround and Spatial Workflow
 
 Layouts are declared declaratively. Any number of channels with any position may be specified. The engine supports both Spherical (Azimuth/Elevation) and Cartesian (X/Y/Z) coordinates.
 
@@ -961,7 +965,7 @@ Hardware output is multichannel-native. The CPAL backend is configured to reques
 
 ---
 
-## Automation System
+## ⚙️ Automation System
 
 The automation system in Particelle is not a modulation matrix. It is a signal composition graph. Any parameter can be expressed as a function of time, control input, or other parameters, without limit.
 
@@ -1011,7 +1015,7 @@ The curve is evaluated at control rate. The result is multiplied by a MIDI CC fi
 
 ---
 
-## Realtime Hardware Support
+## 🎛️ Realtime Hardware Support
 
 ```yaml
 hardware:
@@ -1030,7 +1034,7 @@ Offline and realtime modes share the same engine core. A deterministic offline r
 
 ---
 
-## Selected References (Foundational Literature)
+## 📖 Selected References (Foundational Literature)
 
 1. **Gabor, Dennis (1946)** — *Theory of communication. Part 1: The analysis of information*. Journal of the Institution of Electrical Engineers. [DOI: 10.1049/ji-3-2.1946.0074](https://doi.org/10.1049/ji-3-2.1946.0074)
 2. **Xenakis, Iannis (1971)** — *Formalized Music: Thought and Mathematics in Composition*. Pendragon Press. ISBN: 1576470792
@@ -1050,6 +1054,6 @@ Offline and realtime modes share the same engine core. A deterministic offline r
 16. **Zölzer, Udo (Ed.) (2011)** — *DAFX: Digital Audio Effects* (2nd ed.). Wiley. ISBN: 9780470665992
 17. **Müller, Meinard (2015)** — *Fundamentals of Music Processing: Audio, Analysis, Algorithms, Applications*. Springer. [DOI: 10.1007/978-3-319-21945-5](https://doi.org/10.1007/978-3-319-21945-5)
 
-## License
+## ⚖️ License
 
 MIT
