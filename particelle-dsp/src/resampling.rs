@@ -87,3 +87,18 @@ impl Resampler for RubatoResampler {
         Ok(final_out)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_rubato_resampler_new() {
+        let channels = 2;
+        let resampler = RubatoResampler::new(channels);
+
+        assert!(resampler.resampler.is_none());
+        assert_eq!(resampler.last_rates, (0.0, 0.0));
+        assert_eq!(resampler.channels, channels);
+    }
+}
