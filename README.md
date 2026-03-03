@@ -554,8 +554,10 @@ graph TD
     classDef cli fill:#1e293b,stroke:#38bdf8,stroke-width:2px,color:#f8fafc,rx:8,ry:8
     classDef core fill:#7f1d1d,stroke:#fca5a5,stroke-width:2px,color:#fef2f2,rx:8,ry:8
     classDef sys fill:#334155,stroke:#94a3b8,stroke-width:1px,color:#f8fafc,rx:4,ry:4
+    classDef net fill:#0284c7,stroke:#bae6fd,stroke-width:2px,color:#f8fafc,rx:8,ry:8
 
     CLI[particelle-cli]:::cli
+    OSC[OSC Network]:::net
 
     subgraph Entry
         direction LR
@@ -580,6 +582,7 @@ graph TD
     %% CLI entry point
     CLI --> IO
     CLI --> SCHEMA
+    OSC -->|UDP| CLI
 
     %% Config parses into control structures
     SCHEMA --> TUNING
@@ -598,6 +601,7 @@ graph TD
     MIDI -.-> PARAMS
     CURVE -.-> PARAMS
     DSP -.-> CORE
+    CLI -.->|MPSC| PARAMS
 ```
 
 All internal audio data is `f64`. Multichannel buffers are planar: one `Vec<f64>` per channel. The block size and sample rate are fixed at engine initialization. Frame time is tracked as a monotonic `u64`.
