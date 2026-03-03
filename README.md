@@ -543,29 +543,53 @@ If you are looking for a visual instrument, Particelle is not the right tool. If
 
 ```mermaid
 graph TD
-    classDef Crate fill:#f0ab3c,stroke:#333,stroke-width:2px,color:#fff;
-    classDef Module fill:#f2f2f2,stroke:#333,stroke-width:1px,color:#000;
-    
-    A[particelle-cli]:::Crate --> B[particelle-io]:::Crate
-    A --> C[particelle-schema]:::Crate
-    B --> D[particelle-core]:::Crate
-    C --> D
-    
-    subgraph particelle-schema [Schema Validation]
-        C --> E[particelle-params]:::Crate
-        C --> F[particelle-tuning]:::Crate
-        C --> G[particelle-midi]:::Crate
+    classDef cli fill:#1e293b,stroke:#38bdf8,stroke-width:2px,color:#f8fafc,rx:8,ry:8
+    classDef core fill:#7f1d1d,stroke:#fca5a5,stroke-width:2px,color:#fef2f2,rx:8,ry:8
+    classDef sys fill:#334155,stroke:#94a3b8,stroke-width:1px,color:#f8fafc,rx:4,ry:4
+
+    CLI[particelle-cli]:::cli
+
+    subgraph Entry
+        direction LR
+        IO[particelle-io]:::sys
+        SCHEMA[particelle-schema]:::sys
     end
-    
-    E --> H[particelle-curve]:::Crate
-    D --> I[particelle-dsp]:::Crate
-    
-    %% Connections mapping
-    E -.-> D
-    F -.-> D
-    G -.-> E
-    H -.-> E
-    I -.-> D
+
+    subgraph Control & Modulation
+        direction LR
+        TUNING[particelle-tuning]:::sys
+        MIDI[particelle-midi]:::sys
+        PARAMS[particelle-params]:::sys
+        CURVE[particelle-curve]:::sys
+    end
+
+    subgraph Audio Engine
+        direction LR
+        CORE[particelle-core]:::core
+        DSP[particelle-dsp]:::sys
+    end
+
+    %% CLI entry point
+    CLI --> IO
+    CLI --> SCHEMA
+
+    %% Config parses into control structures
+    SCHEMA --> TUNING
+    SCHEMA --> MIDI
+    SCHEMA --> PARAMS
+    PARAMS --> CURVE
+
+    %% Engine execution
+    IO --> CORE
+    SCHEMA --> CORE
+    CORE --> DSP
+
+    %% Runtime dependency data flow
+    TUNING -.-> CORE
+    PARAMS -.-> CORE
+    MIDI -.-> PARAMS
+    CURVE -.-> PARAMS
+    DSP -.-> CORE
 ```
 
 All internal audio data is `f64`. Multichannel buffers are planar: one `Vec<f64>` per channel. The block size and sample rate are fixed at engine initialization. Frame time is tracked as a monotonic `u64`.
@@ -683,12 +707,14 @@ The full pitch pipeline for a grain:
 
 ```mermaid
 flowchart LR
-    A[Scale Degree] -->|Tuning Hz| B(MPE Pitchbend\nsemitones)
-    B --> C(Curve Offset\nHz)
-    C --> D(Modulation Field\nHz)
-    D -->|Final Hz| E[Playback Ratio]
-    
-    style E fill:#4caf50,stroke:#333,stroke-width:2px,color:#fff;
+    classDef signal fill:#1e293b,stroke:#38bdf8,stroke-width:2px,color:#f8fafc,rx:8,ry:8
+    classDef process fill:#334155,stroke:#94a3b8,stroke-width:1px,color:#f8fafc,rx:4,ry:4
+    classDef output fill:#7f1d1d,stroke:#fca5a5,stroke-width:2px,color:#fef2f2,rx:8,ry:8
+
+    A[Scale Degree]:::signal -->|Tuning Hz| B(MPE Pitchbend):::process
+    B --> C(Curve Offset):::process
+    C --> D(Modulation Field):::process
+    D -->|Final Hz| E[Playback Ratio]:::output
 ```
 
 All arithmetic is `f64`. No conversion to `f32` occurs before the hardware boundary.
@@ -757,18 +783,18 @@ Signal expressions compose. Here is a visual representation of how a density par
 
 ```mermaid
 graph TD
-    A[curves/density_env.json]:::Curve -->|Curve Value| B(Mul Node):::Op
-    C[Field: $midi_cc1]:::Control -->|Direct Value| B
-    B -->|Product| D(Clamp Node):::Op
-    E[Const: 1.0]:::Const -->|Min| D
-    F[Const: 64.0]:::Const -->|Max| D
-    D -->|Final Value| G[Cloud Density]:::Output
-    
-    classDef Op fill:#ffeb3b,stroke:#fbc02d,color:#000
-    classDef Curve fill:#3f51b5,stroke:#303f9f,color:#fff
-    classDef Control fill:#9c27b0,stroke:#7b1fa2,color:#fff
-    classDef Const fill:#e0e0e0,stroke:#9e9e9e,color:#000
-    classDef Output fill:#4caf50,stroke:#388e3c,color:#fff
+    classDef curve fill:#3f51b5,stroke:#c5cae9,stroke-width:2px,color:#fff,rx:8,ry:8
+    classDef control fill:#7b1fa2,stroke:#e1bee7,stroke-width:2px,color:#fff,rx:8,ry:8
+    classDef const fill:#424242,stroke:#bdbdbd,stroke-width:1px,color:#fff,rx:4,ry:4
+    classDef op fill:#f57f17,stroke:#fff9c4,stroke-width:2px,color:#fff,rx:8,ry:8
+    classDef output fill:#1b5e20,stroke:#c8e6c9,stroke-width:2px,color:#fff,rx:8,ry:8
+
+    A[curves/density_env.json]:::curve -->|Curve Block| B(Mul Node):::op
+    C[Field: $midi_cc1]:::control -->|Direct Value| B
+    B -->|Product| D(Clamp Node):::op
+    E[Const: 1.0]:::const -->|Min| D
+    F[Const: 64.0]:::const -->|Max| D
+    D -->|Final Result| G[Cloud Density]:::output
 ```
 
 ```yaml
@@ -808,108 +834,16 @@ Offline and realtime modes share the same engine core. A deterministic offline r
 ---
 
 
-## Selected References (Top 100 Literature on Granular Synthesis & DSP)
+## Selected References (Foundational Literature)
 
-1. Boulanger, Richard & Wishart, Trevor (2023). Stochastic Synthesis: Theory of Communication and Applications. *Journal of the Audio Engineering Society*, 32(1), 50-187.
-2. Gabor, Dennis & Chowning, John (2023). Algorithmic Composition: Algorithmic Composition and Applications. *Journal of the Audio Engineering Society*, 29(4), 39-251.
-3. Zölzer, Udo & Roads, Curtis (2022). Spatialization of Granular Audio: Theory of Communication and Applications. *Computer Music Journal*, 20(2), 8-162.
-4. Loy, Gareth & Cook, Perry (2022). Asynchronous Granular Synthesis: Sound Synthesis Theory and Applications. *Computer Music Journal*, 28(3), 9-230.
-5. Zölzer, Udo (2018). *Granular Synthesis: Particle Synthesis and Applications*. Routledge, London.
-6. Gabor, Dennis (2017). *Computer Music Tutorial: Algorithmic Composition and Applications*. Routledge, London.
-7. Jones, Douglas & Mathews, Max (2017). *Stochastic Synthesis: Theory of Communication and Applications*. Routledge, London.
-8. Moore, F. Richard (2016). *Pitch-Synchronous Overlap-Add: Cloud-based Synthesis and Applications*. MIT Press, Cambridge, MA.
-9. Gabor, Dennis & Boulanger, Richard (2016). Synchronous Granular Synthesis: Cloud-based Synthesis and Applications. *Proceedings of the 2016 International Computer Music Conference*, pp. 44-153.
-10. Moore, F. Richard & Mathews, Max (2016). Acoustic Quanta: Real-Time Granular Engines and Applications. *Proceedings of the 2016 International Conference on Digital Audio Effects (DAFx)*, pp. 90-217.
-11. Arfib, Daniel & Loy, Gareth (2015). Computer Music Tutorial: Stochastic Synthesis and Applications. *Proceedings of the 2015 International Conference on Digital Audio Effects (DAFx)*, pp. 1-295.
-12. Parks, Thomas & Arfib, Daniel (2015). *Synchronous Granular Synthesis: Sound Synthesis Theory and Applications*. MIT Press, Cambridge, MA.
-13. Loy, Gareth (2013). Granular Synthesis: Audio Effects and Applications. *Proceedings of the 2013 International Computer Music Conference*, pp. 18-168.
-14. Bencina, Ross (2012). *Cloud-based Synthesis: Algorithmic Composition and Applications*. MIT Press, Cambridge, MA.
-15. Jones, Douglas & Bencina, Ross (2011). Theory of Communication: Particle Synthesis and Applications. *Computer Music Journal*, 41(2), 88-209.
-16. De Poli, Giovanni (2011). Particle Synthesis: Pitch-Synchronous Overlap-Add and Applications. *Computer Music Journal*, 16(4), 16-246.
-17. Moore, F. Richard & Parks, Thomas (2010). Theory of Communication: Cloud-based Synthesis and Applications. *Computer Music Journal*, 28(3), 6-101.
-18. Lazzarini, Victor & Miranda, Eduardo (2010). Computer Music Tutorial: Audio Effects and Applications. *Proceedings of the 2010 International Conference on Digital Audio Effects (DAFx)*, pp. 61-216.
-19. Jerse, Thomas (2008). Particle Synthesis: Theory of Communication and Applications. *Proceedings of the 2008 International Computer Music Conference*, pp. 42-272.
-20. Serra, Xavier & Puckette, Miller (2007). Granular Synthesis: Real-Time Granular Engines and Applications. *Proceedings of the 2007 International Computer Music Conference*, pp. 54-238.
-21. Boulanger, Richard (2005). *Digital Signal Processing: Cloud-based Synthesis and Applications*. Routledge, London.
-22. Oppenheim, Alan (2004). *Granular Synthesis: Cloud-based Synthesis and Applications*. MIT Press, Cambridge, MA.
-23. Parks, Thomas & Wishart, Trevor (2004). *Window Functions in Audio Analysis: Computer Music Tutorial and Applications*. Routledge, London.
-24. Xenakis, Iannis & Serra, Xavier (2001). Spatialization of Granular Audio: Algorithmic Composition and Applications. *Proceedings of the 2001 International Computer Music Conference*, pp. 30-273.
-25. Wishart, Trevor (2000). Spatialization of Granular Audio: Cloud-based Synthesis and Applications. *Journal of the Audio Engineering Society*, 22(1), 12-198.
-26. Serra, Xavier (2000). *Stochastic Synthesis: Pitch-Synchronous Overlap-Add and Applications*. Routledge, London.
-27. Chowning, John (1999). *Digital Signal Processing: Sound Synthesis Theory and Applications*. Routledge, London.
-28. Lazzarini, Victor & Parks, Thomas (1999). Cloud-based Synthesis: Particle Synthesis and Applications. *Proceedings of the 1999 International Conference on Digital Audio Effects (DAFx)*, pp. 70-114.
-29. Strawn, John (1999). Theory of Communication: Asynchronous Granular Synthesis and Applications. *Proceedings of the 1999 International Conference on Digital Audio Effects (DAFx)*, pp. 59-282.
-30. Wishart, Trevor (1998). Time-Stretching Algorithms: Asynchronous Granular Synthesis and Applications. *Computer Music Journal*, 28(4), 60-287.
-31. Cook, Perry (1998). Theory of Communication: Theory of Communication and Applications. *Journal of the Audio Engineering Society*, 11(4), 1-200.
-32. Risset, Jean-Claude (1998). *Spatialization of Granular Audio: Digital Signal Processing and Applications*. Routledge, London.
-33. Gabor, Dennis & Schafer, Ronald (1998). *Theory of Communication: Window Functions in Audio Analysis and Applications*. Routledge, London.
-34. Moorer, James & Loy, Gareth (1997). *Cloud-based Synthesis: Acoustic Quanta and Applications*. MIT Press, Cambridge, MA.
-35. Jerse, Thomas & Puckette, Miller (1996). *Time-Stretching Algorithms: Particle Synthesis and Applications*. MIT Press, Cambridge, MA.
-36. Jerse, Thomas (1995). Theory of Communication: Digital Signal Processing and Applications. *Journal of the Audio Engineering Society*, 45(1), 97-298.
-37. Miranda, Eduardo (1994). *Algorithmic Composition: Formalized Music and Applications*. MIT Press, Cambridge, MA.
-38. Bencina, Ross (1994). *Pitch-Synchronous Overlap-Add: Algorithmic Composition and Applications*. MIT Press, Cambridge, MA.
-39. Oppenheim, Alan & Miranda, Eduardo (1992). *Sound Synthesis Theory: Time-Stretching Algorithms and Applications*. Routledge, London.
-40. Gabor, Dennis (1990). Algorithmic Composition: Cloud-based Synthesis and Applications. *Computer Music Journal*, 8(4), 11-242.
-41. Moore, F. Richard (1988). Cloud-based Synthesis: Particle Synthesis and Applications. *Proceedings of the 1988 International Computer Music Conference*, pp. 66-203.
-42. Moore, F. Richard & Dodge, Charles (1988). Granular Synthesis: Asynchronous Granular Synthesis and Applications. *Proceedings of the 1988 International Computer Music Conference*, pp. 34-110.
-43. Xenakis, Iannis (1988). *Particle Synthesis: Stochastic Synthesis and Applications*. Routledge, London.
-44. Zölzer, Udo & Serra, Xavier (1986). Time-Stretching Algorithms: Theory of Communication and Applications. *Proceedings of the 1986 International Conference on Digital Audio Effects (DAFx)*, pp. 34-136.
-45. Zölzer, Udo (1986). Stochastic Synthesis: Cloud-based Synthesis and Applications. *Proceedings of the 1986 International Conference on Digital Audio Effects (DAFx)*, pp. 83-177.
-46. Gabor, Dennis & Smith, Julius O. (1986). *Computer Music Tutorial: Algorithmic Composition and Applications*. MIT Press, Cambridge, MA.
-47. Zölzer, Udo (1984). Acoustic Quanta: Algorithmic Composition and Applications. *Journal of the Audio Engineering Society*, 49(2), 70-300.
-48. Moore, F. Richard (1983). Particle Synthesis: Stochastic Synthesis and Applications. *Computer Music Journal*, 30(3), 21-195.
-49. Wishart, Trevor (1983). *Stochastic Synthesis: Digital Signal Processing and Applications*. Routledge, London.
-50. Dodge, Charles & Oppenheim, Alan (1982). *Time-Stretching Algorithms: Computer Music Tutorial and Applications*. MIT Press, Cambridge, MA.
-51. Moorer, James (1982). Stochastic Synthesis: Cloud-based Synthesis and Applications. *Proceedings of the 1982 International Computer Music Conference*, pp. 11-136.
-52. Gabor, Dennis & Jerse, Thomas (1982). Theory of Communication: Theory of Communication and Applications. *Proceedings of the 1982 International Conference on Digital Audio Effects (DAFx)*, pp. 7-165.
-53. Truax, Barry (1982). *Formalized Music: Particle Synthesis and Applications*. Routledge, London.
-54. Strawn, John (1981). Stochastic Synthesis: Stochastic Synthesis and Applications. *Journal of the Audio Engineering Society*, 48(1), 76-209.
-55. Parks, Thomas & Farnell, Andy (1981). *Acoustic Quanta: Theory of Communication and Applications*. Routledge, London.
-56. Serra, Xavier & Serra, Xavier (1981). *Audio Effects: Granular Synthesis and Applications*. MIT Press, Cambridge, MA.
-57. Smith, Julius O. (1980). *Particle Synthesis: Algorithmic Composition and Applications*. Routledge, London.
-58. Chowning, John & Jerse, Thomas (1980). Spatialization of Granular Audio: Stochastic Synthesis and Applications. *Computer Music Journal*, 16(4), 73-257.
-59. Jones, Douglas & Dodge, Charles (1979). *Sound Synthesis Theory: Computer Music Tutorial and Applications*. MIT Press, Cambridge, MA.
-60. Dodge, Charles (1979). Synchronous Granular Synthesis: Real-Time Granular Engines and Applications. *Computer Music Journal*, 19(2), 57-240.
-61. Schafer, Ronald & Strawn, John (1979). *Pitch-Synchronous Overlap-Add: Formalized Music and Applications*. MIT Press, Cambridge, MA.
-62. Serra, Xavier & Gabor, Dennis (1977). Stochastic Synthesis: Particle Synthesis and Applications. *Proceedings of the 1977 International Computer Music Conference*, pp. 71-159.
-63. Parks, Thomas (1975). Asynchronous Granular Synthesis: Time-Stretching Algorithms and Applications. *Proceedings of the 1975 International Computer Music Conference*, pp. 69-296.
-64. Truax, Barry (1973). *Stochastic Synthesis: Acoustic Quanta and Applications*. MIT Press, Cambridge, MA.
-65. Moorer, James (1973). *Acoustic Quanta: Theory of Communication and Applications*. Routledge, London.
-66. Mathews, Max & Jerse, Thomas (1973). Formalized Music: Cloud-based Synthesis and Applications. *Proceedings of the 1973 International Computer Music Conference*, pp. 78-292.
-67. Loy, Gareth (1973). *Theory of Communication: Cloud-based Synthesis and Applications*. Routledge, London.
-68. Zölzer, Udo & Boulanger, Richard (1971). *Window Functions in Audio Analysis: Digital Signal Processing and Applications*. Routledge, London.
-69. Boulanger, Richard & Boulanger, Richard (1971). Real-Time Granular Engines: Computer Music Tutorial and Applications. *Computer Music Journal*, 21(1), 93-177.
-70. Wishart, Trevor & Jerse, Thomas (1971). *Computer Music Tutorial: Asynchronous Granular Synthesis and Applications*. MIT Press, Cambridge, MA.
-71. Cook, Perry (1970). Time-Stretching Algorithms: Audio Effects and Applications. *Proceedings of the 1970 International Conference on Digital Audio Effects (DAFx)*, pp. 24-172.
-72. Oppenheim, Alan & Farnell, Andy (1970). Window Functions in Audio Analysis: Stochastic Synthesis and Applications. *Proceedings of the 1970 International Computer Music Conference*, pp. 2-282.
-73. Cook, Perry (1968). Computer Music Tutorial: Granular Synthesis and Applications. *Journal of the Audio Engineering Society*, 27(2), 35-141.
-74. Moore, F. Richard & Puckette, Miller (1967). *Formalized Music: Synchronous Granular Synthesis and Applications*. MIT Press, Cambridge, MA.
-75. Loy, Gareth (1966). *Window Functions in Audio Analysis: Asynchronous Granular Synthesis and Applications*. MIT Press, Cambridge, MA.
-76. Roads, Curtis (1965). Audio Effects: Microsound and Applications. *Proceedings of the 1965 International Computer Music Conference*, pp. 17-111.
-77. Bencina, Ross (1965). Time-Stretching Algorithms: Particle Synthesis and Applications. *Proceedings of the 1965 International Conference on Digital Audio Effects (DAFx)*, pp. 70-220.
-78. Bencina, Ross & Farnell, Andy (1964). Particle Synthesis: Microsound and Applications. *Journal of the Audio Engineering Society*, 48(3), 57-132.
-79. Truax, Barry & Zölzer, Udo (1961). Formalized Music: Synchronous Granular Synthesis and Applications. *Proceedings of the 1961 International Conference on Digital Audio Effects (DAFx)*, pp. 77-182.
-80. Cook, Perry & Moore, F. Richard (1960). *Audio Effects: Cloud-based Synthesis and Applications*. Routledge, London.
-81. Truax, Barry & Strawn, John (1958). *Microsound: Digital Signal Processing and Applications*. Routledge, London.
-82. Serra, Xavier & Xenakis, Iannis (1956). *Theory of Communication: Particle Synthesis and Applications*. MIT Press, Cambridge, MA.
-83. Jones, Douglas & Truax, Barry (1956). *Computer Music Tutorial: Sound Synthesis Theory and Applications*. MIT Press, Cambridge, MA.
-84. Jerse, Thomas (1955). Microsound: Stochastic Synthesis and Applications. *Computer Music Journal*, 22(1), 66-161.
-85. Moorer, James (1955). Formalized Music: Audio Effects and Applications. *Computer Music Journal*, 35(1), 12-293.
-86. Moorer, James (1955). *Granular Synthesis: Formalized Music and Applications*. MIT Press, Cambridge, MA.
-87. Smith, Julius O. (1954). Microsound: Granular Synthesis and Applications. *Journal of the Audio Engineering Society*, 2(2), 31-133.
-88. Cook, Perry (1954). Digital Signal Processing: Theory of Communication and Applications. *Computer Music Journal*, 10(3), 11-164.
-89. Schafer, Ronald & Lazzarini, Victor (1953). Stochastic Synthesis: Microsound and Applications. *Proceedings of the 1953 International Computer Music Conference*, pp. 9-155.
-90. Arfib, Daniel (1953). Sound Synthesis Theory: Audio Effects and Applications. *Computer Music Journal*, 4(4), 65-236.
-91. Chowning, John (1953). Algorithmic Composition: Asynchronous Granular Synthesis and Applications. *Journal of the Audio Engineering Society*, 43(1), 21-162.
-92. Cook, Perry (1952). Cloud-based Synthesis: Digital Signal Processing and Applications. *Proceedings of the 1952 International Computer Music Conference*, pp. 42-187.
-93. Oppenheim, Alan (1951). *Real-Time Granular Engines: Time-Stretching Algorithms and Applications*. Routledge, London.
-94. Serra, Xavier & Parks, Thomas (1951). *Computer Music Tutorial: Granular Synthesis and Applications*. MIT Press, Cambridge, MA.
-95. Dodge, Charles (1951). Microsound: Audio Effects and Applications. *Proceedings of the 1951 International Computer Music Conference*, pp. 97-226.
-96. Wishart, Trevor & Puckette, Miller (1950). Theory of Communication: Stochastic Synthesis and Applications. *Journal of the Audio Engineering Society*, 20(2), 29-107.
-97. Wishart, Trevor (1949). Microsound: Stochastic Synthesis and Applications. *Proceedings of the 1949 International Conference on Digital Audio Effects (DAFx)*, pp. 54-262.
-98. Moore, F. Richard (1949). Theory of Communication: Spatialization of Granular Audio and Applications. *Journal of the Audio Engineering Society*, 23(3), 44-172.
-99. Farnell, Andy & Jerse, Thomas (1948). Cloud-based Synthesis: Sound Synthesis Theory and Applications. *Computer Music Journal*, 34(4), 36-147.
-100. De Poli, Giovanni & De Poli, Giovanni (1946). *Computer Music Tutorial: Formalized Music and Applications*. Routledge, London.
+
+1. **Gabor, Dennis (1946)** — *Theory of communication. Part 1: The analysis of information*. Journal of the Institution of Electrical Engineers. [DOI: 10.1049/ji-3-2.1946.0074](https://doi.org/10.1049/ji-3-2.1946.0074)
+2. **Xenakis, Iannis (1971)** — *Formalized Music: Thought and Mathematics in Composition*. Pendragon Press. ISBN: 1576470792
+3. **Roads, Curtis (1978)** — *Automated Granular Synthesis of Sound*. Computer Music Journal, Vol. 2, No. 2. [DOI: 10.2307/3679443](https://doi.org/10.2307/3679443)
+4. **Truax, Barry (1988)** — *Real-Time Granular Synthesis with a Digital Signal Processor*. Computer Music Journal, Vol. 12, No. 2. [DOI: 10.2307/3680233](https://doi.org/10.2307/3680233)
+5. **De Poli, Giovanni; Piccialli, Aldo; Roads, Curtis (1991)** — *Representations of Musical Signals*. MIT Press. ISBN: 026204126X
+6. **Wishart, Trevor (1996)** — *On Sonic Art*. Routledge. ISBN: 371865847X
+7. **Roads, Curtis (2001)** — *Microsound*. MIT Press. ISBN: 0262182157
 ## License
 
 MIT
