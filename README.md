@@ -659,6 +659,52 @@ The engine runs identically in offline mode (writing to file) and realtime mode 
 
 ---
 
+## 🌪️ Phase 24 (Upcoming): Stochastic & Chaotic Modulators
+
+Particelle is currently implementing an expansive library of non-linear, chaotic, and stochastic generators for the `ParamSignal` AST. These modules will allow for the deterministic generation of complex, evolving macro-structures without relying on large external curve files. 
+
+These generators are calculated sample-for-sample in `f64` within the signal graph and can drive any parameter from grain density to 3D spatial position.
+
+### 1. Chaotic Attractors
+
+**Lorenz System:** A set of coupled, non-linear ordinary differential equations. By tapping into the $x$, $y$, or $z$ dimension of the solved system, users can generate smooth but permanently unpredictable modulation paths that never repeat.
+$$ \frac{dx}{dt} = \sigma (y - x) $$
+$$ \frac{dy}{dt} = x (\rho - z) - y $$
+$$ \frac{dz}{dt} = xy - \beta z $$
+
+**Rössler Attractor:** Similar to Lorenz but designed to have a simpler phase space, producing signals that dwell in harmonic-like cycles before periodically erupting into chaos.
+$$ \frac{dx}{dt} = -y - z $$
+$$ \frac{dy}{dt} = x + ay $$
+$$ \frac{dz}{dt} = b + z(x - c) $$
+
+**Hénon Map:** A discrete-time dynamical system. Because it is calculated iteratively rather than continuously, it produces highly jagged, granular sequences of values perfect for stochastic pitch quantization or erratic spatial scattering.
+$$ x_{n+1} = 1 - a x_n^2 + y_n $$
+$$ y_{n+1} = b x_n $$
+
+### 2. Stochastic & Noise Models
+
+- **Brownian Motion (Random Walk):** A continuously accumulated random value where the derivative (step size) is Gaussian. Excellent for simulating natural analog drift in tuning or density over long durations.
+$$ X_{t+dt} = X_t + \mathcal{N}(0, \sigma^2 \cdot dt) $$
+- **Pink Noise ($1/f$):** Equal energy per octave. Mathematically modeled via the Voss-McCartney algorithm. Highly musical for modulating grain durations as it avoids the harsh jitter of white noise.
+- **Perlin & Simplex Noise:** Continuous gradient noise in 1D, 2D, or 3D space. By sweeping a clock through 3D Simplex space, smooth, organic, landscape-like modulation curves are generated.
+
+### 3. Usage Example (Preview)
+
+Once Phase 24 is merged, these nodes will integrate directly into the `op` graph:
+
+```yaml
+position:
+  op: lorenz
+  args:
+    - 10.0  # sigma
+    - 28.0  # rho
+    - 2.66  # beta
+    - "x"   # output dimension
+    - 0.01  # timestep (speed)
+```
+
+---
+
 ## 📡 OSC (Open Sound Control) Telemetry
 
 To modify engine parameters in realtime from external applications (Max/MSP, SuperCollider, TouchOSC), Particelle provides a lightweight, non-blocking UDP receiver thread that bypasses the parser entirely. 
