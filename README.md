@@ -774,6 +774,19 @@ For example, sending `12.5` to `/field/density` will override a YAML node parame
 
 ---
 
+## 🗄️ Catalog of Complexity (Extreme Stress Tests)
+
+To prove Particelle's deterministic rigor and capability under extreme architectural load, the `examples/complex/` directory contains an array of advanced patches. These patches theoretically stress-test the `f64` evaluation pipelines, multi-cloud concurrency, and AST evaluation depths.
+
+**Noteworthy Architectural Tests:**
+* **`dxd_384khz_64ch.yaml`:** Granulates audio natively at the DXD 384kHz frontier across a 64-channel continuous spherical grid (`SIMD`/Memory allocation limit-test).
+* **`directional_shimmer.yaml`:** Continuously computes cardioid radiation attenuation $G = \max(0, \delta + (1 - \delta) \cos(\theta))$ across chaotic rotational geometry.
+* **`multi_cloud_saturation.yaml`:** Spawns 32 uncoupled `GrainPool` structures reading overlapping segments simultaneously.
+
+For a formal whitepaper exploring the signal flow and theoretical models of these patches, read: **[`examples/complex/README.md`](examples/complex/README.md)**.
+
+---
+
 ## 🤖 AI-Assisted Patch Generation
 
 Particelle's YAML schema is precisely documented to work seamlessly with Large Language Models. There are two ways to use this:
