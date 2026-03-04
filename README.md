@@ -205,7 +205,7 @@ The curve `curves/stretch_pos.json` maps 16s of clock time to 4s of file positio
 
 ### 🎹 Example 3 — Steve Reich Phase Effect
 
-Granulate a mono sound file and pan two duplicate clouds hard left and right. Use programmatic `phasor` oscillators running at *slightly* different rates (0.100 Hz vs 0.101 Hz) to control the `position` parameter. The left and right channels will drift out of phase exactly like early Steve Reich tape experiments. No JSON curves required. Bonus: no analog tape required. 
+Granulate a mono sound file and pan two duplicate clouds hard left and right. Use programmatic `phasor` oscillators running at *slightly* different rates (0.100 Hz vs 0.101 Hz) to control the `position` parameter. The left and right channels will drift out of phase exactly like early Steve Reich tape experiments. No JSON curves required. Bonus: no analog tape required.
 
 ```yaml
 engine:
@@ -336,11 +336,11 @@ particelle render immersive.yaml -o atmos_orbit.wav --duration 60.0
 
 ### 🏎️ Example 5 — 384kHz DXD 64-Channel Stress Test
 
-To truly test multicore hardware limits (like Apple M-Series chips), Particelle scales effortlessly to massive spatial arrays and extreme sample rates. This patch generates 250 grains per second per channel, calculating all mixing in 64-bit float across 64 discrete outputs at 384,000 Hz:
+Enough playing around; lets get serious. To test multicore hardware limits (like Apple M-Series chips), Particelle scales effortlessly to massive spatial arrays and extreme sample rates. This patch generates 250 grains per second per channel, calculating all mixing in 64-bit float across 64 discrete outputs at 384,000 Hz:
 
 ```yaml
 engine:
-  sample_rate: 384000.0   # 384 kHz DXD limit
+  sample_rate: 384000g.0   # 384 kHz DXD limit
   block_size: 1024
   max_particles_per_cloud: 16384
 
@@ -414,12 +414,12 @@ This windowing fades the grain smoothly in and out, preventing harsh clicks at t
 
 ### ☁️ How It Works: The Cloud
 
-A *cloud* is a stream of grains emitted over time. A cloud has parameters that control:
+A *cloud* (nothing to do with The Cloud, involving the interwebs) is a stream of grains emitted over time. A cloud has parameters that control:
 
 | Parameter | What it does |
 |-----------|-------------|
-| **Density** | How many grains per second are emitted (1–1000+) |
-| **Duration** | How long each grain lasts (1ms–500ms) |
+| **Density** | How many grains per second are emitted (1–10000+) |
+| **Duration** | How long each grain lasts (1ms–500ms or whatever you fancy) |
 | **Position** | Where in the source audio each grain reads from |
 | **Amplitude** | How loud each grain is |
 | **Pitch/Rate** | The playback speed of each grain (affects pitch) |
