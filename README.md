@@ -6,7 +6,7 @@
 
 **Sound, atomized. Every parameter a signal. Every result reproducible.**
 
-Particelle is a 64-bit, research-grade, surround-native, LLM-controllable, microtonal-first, multichannel-native granular synthesis engine written entirely in Rust. Not a plugin. Not GUI-driven. Ugly yet capable. Pure infrastructure--controlled through YAML and a CLI, or MIDI and networked Open Sound Control. Scatter millions of grains across 64-channel Dolby Atmos spaces. You can easily patch any audio file's audio features to control granulation parameters of itself or another sound file. Tune in 31-EDO or load an included Scala scale. Render deterministically to 64-bit float WAV files, or run live to  your multiple audio interfaces.
+Particelle is a 64-bit, research-grade, surround-native, LLM-controllable, microtonal-first, multichannel-native granular synthesis engine written entirely in Rust. Not a plugin. Not GUI-driven. Ugly, yet capable. Pure infrastructure--controlled through YAML and a CLI, or MIDI and networked Open Sound Control. Scatter millions of grains across 64-channel Dolby Atmos spaces. You can easily patch any audio file's audio features to control granulation parameters of itself or another sound file. Tune in 31-EDO or load an included Scala scale. Render deterministically to 64-bit float WAV files, or run live to  your multiple audio interfaces.
 
 ```sh
 # 60 seconds to granular sound — no toolchain required
