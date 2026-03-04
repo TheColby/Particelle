@@ -659,6 +659,42 @@ The engine runs identically in offline mode (writing to file) and realtime mode 
 
 ---
 
+## 📐 DSP Architecture & Formal Algorithms
+
+Particelle prioritizes mathematical rigor. All internal processing evaluates continuously in double-precision (`f64`). Below are the foundational models driving the engine's core capabilities.
+
+### 1. Spatialization: Vector Base Amplitude Panning (VBAP)
+When routing thousands of grains across an immersive multichannel dome (e.g. 7.1.4 Atmos or 64-channel arrays), Particelle avoids legacy stereo panning laws. Instead, it utilizes VBAP. Given a virtual source unit vector $\mathbf{p}$ and a matrix mapping the active speaker triplet $\mathbf{L}$, the channel gain vector $\mathbf{g}$ is computed as:
+$$ \mathbf{g} = \mathbf{p}^T \mathbf{L}^{-1} $$
+Constant-power normalization is rigidly enforced across the output vector:
+$$ \mathbf{g}_{\text{norm}} = \frac{\mathbf{g}}{\sqrt{\mathbf{g}^T \mathbf{g}}} $$
+
+### 2. Spatialization: Binaural HRTF (Spherical Head Model)
+When operating in binaural mode, Particelle utilizes a Head-Related Transfer Function (HRTF) to spatialize 3D coordinates onto a standard 2-channel headphone mix. The frequency-independent Interaural Intensity Difference (IID) for a spherical head is modeled as a function of the incidence angle $\theta$ to the ear:
+$$ \text{IID}(\theta) = \alpha_{\text{min}} + (1 - \alpha_{\text{min}}) \left( \frac{\cos(\theta) + 1}{2} \right)^{1.5} $$
+Where $\alpha_{\text{min}}$ represents the maximum acoustic shadow attenuation (typically $\sim 15\text{dB}$).
+
+### 3. Feature Extraction: YIN Pitch Tracking ($f_0$)
+The `particelle-analysis` crate extracts fundamental pitch tracks offline using the YIN algorithm. The core of YIN rests on the Cumulative Mean Normalized Difference Function (CMNDF) $d'_t(\tau)$, which minimizes errors over lag period $\tau$:
+$$ d'_t(\tau) = \begin{cases} 
+1 & \text{if } \tau = 0 \\
+\frac{d_t(\tau)}{\frac{1}{\tau} \sum_{j=1}^{\tau} d_t(j)} & \text{if } \tau > 0 
+\end{cases} $$
+Where $d_t(\tau)$ is the squared difference function.
+
+### 4. Feature Extraction: Spectral Centroid & Entropy
+Grains can map their length or spatial origin to the acoustic brightness of a secondary file.
+**Spectral Centroid** determines the "center of mass" of the magnitude spectrum $X(k)$ across linear frequency bins $f(k)$:
+$$ C = \frac{\sum_{k=0}^{N-1} f(k) X(k)}{\sum_{k=0}^{N-1} X(k)} $$
+**Spectral Entropy** calculates the randomness (tonality vs. noise) by treating the normalized power spectrum $\hat{P}(k)$ as a probability mass function in Shannon's entropy formula:
+$$ H = -\sum_{k=0}^{N-1} \hat{P}(k) \log_2 \hat{P}(k) $$
+
+### 5. Window Generators: The Kaiser Window
+Particelle generates all of its extremely high-fidelity grain envelopes (35+ types) offline in `f64` into static `Arc<[f64]>` tables before rendering. The highly sought-after Kaiser window explicitly balances main-lobe width against side-lobe attenuation using $\beta$ via the modified Bessel function of the first kind $I_0$:
+$$ w(n) = \frac{I_0 \left( \pi \beta \sqrt{ 1 - \left( \frac{2n}{N-1} - 1 \right)^2 } \right)}{I_0(\pi \beta)} \quad \text{for } 0 \le n \le N-1 $$
+
+---
+
 ## 🌪️ Phase 24 (Upcoming): Stochastic & Chaotic Modulators
 
 Particelle is currently implementing an expansive library of non-linear, chaotic, and stochastic generators for the `ParamSignal` AST. These modules will allow for the deterministic generation of complex, evolving macro-structures without relying on large external curve files. 

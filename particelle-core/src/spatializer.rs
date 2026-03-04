@@ -118,6 +118,81 @@ impl Spatializer for AmplitudePanner {
     }
 }
 
+/// Binaural (HRTF) spatializer based on a spherical head model.
+///
+/// Computes Interaural Intensity Differences (IID) based on acoustic head shadowing.
+/// Assumes a rigid sphere radius $a$ where shadowing occurs as a function of the
+/// incident angle to each ear. Currently frequency-independent (broadband approximation).
+pub struct HrtfSpatializer {
+    layout: AudioLayout,
+    left_ear: Vec3,
+    right_ear: Vec3,
+}
+
+impl HrtfSpatializer {
+    pub fn new(layout: AudioLayout) -> Self {
+        // Assert stereo layout for HRTF
+        assert_eq!(layout.channels.len(), 2, "HRTF Spatializer requires exactly 2 output channels.");
+        
+        // Define human ears ideally at -90 (L) and +90 (R) degrees azimuth.
+        Self {
+            layout,
+            left_ear: Vec3::from_az_el(-90.0, 0.0),
+            right_ear: Vec3::from_az_el(90.0, 0.0),
+        }
+    }
+    
+    /// Computes the broadband spherical head shadow gain for a given incident angle.
+    /// Uses a continuous approximation of the shadow zone.
+    fn head_shadow(incident_dot: f64) -> f64 {
+        // incident_dot is cos(theta) where theta is angle to ear.
+        // 1.0 = looking directly at the ear.
+        // -1.0 = looking at the opposite ear.
+        
+        // Smooth transition from full gain on ipsilateral side to shadowed on contralateral.
+        // Scale to a realistic IID max depth (e.g., ~15-20dB shadow = ~0.1 amplitude).
+        let min_gain = 0.15; // approximate max head shadow attenuation
+        let alpha = (incident_dot + 1.0) / 2.0; // map [-1, 1] -> [0, 1]
+        
+        // Non-linear shadow curve
+        min_gain + (1.0 - min_gain) * alpha.powf(1.5)
+    }
+}
+
+impl Spatializer for HrtfSpatializer {
+    fn distribute(&self, position: Vec3, _width: f64, out_gains: &mut [f64]) {
+        if out_gains.len() < 2 { return; }
+        
+        let source_dir = position.normalize();
+        
+        // Dot product gives cosine of angle between source and ear
+        let l_dot = source_dir.dot(&self.left_ear);
+        let r_dot = source_dir.dot(&self.right_ear);
+        
+        // Compute shadowed gains
+        let mut l_gain = Self::head_shadow(l_dot);
+        let mut r_gain = Self::head_shadow(r_dot);
+        
+        // Constant power normalize
+        let sum_sq = l_gain * l_gain + r_gain * r_gain;
+        if sum_sq > f64::EPSILON {
+            let norm = 1.0 / sum_sq.sqrt();
+            l_gain *= norm;
+            r_gain *= norm;
+        } else {
+            l_gain = std::f64::consts::FRAC_1_SQRT_2;
+            r_gain = std::f64::consts::FRAC_1_SQRT_2;
+        }
+        
+        out_gains[0] = l_gain;
+        out_gains[1] = r_gain;
+    }
+
+    fn layout(&self) -> &AudioLayout {
+        &self.layout
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -145,5 +220,21 @@ mod tests {
 
         panner.distribute(Vec3::from_az_el(0.0, 0.0), 0.1, &mut gains);
         assert!((gains[0] - gains[1]).abs() < 1e-10); // Center is equal
+    }
+
+    #[test]
+    fn test_hrtf_spatializer() {
+        let layout = AudioLayout::stereo();
+        let panner = HrtfSpatializer::new(layout);
+        let mut gains = vec![0.0; 2];
+        
+        // Source heavily to the left
+        panner.distribute(Vec3::from_az_el(-90.0, 0.0), 0.1, &mut gains);
+        assert!(gains[0] > gains[1]); // Left ear receives significantly more gain
+        assert!(gains[1] > 0.1);      // Right ear still receives acoustic shadow (not absolute 0)
+
+        // Source dead center
+        panner.distribute(Vec3::from_az_el(0.0, 0.0), 0.1, &mut gains);
+        assert!((gains[0] - gains[1]).abs() < 1e-10); // Perfectly balanced
     }
 }
