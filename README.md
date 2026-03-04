@@ -5,6 +5,8 @@
 # Particelle
 [pär-te-CHell-ee]
 
+**Sound, atomized.**
+
 An algorithmic granular synthesis engine designed for extreme microtonal precision and formats beyond stereo. Not GUI-driven. Ugly, yet capable. Pure infrastructure--controlled through YAML and a CLI, or MIDI and networked Open Sound Control. Scatter millions of grains across 64-channel Dolby Atmos spaces. You can easily patch any audio file's audio features to control granulation parameters of itself or another sound file. Tune in 31-EDO or load an included Scala scale. Render deterministically to 64-bit float WAV files, or run live to  your multiple audio interfaces.
 
 ```sh
