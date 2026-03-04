@@ -193,6 +193,88 @@ impl Spatializer for HrtfSpatializer {
     }
 }
 
+/// Higher-Order Ambisonic (HOA) Encoder up to 3rd order.
+///
+/// Encodes a 3D point source into Ambisonic B-format using ACN channel
+/// ordering and SN3D (Schmidt Semi-Normalized) spherical harmonics.
+/// The number of required channels is `(order + 1)^2`. Max order = 3 (16 channels).
+pub struct AmbisonicEncoder {
+    layout: AudioLayout,
+    order: usize,
+    channels: usize,
+}
+
+impl AmbisonicEncoder {
+    pub fn new(layout: AudioLayout) -> Self {
+        let channels = layout.channels.len();
+        // Determine order based on channel count: N = (order + 1)^2
+        let order = match channels {
+            1 => 0,
+            4 => 1,
+            9 => 2,
+            16 => 3,
+            _ => panic!("Ambisonic layout must have 1, 4, 9, or 16 channels for 0th-3rd order. Got {}.", channels),
+        };
+        
+        Self { layout, order, channels }
+    }
+}
+
+impl Spatializer for AmbisonicEncoder {
+    fn distribute(&self, position: Vec3, _width: f64, out_gains: &mut [f64]) {
+        if out_gains.len() < self.channels { return; }
+        
+        // Normalize position to unit vector
+        let v = position.normalize();
+        let x = v.x;
+        let y = v.y;
+        let z = v.z;
+        
+        // Compute SN3D Spherical Harmonics up to 3rd Order incrementally
+        // ACN Ordering (0 to 15)
+        
+        // Order 0
+        out_gains[0] = 1.0; // W
+        
+        // Order 1
+        if self.order >= 1 {
+            out_gains[1] = y; // Y
+            out_gains[2] = z; // Z
+            out_gains[3] = x; // X
+        }
+        
+        // Order 2
+        if self.order >= 2 {
+            let root3 = 3.0f64.sqrt();
+            let root3_2 = root3 / 2.0;
+
+            out_gains[4] = root3 * x * y;                            // V
+            out_gains[5] = root3 * y * z;                            // T
+            out_gains[6] = 0.5 * (3.0 * z * z - 1.0);                // R
+            out_gains[7] = root3 * x * z;                            // S
+            out_gains[8] = root3_2 * (x * x - y * y);                // U
+        }
+        
+        // Order 3
+        if self.order >= 3 {
+            let root15 = 15.0f64.sqrt();
+            let root5_8 = (5.0 / 8.0_f64).sqrt();
+
+            out_gains[9]  = root5_8 * y * (3.0 * x * x - y * y);     // Q
+            out_gains[10] = root15 * x * y * z;                      // O
+            out_gains[11] = root5_8 * y * (5.0 * z * z - 1.0);       // M
+            out_gains[12] = 0.5 * z * (5.0 * z * z - 3.0);           // K
+            out_gains[13] = root5_8 * x * (5.0 * z * z - 1.0);       // L
+            out_gains[14] = root15 / 2.0 * z * (x * x - y * y);      // N
+            out_gains[15] = root5_8 * x * (x * x - 3.0 * y * y);     // P
+        }
+    }
+
+    fn layout(&self) -> &AudioLayout {
+        &self.layout
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -236,5 +318,35 @@ mod tests {
         // Source dead center
         panner.distribute(Vec3::from_az_el(0.0, 0.0), 0.1, &mut gains);
         assert!((gains[0] - gains[1]).abs() < 1e-10); // Perfectly balanced
+    }
+
+    #[test]
+    fn test_ambisonic_encoder_1st_order() {
+        // Create 4-channel layout for 1st-order AmbiX
+        let mut chs = Vec::new();
+        for i in 0..4 {
+            chs.push(crate::layout::ChannelMeta {
+                name: format!("ACN{}", i),
+                position: crate::layout::SpeakerPosition::Cartesian { x: 0.0, y: 0.0, z: 0.0 }
+            });
+        }
+        let layout = AudioLayout { channels: chs };
+        let encoder = AmbisonicEncoder::new(layout);
+        
+        let mut gains = vec![0.0; 4];
+        
+        // Encode source at front (y = 1)
+        encoder.distribute(Vec3::new(0.0, 1.0, 0.0), 0.1, &mut gains);
+        assert_eq!(gains[0], 1.0); // W is always 1.0 in SN3D
+        assert_eq!(gains[1], 1.0); // Y = y = 1.0
+        assert_eq!(gains[2], 0.0); // Z = z = 0.0
+        assert_eq!(gains[3], 0.0); // X = x = 0.0
+        
+        // Encode source at right (x = 1)
+        encoder.distribute(Vec3::new(1.0, 0.0, 0.0), 0.1, &mut gains);
+        assert_eq!(gains[0], 1.0); // W
+        assert_eq!(gains[1], 0.0); // Y
+        assert_eq!(gains[2], 0.0); // Z
+        assert_eq!(gains[3], 1.0); // X
     }
 }

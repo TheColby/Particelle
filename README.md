@@ -674,7 +674,16 @@ When operating in binaural mode, Particelle utilizes a Head-Related Transfer Fun
 $$ \text{IID}(\theta) = \alpha_{\text{min}} + (1 - \alpha_{\text{min}}) \left( \frac{\cos(\theta) + 1}{2} \right)^{1.5} $$
 Where $\alpha_{\text{min}}$ represents the maximum acoustic shadow attenuation (typically $\sim 15\text{dB}$).
 
-### 3. Feature Extraction: YIN Pitch Tracking ($f_0$)
+### 3. Spatialization: Higher-Order Ambisonics (HOA)
+For isotropic, format-agnostic immersive rendering, Particelle natively encodes virtual sources into **AmbiX (ACN/SN3D)** format up to 3rd order (16 channels). 
+The spatial encoding leverages Spherical Harmonics $Y_l^m(\theta, \phi)$, derived from the Associated Legendre Polynomials $P_l^m(\cos\theta)$:
+$$ Y_l^m(\theta, \phi) = N_l^{|m|} P_l^{|m|}(\cos\theta) \begin{cases} 
+\sin(|m|\phi) & \text{if } m < 0 \\
+\cos(m\phi) & \text{if } m \ge 0 
+\end{cases} $$
+Where $N_l^{|m|}$ is the SN3D normalization factor. This allows grain positions in $x, y, z$ to seamlessly map into quadrupolar ($l=2$) and octupolar ($l=3$) acoustic velocity and gradient fields.
+
+### 4. Feature Extraction: YIN Pitch Tracking ($f_0$)
 The `particelle-analysis` crate extracts fundamental pitch tracks offline using the YIN algorithm. The core of YIN rests on the Cumulative Mean Normalized Difference Function (CMNDF) $d'_t(\tau)$, which minimizes errors over lag period $\tau$:
 $$ d'_t(\tau) = \begin{cases} 
 1 & \text{if } \tau = 0 \\
