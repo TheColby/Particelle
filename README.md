@@ -28,6 +28,21 @@ The project is designed to scale. Adding a new window type, a new curve shape, o
 
 This is a long-horizon platform. Compatibility, correctness, and architectural clarity take precedence over feature velocity.
 
+> [!IMPORTANT]
+> **Particelle is currently pre-alpha.** It is highly experimental and its data schema is subject to change.
+
+<div align="center">
+  <h3>
+    <a href="https://github.com/TheColby/Particelle/blob/main/docs/ARCHITECTURE.md">Architecture</a>
+    <span> | </span>
+    <a href="https://github.com/TheColby/Particelle/tree/main/examples">Examples Gallery</a>
+    <span> | </span>
+    <a href="CHANGELOG.md">Changelog</a>
+    <span> | </span>
+    <a href="https://github.com/TheColby/Particelle/issues">Report Bug</a>
+  </h3>
+</div>
+
 ---
 
 ## 📦 Installation
