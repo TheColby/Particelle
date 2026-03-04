@@ -159,6 +159,6 @@ pub enum HardwareError {
     NoDefaultDevice,
     #[error("Failed to open audio stream: {reason}")]
     StreamOpenFailed { reason: String },
-    #[error("Realtime feature not enabled. Rebuild with --features realtime")]
+    #[error("Real-time feature not enabled. Rebuild with --features realtime")]
     RealtimeNotEnabled,
 }

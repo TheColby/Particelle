@@ -30,7 +30,7 @@ QUICK START:\n\
     particelle validate patch.yaml        Check for schema errors\n\
     particelle render patch.yaml -o out.wav --duration 10.0\n\
                                           Render 10 seconds to WAV\n\
-    particelle run patch.yaml             Stream to hardware in realtime\n\n\
+    particelle run patch.yaml             Stream to hardware in real time\n\n\
 EXAMPLES:\n\
     # Render a 31-EDO drone for 60 seconds at 96kHz\n\
     particelle render drone.yaml -o drone.wav --duration 60.0\n\n\
@@ -68,7 +68,7 @@ enum Commands {
     ///
     /// Processes the full grain engine offline and writes a multichannel WAV file.
     /// Output is byte-identical across runs with equal inputs. Useful for batch
-    /// rendering, regression testing, and non-realtime composition.
+    /// rendering, regression testing, and non-real-time composition.
     #[command(
         after_help = "\
 EXAMPLES:\n\
@@ -97,7 +97,7 @@ NOTES:\n\
         hash: bool,
     },
 
-    /// Run a patch in realtime using the configured hardware audio device.
+    /// Run a patch in real time using the configured hardware audio device.
     ///
     /// Opens a multichannel output stream via CPAL, matching the channel count
     /// and sample rate declared in the patch. The audio callback runs on a

@@ -3,10 +3,9 @@
 </p>
 
 # Particelle
+[pär-te-CHell-ee]
 
-**Sound, atomized. Every parameter a signal. Every result reproducible.**
-
-Particelle is a 64-bit, research-grade, surround-native, LLM-controllable, microtonal-first, multichannel-native granular synthesis engine written entirely in Rust. Not a plugin. Not GUI-driven. Ugly, yet capable. Pure infrastructure--controlled through YAML and a CLI, or MIDI and networked Open Sound Control. Scatter millions of grains across 64-channel Dolby Atmos spaces. You can easily patch any audio file's audio features to control granulation parameters of itself or another sound file. Tune in 31-EDO or load an included Scala scale. Render deterministically to 64-bit float WAV files, or run live to  your multiple audio interfaces.
+An algorithmic granular synthesis engine designed for extreme microtonal precision and formats beyond stereo. Not GUI-driven. Ugly, yet capable. Pure infrastructure--controlled through YAML and a CLI, or MIDI and networked Open Sound Control. Scatter millions of grains across 64-channel Dolby Atmos spaces. You can easily patch any audio file's audio features to control granulation parameters of itself or another sound file. Tune in 31-EDO or load an included Scala scale. Render deterministically to 64-bit float WAV files, or run live to  your multiple audio interfaces.
 
 ```sh
 # 60 seconds to granular sound — no toolchain required
@@ -95,7 +94,7 @@ Usage: particelle <COMMAND>
 
 Commands:
   render    Render a patch to an audio file (offline, deterministic)
-  run       Run a patch in realtime on a hardware device
+  run       Run a patch in real time on a hardware device
   validate  Check a YAML patch for schema errors
   init      Generate a default starter patch to stdout
   curve     Preview a JSON curve file
@@ -139,7 +138,7 @@ particelle render my_first_patch.yaml -o output.wav --duration 10.0
 # → Rendering 10.0s @ 48000Hz … done. Wrote output.wav (960000 frames, 2 channels)
 ```
 
-### ▶️ 4. Play in realtime
+### ▶️ 4. Play in real time
 
 ```sh
 particelle run my_first_patch.yaml
@@ -199,7 +198,7 @@ particelle render shimmer.yaml -o shimmer.wav --duration 8.0
 
 ### ⏩ Example 2 — 4× Timestretch
 
-Slow down a 4-second file to 16 seconds without changing pitch. The grain read position is driven by a linear curve that advances 4× slower than realtime:
+Slow down a 4-second file to 16 seconds without changing pitch. The grain read position is driven by a linear curve that advances 4× slower than real time:
 
 ```yaml
 clouds:
@@ -394,17 +393,17 @@ clouds:
 
 Particelle's architecture supports a vast array of granular techniques natively. The `examples/` directory contains 150 distinct patch configurations to demonstrate the engine's versatility. They are organized by layout:
 
-- **[Mono Examples](examples/mono/)**: 50 patches designed for single-channel evaluation or spatial routing preparation.
-- **[Stereo Examples](examples/stereo/)**: 50 patches optimized for standard L/R headphones and speakers.
-- **[Multichannel Examples](examples/multichannel/)**: 50 patches showcasing 8-channel wrap-around spatialization.
+-   **[Mono Examples](examples/mono/)**: 50 patches designed for single-channel evaluation or spatial routing preparation.
+-   **[Stereo Examples](examples/stereo/)**: 50 patches optimized for standard L/R headphones and speakers.
+-   **[Multichannel Examples](examples/multichannel/)**: 50 patches showcasing 8-channel wrap-around spatialization.
 
 Each folder contains diverse granular techniques:
-- **Texture**: High-density micro-grains (200+ per second) that dissolve transients.
-- **Drone**: Long, overlapping Tuky-windowed grains (0.5s+) creating sustained ambient beds.
-- **Time Stretch**: Grains that scan the file linearly using custom `curves/sweep_up.json` over long durations.
-- **Pitch Shift**: Static file scanning, but explicit Just Intonation (`ji`) tuning adjustments to shift formants.
-- **MPE**: Signal graphs tied to `$p_mod` (MIDI Polyphonic Expression Pressure) which dynamically scale the density in realtime.
-- **Glitch & Chaos**: Highly randomized parameters using extreme boundary ranges.
+-   **Texture**: High-density micro-grains (200+ per second) that dissolve transients.
+-   **Drone**: Long, overlapping Tuky-windowed grains (0.5s+) creating sustained ambient beds.
+-   **Time Stretch**: Grains that scan the file linearly using custom `curves/sweep_up.json` over long durations.
+-   **Pitch Shift**: Static file scanning, but explicit Just Intonation (`ji`) tuning adjustments to shift formants.
+-   **MPE**: Signal graphs tied to `$p_mod` (MIDI Polyphonic Expression Pressure) which dynamically scale the density in real time.
+-   **Glitch & Chaos**: Highly randomized parameters using extreme boundary ranges.
 
 
 ---
@@ -484,9 +483,9 @@ When density is high and duration is long enough for grains to overlap, the outp
 
 Stutter and glitch effects in Particelle are created by manipulating **overlap** and **position**:
 
-1. **Freeze Position**: Set `position` to a constant value (e.g., `0.5` for the middle of a file).
-2. **Low Overlap**: Set `density` and `duration` so the overlap factor is **≤ 1.0**. Back-to-back grains (1.0×) create a rhythmic repeat. Gappy grains (<1.0×) create a choppy, isolated stutter.
-3. **Short Duration**: Keep durations between 10ms and 50ms for that classic "glitch" sound rather than a recognizable loop.
+1.  **Freeze Position**: Set `position` to a constant value (e.g., `0.5` for the middle of a file).
+2.  **Low Overlap**: Set `density` and `duration` so the overlap factor is **≤ 1.0**. Back-to-back grains (1.0×) create a rhythmic repeat. Gappy grains (<1.0×) create a choppy, isolated stutter.
+3.  **Short Duration**: Keep durations between 10ms and 50ms for that classic "glitch" sound rather than a recognizable loop.
 
 ```yaml
 clouds:
@@ -515,11 +514,11 @@ Granular synthesis decouples properties that are normally locked together in rec
 
 Think of a photograph. Granular synthesis is like cutting the photograph into thousands of tiny tiles, then reassembling them — but now you can:
 
-- Rearrange the tiles in any order
-- Repeat certain tiles thousands of times
-- Change the color of each tile independently
-- Spread them across the walls of a room
-- Control how fast you scan across them
+-   Rearrange the tiles in any order
+-   Repeat certain tiles thousands of times
+-   Change the color of each tile independently
+-   Spread them across the walls of a room
+-   Control how fast you scan across them
 
 The source material is still recognizable, but you have total control over its micro-structure.
 
@@ -535,12 +534,12 @@ Different window shapes produce different timbral qualities. A Hann window gives
 
 ### 🌍 Where Granular Synthesis Is Used
 
-- **Ambient and electroacoustic music** — timestretching, texture generation, spectral freezing
-- **Film and game audio** — creating evolving atmospheric soundscapes from short recordings
-- **Sound design** — transforming mundane recordings into otherworldly textures
-- **Scientific research** — auditory perception studies, acoustic ecology, spatial audio experiments
-- **Live performance** — real-time granular processing of live instruments or voice
-- **Installation art** — long-duration generative pieces running unattended for hours or days
+-   **Ambient and electroacoustic music** — timestretching, texture generation, spectral freezing
+-   **Film and game audio** — creating evolving atmospheric soundscapes from short recordings
+-   **Sound design** — transforming mundane recordings into otherworldly textures
+-   **Scientific research** — auditory perception studies, acoustic ecology, spatial audio experiments
+-   **Live performance** — real-time granular processing of live instruments or voice
+-   **Installation art** — long-duration generative pieces running unattended for hours or days
 
 ### 🌀 Granular Synthesis in Particelle
 
@@ -566,17 +565,17 @@ In Particelle, parameters are not values. They are signals. `ParamSignal` is a c
 
 YAML declares every parameter. JSON control-point curves express temporal behavior. Control-rate values are upsampled to audio rate through configurable reconstruction methods including ZOH, linear, cubic, monotone cubic, sinc interpolation, one-pole and two-pole filters, slew limiters, and MinBLEP step reconstruction.
 
-### 🔁 Deterministic Offline Rendering
+### Determinism Guarantee
 
-Any patch that runs in realtime can run offline with byte-identical output given equal inputs. Randomness is seeded and deterministic. Offline renders are batchable and scriptable. Hash-based regression testing is a first-class part of the test suite.
+Any patch that runs in real time can run offline with byte-identical output given equal inputs. Randomness is seeded and deterministic. Offline renders are batchable and scriptable. Hash-based regression testing is a first-class part of the test suite.
 
 ### 🪗 35+ Window Types
 
 The windowing system covers standard research windows (Hann, Hamming, Blackman-Harris, Kaiser, DPSS, Dolph-Chebyshev) and specialized variants (Planck taper, KBD, asymmetric Tukey, Rife-Vincent, user-defined cosine sum). All windows are generated in `f64`, cached by spec and length, and normalized by peak, RMS, or sum as specified. No window is computed more than once per session.
 
-### 🦀 Rust Architecture
+### Lock-Free Execution
 
-Particelle is written entirely in Rust. The realtime audio callback performs zero heap allocation. Lock-free queues separate the audio thread from all I/O. Internal precision is `f64` throughout. The hardware boundary converts to `f32` only at the device interface, if required by the driver. Thread safety is guaranteed by the type system.
+Particelle is written entirely in Rust. The real-time audio callback performs zero heap allocation. Lock-free queues separate the audio thread from all I/O. Internal precision is `f64` throughout. The hardware boundary converts to `f32` only at the device interface, if required by the driver. Thread safety is guaranteed by the type system.
 
 ---
 
@@ -584,17 +583,17 @@ Particelle is written entirely in Rust. The realtime audio callback performs zer
 
 Particelle is designed for:
 
-- Microtonal composers working in EDO, JI, or Scala tuning systems
-- Immersive audio composers and installation artists working in surround and spatial formats
-- Spatial audio researchers building reproducible experimental workflows
-- Algorithmic composition researchers who require deterministic, batchable rendering
-- Developers building sound systems that require formal architectural boundaries
+-   Microtonal composers working in EDO, JI, or Scala tuning systems
+-   Immersive audio composers and installation artists working in surround and spatial formats
+-   Spatial audio researchers building reproducible experimental workflows
+-   Algorithmic composition researchers who require deterministic, batchable rendering
+-   Developers building sound systems that require formal architectural boundaries
 
 Particelle is not designed for:
 
-- Casual preset-driven production
-- GUI-centric workflows
-- Users who need a DAW plugin
+-   Casual preset-driven production
+-   GUI-centric workflows
+-   Users who need a DAW plugin
 
 If you are looking for a visual instrument, Particelle is not the right tool. If you are building infrastructure for a complex compositional system, it may be exactly right.
 
@@ -604,7 +603,7 @@ If you are looking for a visual instrument, Particelle is not the right tool. If
 
 | Concept | Description |
 |---------|-------------|
-| **Matter** | The source audio material a cloud reads grains from. May be a file on disk or a realtime input stream. |
+| **Matter** | The source audio material a cloud reads grains from. May be a file on disk or a real-time input stream. |
 | **Cloud** | A grain emitter. Owns an `EmitterParams` struct specifying density, duration, position, rate, amplitude, spread, and spatial position. Multiple clouds may run simultaneously over the same or different Matter sources. |
 | **Particle** | A single active grain. Has a read position, playback rate, elapsed duration, window phase, 3D position, and pre-computed per-channel gains. Particles are pooled; no allocation occurs during grain scheduling. |
 | **Field** | A named scalar value in the signal routing layer. Fields are populated by MIDI, MPE, or external control, and are readable by `ParamSignal::Control` nodes. |
@@ -676,7 +675,7 @@ All internal audio data is `f64`. Multichannel buffers are planar: one `Vec<f64>
 
 Curves are compiled from JSON into efficient evaluators before the first block is processed. Windows are computed once, cached by `(WindowSpec, length, normalization)`, and returned as shared `Arc<[f64]>` slices. No window is recomputed during rendering.
 
-The engine runs identically in offline mode (writing to file) and realtime mode (driving a hardware device). The audio callback in realtime mode performs no heap allocation. A lock-free ring buffer separates the audio thread from all I/O operations.
+The engine runs identically in offline mode (writing to file) and real-time mode (driving a hardware device). The audio callback in real-time mode performs no heap allocation. A lock-free ring buffer separates the audio thread from all I/O operations.
 
 ---
 
@@ -811,12 +810,12 @@ y_{n+1} = b x_n
 
 ### 2. Stochastic & Noise Models
 
-- **Brownian Motion (Random Walk):** A continuously accumulated random value where the derivative (step size) is Gaussian. Excellent for simulating natural analog drift in tuning or density over long durations.
+-   **Brownian Motion (Random Walk):** A continuously accumulated random value where the derivative (step size) is Gaussian. Excellent for simulating natural analog drift in tuning or density over long durations.
 ```math
 X_{t+dt} = X_t + \mathcal{N}(0, \sigma^2 \cdot dt)
 ```
-- **Pink Noise ($1/f$):** Equal energy per octave. Mathematically modeled via the Voss-McCartney algorithm. Highly musical for modulating grain durations as it avoids the harsh jitter of white noise.
-- **Perlin & Simplex Noise:** Continuous gradient noise in 1D, 2D, or 3D space. By sweeping a clock through 3D Simplex space, smooth, organic, landscape-like modulation curves are generated.
+-   **Pink Noise ($1/f$):** Equal energy per octave. Mathematically modeled via the Voss-McCartney algorithm. Highly musical for modulating grain durations as it avoids the harsh jitter of white noise.
+-   **Perlin & Simplex Noise:** Continuous gradient noise in 1D, 2D, or 3D space. By sweeping a clock through 3D Simplex space, smooth, organic, landscape-like modulation curves are generated.
 
 ### 3. Usage Example 
 
@@ -837,7 +836,7 @@ position:
 
 ## 📡 OSC (Open Sound Control) Telemetry
 
-To modify engine parameters in realtime from external applications (Max/MSP, SuperCollider, TouchOSC), Particelle provides a lightweight, non-blocking UDP receiver thread that bypasses the parser entirely. 
+To modify engine parameters in real time from external applications (Max/MSP, SuperCollider, TouchOSC), Particelle provides a lightweight, non-blocking UDP receiver thread that bypasses the parser entirely. 
 
 To enable OSC, launch your patch with the network port flag:
 
@@ -856,9 +855,9 @@ For example, sending `12.5` to `/field/density` will override a YAML node parame
 To prove Particelle's deterministic rigor and capability under extreme architectural load, the `examples/complex/` directory contains an array of advanced patches. These patches theoretically stress-test the `f64` evaluation pipelines, multi-cloud concurrency, and AST evaluation depths.
 
 **Noteworthy Architectural Tests:**
-* **`dxd_384khz_64ch.yaml`:** Granulates audio natively at the DXD 384kHz frontier across a 64-channel continuous spherical grid (`SIMD`/Memory allocation limit-test).
-* **`directional_shimmer.yaml`:** Continuously computes cardioid radiation attenuation $G = \max(0, \delta + (1 - \delta) \cos(\theta))$ across chaotic rotational geometry.
-* **`multi_cloud_saturation.yaml`:** Spawns 32 uncoupled `GrainPool` structures reading overlapping segments simultaneously.
+*   **`dxd_384khz_64ch.yaml`:** Granulates audio natively at the DXD 384kHz frontier across a 64-channel continuous spherical grid (`SIMD`/Memory allocation limit-test).
+*   **`directional_shimmer.yaml`:** Continuously computes cardioid radiation attenuation $G = \max(0, \delta + (1 - \delta) \cos(\theta))$ across chaotic rotational geometry.
+*   **`multi_cloud_saturation.yaml`:** Spawns 32 uncoupled `GrainPool` structures reading overlapping segments simultaneously.
 
 For a formal whitepaper exploring the signal flow and theoretical models of these patches, read: **[`examples/complex/README.md`](examples/complex/README.md)**.
 
@@ -956,7 +955,7 @@ The `analysis` block extracts time-varying acoustic feature vectors from source 
 
 ![Particelle offline analysis pipeline: source file → extractor → feature vector → $analysis.id → granular parameter](docs/analysis_pipeline.png)
 
-*Feature extraction runs once at patch load time. The resulting `Vec<f64>` is then interpolated at audio rate during rendering/realtime performance.*
+*Feature extraction runs once at patch load time. The resulting `Vec<f64>` is then interpolated at audio rate during rendering/real-time performance.*
 
 Because the analysis source is **independent of the granulation source**, you can cross-couple any file to any cloud:
 
@@ -1269,7 +1268,7 @@ The curve is evaluated at control rate. The result is multiplied by a MIDI CC fi
 
 ---
 
-## 🎛️ Realtime Hardware Support
+## 🎛️ Real-Time Hardware Support
 
 ```yaml
 hardware:
@@ -1278,7 +1277,7 @@ hardware:
   duplex: false
 ```
 
-The realtime mode selects a device by name, configures the sample rate and block size from the engine config, and opens a multichannel output stream. Duplex mode enables audio input, which becomes available as Matter for clouds.
+The real-time mode selects a device by name, configures the sample rate and block size from the engine config, and opens a multichannel output stream. Duplex mode enables audio input, which becomes available as Matter for clouds.
 
 MIDI and MPE are ingested off the audio thread and pushed into a lock-free ring buffer. The audio thread reads events from the queue without blocking. No MIDI parsing or event dispatch occurs on the audio thread.
 
