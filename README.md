@@ -398,6 +398,7 @@ Particelle's architecture supports a vast array of granular techniques natively.
 -   **[Mono Examples](examples/mono/)**: 50 patches designed for single-channel evaluation or spatial routing preparation.
 -   **[Stereo Examples](examples/stereo/)**: 50 patches optimized for standard L/R headphones and speakers.
 -   **[Multichannel Examples](examples/multichannel/)**: 50 patches showcasing 8-channel wrap-around spatialization.
+-   **[Complex Examples](examples/complex/)**: Advanced stress tests executing features like 64-channel DXD audio, differential chaos, and off-line feature extraction.
 
 Each folder contains diverse granular techniques:
 -   **Texture**: High-density micro-grains (200+ per second) that dissolve transients.
