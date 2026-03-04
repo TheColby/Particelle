@@ -1052,9 +1052,7 @@ To regenerate any recipe from its prompt:
 ## 🔬 Offline Audio Feature Analysis
 
 The `analysis` block extracts time-varying acoustic feature vectors from source files offline (before rendering begins). These vectors are then interpolated at audio rate and exposed as `$analysis.<id>` references anywhere in the parameter graph. The source file in `analysis` blocks is independent of — and can be completely different from — the cloud's granular source.
-
 ![Particelle offline analysis pipeline: source file → extractor → feature vector → $analysis.id → granular parameter](docs/analysis_pipeline.png)
-
 *Feature extraction runs once at patch load time. The resulting `Vec<f64>` is then interpolated at audio rate during rendering/real-time performance.*
 
 Because the analysis source is **independent of the granulation source**, you can cross-couple any file to any cloud:
@@ -1068,6 +1066,7 @@ Because the analysis source is **independent of the granulation source**, you ca
 | Extractor | Output | Description |
 |---|---|---|
 | `f0_yin` | Hz | Fundamental frequency via YIN algorithm |
+| `f0_hps` | Hz | Fundamental frequency via Harmonic Product Spectrum |
 | `harmonic_ratio` | 0–1 | Autocorrelation-based harmonics-to-noise ratio (HNR) |
 | `inharmonicity` | 0–1 | Average partial deviation from ideal harmonic series |
 | `tristimulus1` | 0–1 | Ratio of fundamental energy to total spectral energy |
@@ -1336,6 +1335,8 @@ Supported control-rate to audio-rate reconstruction:
 
 Signal expressions compose. Here is a visual representation of how a density parameter might be routed:
 
+<div align="center">
+
 ```mermaid
 graph TD
     classDef curve fill:#3f51b5,stroke:#c5cae9,stroke-width:2px,color:#fff,rx:8,ry:8
@@ -1353,6 +1354,8 @@ graph TD
     F[Const: 64.0]:::const -->|Max| D
     D -->|Final Result| G[Cloud Density]:::output
 ```
+
+</div>
 
 ```yaml
 density:
