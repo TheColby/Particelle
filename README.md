@@ -2,7 +2,7 @@
   <img src="assets/logo.svg" alt="Particelle Logo" width="700">
 </p>
 
-# 🌬️ Particelle
+# Particelle
 
 **Sound, atomized. Every parameter a signal. Every result reproducible.**
 
