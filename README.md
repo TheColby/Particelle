@@ -424,11 +424,21 @@ g(t) = x(t + \tau) \cdot w\left(\frac{t}{D}\right) \quad \text{for } 0 \le t \le
 
 This windowing fades the grain smoothly in and out, preventing harsh clicks at the boundaries. A single grain sounds like almost nothing — a brief click or a wisp of tone. But when hundreds of grains are layered together per second, something remarkable happens: a continuous, evolving texture emerges from the aggregate. This is the central insight of granular synthesis.
 
-![Granular synthesis: a mono waveform segmented into five overlapping Hann-windowed grains with labeled hop size and grain duration](docs/grain_hopping_windows.png)
+<br>
+
+<div align="center">
+  <img src="docs/grain_hopping_windows.png" alt="Granular synthesis: a mono waveform segmented into five overlapping Hann-windowed grains with labeled hop size and grain duration">
+</div>
 
 *Each colored envelope is one grain — a short Hann-windowed segment. The grains hop forward by the **hop size** and overlap each other, producing a continuous output through overlap-add reconstruction.*
 
-![Granular synthesis explained: source audio, windowed grains, and overlap-add reconstruction](docs/granular_synthesis_explained.png)
+<br>
+
+<div align="center">
+  <img src="docs/granular_synthesis_explained.png" alt="Granular synthesis explained: source audio, windowed grains, and overlap-add reconstruction">
+</div>
+
+<br>
 
 ### ☁️ How It Works: The Cloud
 
@@ -841,7 +851,7 @@ Where:
 - $\rho$ (Rayleigh number) determines the temperature difference (default $\sim 28.0$).
 - $\beta$ is a geometric scaling factor (default $\sim 2.66$).
 
-![Lorenz Attractor traversing its two-lobed butterfly phase space](docs/lorenz_plot.png)
+<img src="docs/lorenz_plot.png" width="400" alt="Lorenz Attractor traversing its two-lobed butterfly phase space">
 
 **Rössler Attractor:** Similar to Lorenz but designed to have a simpler phase space, producing signals that dwell in harmonic-like cycles before periodically erupting into chaos.
 ```math
@@ -857,7 +867,7 @@ Where:
 - $x, y, z$ are the system state variables.
 - $a, b, c$ are the system parameters (commonly $a=0.2$, $b=0.2$, $c=5.7$).
 
-![Rossler Attractor showing its single-folded band in phase space](docs/rossler_plot.png)
+<img src="docs/rossler_plot.png" width="400" alt="Rossler Attractor showing its single-folded band in phase space">
 
 **Hénon Map:** A discrete-time dynamical system. Because it is calculated iteratively rather than continuously, it produces highly jagged, granular sequences of values perfect for stochastic pitch quantization or erratic spatial scattering.
 ```math
@@ -871,7 +881,7 @@ Where:
 - $a$ shapes the quadratic non-linearity (classically $1.4$).
 - $b$ is the Jacobian determinant controlling dissipation (classically $0.3$).
 
-![Henon Map discrete strange attractor plotted as 2D scattered points](docs/henon_plot.png)
+<img src="docs/henon_plot.png" width="400" alt="Henon Map discrete strange attractor plotted as 2D scattered points">
 
 ### 2. Stochastic & Noise Models
 
