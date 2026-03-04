@@ -690,6 +690,11 @@ When routing thousands of grains across an immersive multichannel dome (e.g. 7.1
 ```math
 \mathbf{g} = \mathbf{p}^T \mathbf{L}^{-1}
 ```
+Where:
+- $\mathbf{g}$ is the resulting channel gain vector.
+- $\mathbf{p}$ is the unit vector pointing toward the virtual grain source.
+- $\mathbf{L}$ is the invertible $3 \times 3$ matrix of the three active loudspeaker unit vectors.
+
 Constant-power normalization is rigidly enforced across the output vector:
 ```math
 \mathbf{g}_{\text{norm}} = \frac{\mathbf{g}}{\sqrt{\mathbf{g}^T \mathbf{g}}}
@@ -703,13 +708,22 @@ The frequency-independent acoustic shadow for a rigid spherical head is modeled 
 ```math
 \text{IID}(\theta) = \alpha_{\text{min}} + (1 - \alpha_{\text{min}}) \left( \frac{\cos(\theta) + 1}{2} \right)^{1.5}
 ```
-Where $\alpha_{\text{min}}$ represents the maximum acoustic shadow attenuation (typically $\sim 15\text{dB}$). This provides robust lateral localization at a fraction of the CPU cost of full convolution.
+Where:
+- $\theta$ is the incidence angle of the sound source relative to the listener's ear.
+- $\alpha_{\text{min}}$ represents the maximum acoustic shadow attenuation (typically $\sim 15\text{dB}$).
+
+This provides robust lateral localization at a fraction of the CPU cost of full convolution.
 
 #### B. Interaural Time Difference (ITD)
 The time-of-arrival delay between ears. For a spherical head of radius $a$ and the speed of sound $c$, the Woodworth formula defines the delay $\Delta t$ to the contralateral ear:
 ```math
 \Delta t = \frac{a}{c} (\theta + \sin\theta)
 ```
+Where:
+- $\Delta t$ is the time delay to the contralateral ear natively.
+- $a$ is the radius of the spherical head model.
+- $c$ is the speed of sound.
+- $\theta$ is the angle of incidence.
 
 #### C. Spectral Filtering (Pinnae & Torso)
 Frequency-dependent filtering (typically derived from measured HRIR dummy-head convolutions). This resolves front-to-back confusion and elevation, but requires expensive FFT block convolution per active grain.
@@ -723,7 +737,14 @@ Y_l^m(\theta, \phi) = N_l^{|m|} P_l^{|m|}(\cos\theta) \begin{cases}
 \cos(m\phi) & \text{if } m \ge 0 
 \end{cases}
 ```
-Where $N_l^{|m|}$ is the SN3D normalization factor. This allows grain positions in $x, y, z$ to seamlessly map into quadrupolar ($l=2$) and octupolar ($l=3$) acoustic velocity and gradient fields.
+Where:
+- $Y_l^m$ is the Spherical Harmonic component at incidence $\theta$ (elevation) and $\phi$ (azimuth).
+- $l$ is the Ambisonic order ($0 \le l \le 3$).
+- $m$ is the degree ($-l \le m \le l$).
+- $N_l^{|m|}$ is the SN3D normalization factor.
+- $P_l^{|m|}$ is the Associated Legendre Polynomial.
+
+This allows grain positions in $x, y, z$ to seamlessly map into quadrupolar ($l=2$) and octupolar ($l=3$) acoustic velocity and gradient fields.
 
 ### 4. Feature Extraction: Fundamental Pitch Tracking ($f_0$)
 The `particelle-analysis` crate extracts fundamental pitch tracks offline. Two distinct estimators are provided based on the target timbral density:
@@ -736,13 +757,19 @@ d'_t(\tau) = \begin{cases}
 \frac{d_t(\tau)}{\frac{1}{\tau} \sum_{j=1}^{\tau} d_t(j)} & \text{if } \tau > 0 
 \end{cases}
 ```
-Where $d_t(\tau)$ is the squared difference function.
+Where:
+- $d'_t(\tau)$ is the normalized difference function at time step $t$ for lag period $\tau$.
+- $d_t(\tau)$ is the base squared difference function.
 
 #### B. Harmonic Product Spectrum (Frequency-Domain)
 Best for noisy environments or sources with missing fundamentals. HPS identifies the fundamental frequency by downsampling the magnitude spectrum $X(\omega)$ multiple times ($R$) and multiplying them together. The fundamental peak aligns across all harmonic arrays:
 ```math
 Y(\omega) = \prod_{r=1}^{R} |X(r\omega)|
 ```
+Where:
+- $Y(\omega)$ is the harmonic product spectrum peak magnitude for frequency $\omega$.
+- $X(\omega)$ is the magnitude of the FFT spectrum at frequency $\omega$.
+- $R$ is the number of harmonic integer multiples to downsample and multiply.
 
 ### 4. Feature Extraction: Spectral Centroid & Entropy
 Grains can map their length or spatial origin to the acoustic brightness of a secondary file.
@@ -750,16 +777,31 @@ Grains can map their length or spatial origin to the acoustic brightness of a se
 ```math
 C = \frac{\sum_{k=0}^{N-1} f(k) X(k)}{\sum_{k=0}^{N-1} X(k)}
 ```
+Where:
+- $C$ is the spectral centroid.
+- $N$ is the FFT block size.
+- $k$ is the frequency bin index.
+- $f(k)$ is the center frequency of bin $k$.
+- $X(k)$ is the magnitude of bin $k$.
+
 **Spectral Entropy** calculates the randomness (tonality vs. noise) by treating the normalized power spectrum $\hat{P}(k)$ as a probability mass function in Shannon's entropy formula:
 ```math
 H = -\sum_{k=0}^{N-1} \hat{P}(k) \log_2 \hat{P}(k)
 ```
+Where:
+- $H$ is the spectral entropy.
+- $\hat{P}(k)$ is the normalized power probability mass for bin $k$.
 
 ### 5. Window Generators: The Kaiser Window
 Particelle generates all of its extremely high-fidelity grain envelopes (35+ types) offline in `f64` into static `Arc<[f64]>` tables before rendering. The highly sought-after Kaiser window explicitly balances main-lobe width against side-lobe attenuation using $\beta$ via the modified Bessel function of the first kind $I_0$:
 ```math
 w(n) = \frac{I_0 \left( \pi \beta \sqrt{ 1 - \left( \frac{2n}{N-1} - 1 \right)^2 } \right)}{I_0(\pi \beta)} \quad \text{for } 0 \le n \le N-1
 ```
+Where:
+- $n$ is the discrete sample index.
+- $N$ is the total length of the window in samples.
+- $\beta$ is the independent shape parameter controlling side-lobe attenuation.
+- $I_0$ is the zeroth-order modified Bessel function of the first kind.
 
 ### 6. Spatialization: Anisotropic Grain Directivity
 Traditional granular synthesis treats grains as perfect isotropic (omnidirectional) point sources. Particelle supports fully **anisotropic grain directivity**, allowing each individual grain to act as a focused acoustic beam (cardioid) or a dipole (figure-8) tumbling through 3D space.
@@ -768,7 +810,10 @@ The resulting acoustic attenuation gain $G$ is determined by the cardioid direct
 ```math
 G = \max(0, \delta + (1 - \delta) \cos(\theta))
 ```
-When $\delta = 1.0$, the grain is completely omnidirectional. When $\delta = 0.5$, it acts as a perfect cardioid. When $\delta = 0.0$, it becomes a dipole. 
+Where:
+- $G$ is the continuous linear amplitude gain applied to the grain.
+- $\delta$ is the directivity shape index. When $\delta = 1.0$, the grain is omnidirectional. When $\delta = 0.5$, it acts as a perfect cardioid. When $\delta = 0.0$, it becomes a figure-8 dipole. 
+- $\theta$ is the angle between the grain's orientation vector and the listener's position.
 
 ---
 
@@ -790,6 +835,13 @@ These generators are calculated sample-for-sample in `f64` within the signal gra
 ```math
 \frac{dz}{dt} = xy - \beta z
 ```
+Where:
+- $x, y, z$ are the system state variables.
+- $\sigma$ (Prandtl number) determines fluid viscosity (default $\sim 10.0$).
+- $\rho$ (Rayleigh number) determines the temperature difference (default $\sim 28.0$).
+- $\beta$ is a geometric scaling factor (default $\sim 2.66$).
+
+![Lorenz Attractor traversing its two-lobed butterfly phase space](docs/lorenz_plot.png)
 
 **Rössler Attractor:** Similar to Lorenz but designed to have a simpler phase space, producing signals that dwell in harmonic-like cycles before periodically erupting into chaos.
 ```math
@@ -801,6 +853,11 @@ These generators are calculated sample-for-sample in `f64` within the signal gra
 ```math
 \frac{dz}{dt} = b + z(x - c)
 ```
+Where:
+- $x, y, z$ are the system state variables.
+- $a, b, c$ are the system parameters (commonly $a=0.2$, $b=0.2$, $c=5.7$).
+
+![Rossler Attractor showing its single-folded band in phase space](docs/rossler_plot.png)
 
 **Hénon Map:** A discrete-time dynamical system. Because it is calculated iteratively rather than continuously, it produces highly jagged, granular sequences of values perfect for stochastic pitch quantization or erratic spatial scattering.
 ```math
@@ -809,6 +866,12 @@ x_{n+1} = 1 - a x_n^2 + y_n
 ```math
 y_{n+1} = b x_n
 ```
+Where:
+- $x_n, y_n$ are the discrete iteration states.
+- $a$ shapes the quadratic non-linearity (classically $1.4$).
+- $b$ is the Jacobian determinant controlling dissipation (classically $0.3$).
+
+![Henon Map discrete strange attractor plotted as 2D scattered points](docs/henon_plot.png)
 
 ### 2. Stochastic & Noise Models
 
@@ -816,6 +879,12 @@ y_{n+1} = b x_n
 ```math
 X_{t+dt} = X_t + \mathcal{N}(0, \sigma^2 \cdot dt)
 ```
+Where:
+- $X_t$ is the current continuous value.
+- $dt$ is the delta time step (equivalent to one audio frame).
+- $\mathcal{N}$ is a Gaussian normal distribution with mean $0$.
+- $\sigma$ is the variance (volatility) scaling the random step size.
+
 -   **Pink Noise ($1/f$):** Equal energy per octave. Mathematically modeled via the Voss-McCartney algorithm. Highly musical for modulating grain durations as it avoids the harsh jitter of white noise.
 -   **Perlin & Simplex Noise:** Continuous gradient noise in 1D, 2D, or 3D space. By sweeping a clock through 3D Simplex space, smooth, organic, landscape-like modulation curves are generated.
 
