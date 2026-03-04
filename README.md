@@ -34,7 +34,7 @@ This is a long-horizon platform. Compatibility, correctness, and architectural c
 
 <div align="center">
   <h3>
-    <a href="https://github.com/TheColby/Particelle/blob/main/docs/ARCHITECTURE.md">Architecture</a>
+    <a href="#%EF%B8%8F-architecture-overview">Architecture</a>
     <span> | </span>
     <a href="https://github.com/TheColby/Particelle/tree/main/examples">Examples Gallery</a>
     <span> | </span>
