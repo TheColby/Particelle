@@ -680,11 +680,23 @@ Constant-power normalization is rigidly enforced across the output vector:
 ```
 
 ### 2. Spatialization: Binaural HRTF (Spherical Head Model)
-When operating in binaural mode, Particelle utilizes a Head-Related Transfer Function (HRTF) to spatialize 3D coordinates onto a standard 2-channel headphone mix. The frequency-independent Interaural Intensity Difference (IID) for a spherical head is modeled as a function of the incidence angle $\theta$ to the ear:
+When operating in binaural mode, Particelle utilizes a Head-Related Transfer Function (HRTF) to spatialize 3D coordinates onto a standard 2-channel headphone mix. True HRTF relies on three psychoacoustic pillars. Due to the extreme computational density of granular synthesis (often exceeding 10,000 simultaneous voices), Particelle isolates the **IID** model for continuous spatialization, as maintaining 10,000 independent fractional delay lines (ITD) or running 10,000 parallel convolutions (Spectral) per frame is mathematically prohibitive.
+
+#### A. Interaural Intensity Difference (IID) - *[Currently Implemented]*
+The frequency-independent acoustic shadow for a rigid spherical head is modeled as a function of the incidence angle $\theta$ to the ear:
 ```math
 \text{IID}(\theta) = \alpha_{\text{min}} + (1 - \alpha_{\text{min}}) \left( \frac{\cos(\theta) + 1}{2} \right)^{1.5}
 ```
-Where $\alpha_{\text{min}}$ represents the maximum acoustic shadow attenuation (typically $\sim 15\text{dB}$).
+Where $\alpha_{\text{min}}$ represents the maximum acoustic shadow attenuation (typically $\sim 15\text{dB}$). This provides robust lateral localization at a fraction of the CPU cost of full convolution.
+
+#### B. Interaural Time Difference (ITD)
+The time-of-arrival delay between ears. For a spherical head of radius $a$ and the speed of sound $c$, the Woodworth formula defines the delay $\Delta t$ to the contralateral ear:
+```math
+\Delta t = \frac{a}{c} (\theta + \sin\theta)
+```
+
+#### C. Spectral Filtering (Pinnae & Torso)
+Frequency-dependent filtering (typically derived from measured HRIR dummy-head convolutions). This resolves front-to-back confusion and elevation, but requires expensive FFT block convolution per active grain.
 
 ### 3. Spatialization: Higher-Order Ambisonics (HOA)
 For isotropic, format-agnostic immersive rendering, Particelle natively encodes virtual sources into **AmbiX (ACN/SN3D)** format up to 3rd order (16 channels). 
@@ -697,8 +709,11 @@ Y_l^m(\theta, \phi) = N_l^{|m|} P_l^{|m|}(\cos\theta) \begin{cases}
 ```
 Where $N_l^{|m|}$ is the SN3D normalization factor. This allows grain positions in $x, y, z$ to seamlessly map into quadrupolar ($l=2$) and octupolar ($l=3$) acoustic velocity and gradient fields.
 
-### 4. Feature Extraction: YIN Pitch Tracking ($f_0$)
-The `particelle-analysis` crate extracts fundamental pitch tracks offline using the YIN algorithm. The core of YIN rests on the Cumulative Mean Normalized Difference Function (CMNDF) $d'_t(\tau)$, which minimizes errors over lag period $\tau$:
+### 4. Feature Extraction: Fundamental Pitch Tracking ($f_0$)
+The `particelle-analysis` crate extracts fundamental pitch tracks offline. Two distinct estimators are provided based on the target timbral density:
+
+#### A. YIN Algorithm (Time-Domain)
+Best for monophonic, harmonic sources (e.g., vocal, cello). The core of YIN rests on the Cumulative Mean Normalized Difference Function (CMNDF) $d'_t(\tau)$, which minimizes errors over lag period $\tau$:
 ```math
 d'_t(\tau) = \begin{cases} 
 1 & \text{if } \tau = 0 \\
@@ -706,6 +721,12 @@ d'_t(\tau) = \begin{cases}
 \end{cases}
 ```
 Where $d_t(\tau)$ is the squared difference function.
+
+#### B. Harmonic Product Spectrum (Frequency-Domain)
+Best for noisy environments or sources with missing fundamentals. HPS identifies the fundamental frequency by downsampling the magnitude spectrum $X(\omega)$ multiple times ($R$) and multiplying them together. The fundamental peak aligns across all harmonic arrays:
+```math
+Y(\omega) = \prod_{r=1}^{R} |X(r\omega)|
+```
 
 ### 4. Feature Extraction: Spectral Centroid & Entropy
 Grains can map their length or spatial origin to the acoustic brightness of a secondary file.
