@@ -332,7 +332,55 @@ fn compile_signal(
                         0.0
                     };
                     
+                    
                     Ok(particelle_params::signal::ParamSignal::Oscillator { shape, freq: Box::new(freq), phase })
+                }
+                "lorenz" => {
+                    if op_config.args.len() != 5 {
+                        anyhow::bail!("'lorenz' requires 5 arguments: [sigma, rho, beta, out_dim, dt]");
+                    }
+                    let sigma = if let SignalExprConfig::Const(v) = &op_config.args[0] { *v } else { anyhow::bail!("lorenz sigma must be constant") };
+                    let rho = if let SignalExprConfig::Const(v) = &op_config.args[1] { *v } else { anyhow::bail!("lorenz rho must be constant") };
+                    let beta = if let SignalExprConfig::Const(v) = &op_config.args[2] { *v } else { anyhow::bail!("lorenz beta must be constant") };
+                    let out_dim = if let SignalExprConfig::Ref(s) = &op_config.args[3] { s.clone() } else { anyhow::bail!("lorenz out_dim must be string") };
+                    let dt = if let SignalExprConfig::Const(v) = &op_config.args[4] { *v } else { anyhow::bail!("lorenz dt must be constant") };
+                    
+                    let state = Arc::new(particelle_params::signal::ChaosState::new(0.1, 0.1, 0.1));
+                    Ok(particelle_params::signal::ParamSignal::Lorenz { state, sigma, rho, beta, dt, out_dim })
+                }
+                "rossler" => {
+                    if op_config.args.len() != 5 {
+                        anyhow::bail!("'rossler' requires 5 arguments: [a, b, c, out_dim, dt]");
+                    }
+                    let a = if let SignalExprConfig::Const(v) = &op_config.args[0] { *v } else { anyhow::bail!("rossler a must be constant") };
+                    let b = if let SignalExprConfig::Const(v) = &op_config.args[1] { *v } else { anyhow::bail!("rossler b must be constant") };
+                    let c = if let SignalExprConfig::Const(v) = &op_config.args[2] { *v } else { anyhow::bail!("rossler c must be constant") };
+                    let out_dim = if let SignalExprConfig::Ref(s) = &op_config.args[3] { s.clone() } else { anyhow::bail!("rossler out_dim must be string") };
+                    let dt = if let SignalExprConfig::Const(v) = &op_config.args[4] { *v } else { anyhow::bail!("rossler dt must be constant") };
+                    
+                    let state = Arc::new(particelle_params::signal::ChaosState::new(0.1, 0.1, 0.1));
+                    Ok(particelle_params::signal::ParamSignal::Rossler { state, a, b, c, dt, out_dim })
+                }
+                "henon" => {
+                    if op_config.args.len() != 3 {
+                        anyhow::bail!("'henon' requires 3 arguments: [a, b, out_dim]");
+                    }
+                    let a = if let SignalExprConfig::Const(v) = &op_config.args[0] { *v } else { anyhow::bail!("henon a must be constant") };
+                    let b = if let SignalExprConfig::Const(v) = &op_config.args[1] { *v } else { anyhow::bail!("henon b must be constant") };
+                    let out_dim = if let SignalExprConfig::Ref(s) = &op_config.args[2] { s.clone() } else { anyhow::bail!("henon out_dim must be string") };
+                    
+                    let state = Arc::new(particelle_params::signal::ChaosState::new(0.1, 0.1, 0.0));
+                    Ok(particelle_params::signal::ParamSignal::Henon { state, a, b, out_dim })
+                }
+                "brownian" => {
+                    if op_config.args.len() != 2 {
+                        anyhow::bail!("'brownian' requires 2 arguments: [sigma, dt]");
+                    }
+                    let sigma = if let SignalExprConfig::Const(v) = &op_config.args[0] { *v } else { anyhow::bail!("brownian sigma must be constant") };
+                    let dt = if let SignalExprConfig::Const(v) = &op_config.args[1] { *v } else { anyhow::bail!("brownian dt must be constant") };
+                    
+                    let state = Arc::new(particelle_params::signal::ChaosState::new(0.0, 0.0, 0.0));
+                    Ok(particelle_params::signal::ParamSignal::Brownian { state, sigma, dt })
                 }
                 other => anyhow::bail!("Expr operator '{}' is not supported", other),
             }

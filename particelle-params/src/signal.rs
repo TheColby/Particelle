@@ -1,6 +1,56 @@
 use std::sync::Arc;
 use particelle_curve::CompiledCurve;
 use crate::context::SignalContext;
+use std::sync::atomic::{AtomicU64, Ordering};
+
+#[derive(Debug)]
+pub struct AtomicF64(AtomicU64);
+
+impl AtomicF64 {
+    pub fn new(val: f64) -> Self {
+        Self(AtomicU64::new(val.to_bits()))
+    }
+    pub fn get(&self) -> f64 {
+        f64::from_bits(self.0.load(Ordering::Relaxed))
+    }
+    pub fn set(&self, val: f64) {
+        self.0.store(val.to_bits(), Ordering::Relaxed);
+    }
+}
+impl Clone for AtomicF64 {
+    fn clone(&self) -> Self {
+        Self::new(self.get())
+    }
+}
+
+#[derive(Debug)]
+pub struct ChaosState {
+    pub x: AtomicF64,
+    pub y: AtomicF64,
+    pub z: AtomicF64,
+    pub last_frame: AtomicU64,
+}
+
+impl ChaosState {
+    pub fn new(x: f64, y: f64, z: f64) -> Self {
+        Self {
+            x: AtomicF64::new(x),
+            y: AtomicF64::new(y),
+            z: AtomicF64::new(z),
+            last_frame: AtomicU64::new(u64::MAX),
+        }
+    }
+    
+    pub fn advance(&self, frame: u64) -> bool {
+        let last = self.last_frame.load(Ordering::Relaxed);
+        if last != frame {
+            self.last_frame.store(frame, Ordering::Relaxed);
+            true
+        } else {
+            false
+        }
+    }
+}
 
 #[derive(Debug, Clone)]
 pub enum OscShape {
@@ -50,6 +100,18 @@ pub enum ParamSignal {
     /// Offline audio feature analysis vector mapping (e.g. F0, RMS).
     /// Linearly interpolated at the audio `hop_rate` resolution.
     Analysis { buffer: Arc<Vec<f64>>, hop_rate: f64 },
+
+    /// Lorenz chaotic attractor. Output dimension is "x", "y", or "z".
+    Lorenz { state: Arc<ChaosState>, sigma: f64, rho: f64, beta: f64, dt: f64, out_dim: String },
+    
+    /// Rössler chaotic attractor. Output dimension is "x", "y", or "z".
+    Rossler { state: Arc<ChaosState>, a: f64, b: f64, c: f64, dt: f64, out_dim: String },
+    
+    /// Hénon discrete map. Output dimension is "x" or "y".
+    Henon { state: Arc<ChaosState>, a: f64, b: f64, out_dim: String },
+    
+    /// Brownian motion (Random Walk) mapping to output dimension "x".
+    Brownian { state: Arc<ChaosState>, sigma: f64, dt: f64 },
 }
 
 impl ParamSignal {
@@ -116,6 +178,87 @@ impl ParamSignal {
                 let val_b = buffer[idx_ceil];
                 
                 val_a + (val_b - val_a) * frac
+            }
+            ParamSignal::Lorenz { state, sigma, rho, beta, dt, out_dim } => {
+                let frame = ctx.frame;
+                if state.advance(frame) {
+                    let mut x = state.x.get();
+                    let mut y = state.y.get();
+                    let mut z = state.z.get();
+                    
+                    let dx = sigma * (y - x);
+                    let dy = x * (rho - z) - y;
+                    let dz = x * y - beta * z;
+                    
+                    x += dx * dt;
+                    y += dy * dt;
+                    z += dz * dt;
+                    
+                    state.x.set(x);
+                    state.y.set(y);
+                    state.z.set(z);
+                }
+                match out_dim.as_str() {
+                    "y" => state.y.get(),
+                    "z" => state.z.get(),
+                    _ => state.x.get(),
+                }
+            }
+            ParamSignal::Rossler { state, a, b, c, dt, out_dim } => {
+                let frame = ctx.frame;
+                if state.advance(frame) {
+                    let mut x = state.x.get();
+                    let mut y = state.y.get();
+                    let mut z = state.z.get();
+                    
+                    let dx = -y - z;
+                    let dy = x + a * y;
+                    let dz = b + z * (x - c);
+                    
+                    x += dx * dt;
+                    y += dy * dt;
+                    z += dz * dt;
+                    
+                    state.x.set(x);
+                    state.y.set(y);
+                    state.z.set(z);
+                }
+                match out_dim.as_str() {
+                    "y" => state.y.get(),
+                    "z" => state.z.get(),
+                    _ => state.x.get(),
+                }
+            }
+            ParamSignal::Henon { state, a, b, out_dim } => {
+                let frame = ctx.frame;
+                if state.advance(frame) {
+                    let x = state.x.get();
+                    let y = state.y.get();
+                    
+                    let nx = 1.0 - a * x * x + y;
+                    let ny = b * x;
+                    
+                    state.x.set(nx);
+                    state.y.set(ny);
+                }
+                match out_dim.as_str() {
+                    "y" => state.y.get(),
+                    _ => state.x.get(),
+                }
+            }
+            ParamSignal::Brownian { state, sigma, dt } => {
+                let frame = ctx.frame;
+                if state.advance(frame) {
+                    let val = state.x.get();
+                    // Fast pseudo-random via seeded LCG
+                    let mut seed = frame.wrapping_mul(6364136223846793005).wrapping_add(state.last_frame.load(Ordering::Relaxed));
+                    seed ^= seed >> 32;
+                    let noise = (seed as f64 / u64::MAX as f64) * 2.0 - 1.0; // Uniform [-1, 1] Approximation
+                    
+                    let next = val + noise * sigma * dt;
+                    state.x.set(next);
+                }
+                state.x.get()
             }
         }
     }
