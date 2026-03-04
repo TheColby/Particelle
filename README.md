@@ -936,9 +936,15 @@ For example, sending `12.5` to `/field/density` will override a YAML node parame
 To prove Particelle's deterministic rigor and capability under extreme architectural load, the `examples/complex/` directory contains an array of advanced patches. These patches theoretically stress-test the `f64` evaluation pipelines, multi-cloud concurrency, and AST evaluation depths.
 
 **Noteworthy Architectural Tests:**
-*   **`dxd_384khz_64ch.yaml`:** Granulates audio natively at the DXD 384kHz frontier across a 64-channel continuous spherical grid (`SIMD`/Memory allocation limit-test).
-*   **`directional_shimmer.yaml`:** Continuously computes cardioid radiation attenuation $G = \max(0, \delta + (1 - \delta) \cos(\theta))$ across chaotic rotational geometry.
-*   **`multi_cloud_saturation.yaml`:** Spawns 32 uncoupled `GrainPool` structures reading overlapping segments simultaneously.
+
+| Patch File | Category | Engine Stress Focus |
+|---|---|---|
+| **`dxd_384khz_64ch.yaml`** | Format Limits | Granulates natively at the [DXD 384kHz](https://en.wikipedia.org/wiki/Digital_eXtreme_Definition) frontier across a 64-channel continuous spherical grid ([`SIMD`](https://en.wikipedia.org/wiki/Single_instruction,_multiple_data)/memory allocation limit-test). |
+| **`multi_cloud_saturation.yaml`** | Concurrency | Spawns 32 uncoupled `GrainPool` structures reading overlapping segments simultaneously, testing [thread-safety](https://en.wikipedia.org/wiki/Thread_safety) and lock-free switching. |
+| **`directional_shimmer.yaml`** | Anisotropy | Continuously computes [cardioid radiation](https://en.wikipedia.org/wiki/Cardioid) attenuation $G = \max(0, \delta + (1 - \delta) \cos(\theta))$ across chaotic rotational geometry. |
+| **`hyper_mod_matrix.yaml`** | AST Tree Depth | Evaluates a deeply nested, non-linear algebraic modulation graph natively on the audio thread without [branch-prediction](https://en.wikipedia.org/wiki/Branch_predictor) failures. |
+| **`multi_extractor_orchestra.yaml`** | Offline Analysis | Extracts offline [$f_0$ frequencies](https://en.wikipedia.org/wiki/Fundamental_frequency) from multiple source files and maps vectors dynamically to the playback head routes of other files. |
+| **`chaos_lorenz.yaml`** | Deterministic Chaos | Evaluates three coupled [differential equations](https://en.wikipedia.org/wiki/Differential_equation) step-by-step per frame without mutex locking to generate complex deterministic drift. |
 
 For a formal whitepaper exploring the signal flow and theoretical models of these patches, read: **[`examples/complex/README.md`](examples/complex/README.md)**.
 
@@ -1065,8 +1071,8 @@ Because the analysis source is **independent of the granulation source**, you ca
 
 | Extractor | Output | Description |
 |---|---|---|
-| `f0_yin` | Hz | Fundamental frequency via YIN algorithm |
-| `f0_hps` | Hz | Fundamental frequency via Harmonic Product Spectrum |
+| `f0_yin` | Hz | Fundamental frequency via [YIN algorithm](https://audition.ens.fr/adc/pdf/2002_JASA_YIN.pdf) |
+| `f0_hps` | Hz | Fundamental frequency via [Harmonic Product Spectrum](https://en.wikipedia.org/wiki/Harmonic_product_spectrum) |
 | `harmonic_ratio` | 0–1 | Autocorrelation-based harmonics-to-noise ratio (HNR) |
 | `inharmonicity` | 0–1 | Average partial deviation from ideal harmonic series |
 | `tristimulus1` | 0–1 | Ratio of fundamental energy to total spectral energy |
@@ -1317,7 +1323,7 @@ Hardware output is multichannel-native. The CPAL backend is configured to reques
 
 ## ⚙️ Automation System
 
-The automation system in Particelle is not a modulation matrix. It is a signal composition graph. Any parameter can be expressed as a function of time, control input, or other parameters, without limit.
+The automation system in Particelle is not a modulation matrix. It is a signal composition graph. Any parameter can be expressed as a function of time, control input, or other parameters, without limit. This forms a recursive [Abstract Syntax Tree (AST)](https://en.wikipedia.org/wiki/Abstract_syntax_tree) that is evaluated deterministically.
 
 Supported segment shapes in JSON curves:
 
