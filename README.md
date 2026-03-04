@@ -402,7 +402,9 @@ Granular synthesis is a method of sound generation that operates on a fundamenta
 
 A grain is a short snippet of audio, typically between **1 and 200 milliseconds** long. Mathematically, a grain $g(t)$ is formed by multiplying a segment of source audio $x(t)$ starting at read position $\tau$ by a bell-shaped window function $w(t)$ over a duration $D$:
 
-$$ g(t) = x(t + \tau) \cdot w\left(\frac{t}{D}\right) \quad \text{for } 0 \le t \le D $$
+```math
+g(t) = x(t + \tau) \cdot w\left(\frac{t}{D}\right) \quad \text{for } 0 \le t \le D
+```
 
 This windowing fades the grain smoothly in and out, preventing harsh clicks at the boundaries. A single grain sounds like almost nothing — a brief click or a wisp of tone. But when hundreds of grains are layered together per second, something remarkable happens: a continuous, evolving texture emerges from the aggregate. This is the central insight of granular synthesis.
 
@@ -430,11 +432,15 @@ A *cloud* (nothing to do with The Cloud, involving the interwebs) is a stream of
 
 The **hop size** ($H_s$) is the time interval between successive grain onsets — essentially, how far the window "slides" between one grain and the next. In Particelle, hop size is the inverse of the **density** ($\delta$) parameter (grains per second):
 
-$$ H_s = \frac{1}{\delta} $$
+```math
+H_s = \frac{1}{\delta}
+```
 
 The **overlap factor** ($O$) is the ratio of grain duration ($D_g$) to hop size. It represents the average number of grains playing simultaneously:
 
-$$ O = \frac{D_g}{H_s} = D_g \cdot \delta $$
+```math
+O = \frac{D_g}{H_s} = D_g \cdot \delta
+```
 
 At 50% overlap ($O = 2.0$), adjacent grains cross-fade smoothly through each other, producing a continuous, artifact-free texture — this is the regime shown in the plot above.
 
@@ -665,85 +671,120 @@ Particelle prioritizes mathematical rigor. All internal processing evaluates con
 
 ### 1. Spatialization: Vector Base Amplitude Panning (VBAP)
 When routing thousands of grains across an immersive multichannel dome (e.g. 7.1.4 Atmos or 64-channel arrays), Particelle avoids legacy stereo panning laws. Instead, it utilizes VBAP. Given a virtual source unit vector $\mathbf{p}$ and a matrix mapping the active speaker triplet $\mathbf{L}$, the channel gain vector $\mathbf{g}$ is computed as:
-$$ \mathbf{g} = \mathbf{p}^T \mathbf{L}^{-1} $$
+```math
+\mathbf{g} = \mathbf{p}^T \mathbf{L}^{-1}
+```
 Constant-power normalization is rigidly enforced across the output vector:
-$$ \mathbf{g}_{\text{norm}} = \frac{\mathbf{g}}{\sqrt{\mathbf{g}^T \mathbf{g}}} $$
+```math
+\mathbf{g}_{\text{norm}} = \frac{\mathbf{g}}{\sqrt{\mathbf{g}^T \mathbf{g}}}
+```
 
 ### 2. Spatialization: Binaural HRTF (Spherical Head Model)
 When operating in binaural mode, Particelle utilizes a Head-Related Transfer Function (HRTF) to spatialize 3D coordinates onto a standard 2-channel headphone mix. The frequency-independent Interaural Intensity Difference (IID) for a spherical head is modeled as a function of the incidence angle $\theta$ to the ear:
-$$ \text{IID}(\theta) = \alpha_{\text{min}} + (1 - \alpha_{\text{min}}) \left( \frac{\cos(\theta) + 1}{2} \right)^{1.5} $$
+```math
+\text{IID}(\theta) = \alpha_{\text{min}} + (1 - \alpha_{\text{min}}) \left( \frac{\cos(\theta) + 1}{2} \right)^{1.5}
+```
 Where $\alpha_{\text{min}}$ represents the maximum acoustic shadow attenuation (typically $\sim 15\text{dB}$).
 
 ### 3. Spatialization: Higher-Order Ambisonics (HOA)
 For isotropic, format-agnostic immersive rendering, Particelle natively encodes virtual sources into **AmbiX (ACN/SN3D)** format up to 3rd order (16 channels). 
 The spatial encoding leverages Spherical Harmonics $Y_l^m(\theta, \phi)$, derived from the Associated Legendre Polynomials $P_l^m(\cos\theta)$:
-$$ Y_l^m(\theta, \phi) = N_l^{|m|} P_l^{|m|}(\cos\theta) \begin{cases} 
+```math
+Y_l^m(\theta, \phi) = N_l^{|m|} P_l^{|m|}(\cos\theta) \begin{cases} 
 \sin(|m|\phi) & \text{if } m < 0 \\
 \cos(m\phi) & \text{if } m \ge 0 
-\end{cases} $$
+\end{cases}
+```
 Where $N_l^{|m|}$ is the SN3D normalization factor. This allows grain positions in $x, y, z$ to seamlessly map into quadrupolar ($l=2$) and octupolar ($l=3$) acoustic velocity and gradient fields.
 
 ### 4. Feature Extraction: YIN Pitch Tracking ($f_0$)
 The `particelle-analysis` crate extracts fundamental pitch tracks offline using the YIN algorithm. The core of YIN rests on the Cumulative Mean Normalized Difference Function (CMNDF) $d'_t(\tau)$, which minimizes errors over lag period $\tau$:
-$$ d'_t(\tau) = \begin{cases} 
+```math
+d'_t(\tau) = \begin{cases} 
 1 & \text{if } \tau = 0 \\
 \frac{d_t(\tau)}{\frac{1}{\tau} \sum_{j=1}^{\tau} d_t(j)} & \text{if } \tau > 0 
-\end{cases} $$
+\end{cases}
+```
 Where $d_t(\tau)$ is the squared difference function.
 
 ### 4. Feature Extraction: Spectral Centroid & Entropy
 Grains can map their length or spatial origin to the acoustic brightness of a secondary file.
 **Spectral Centroid** determines the "center of mass" of the magnitude spectrum $X(k)$ across linear frequency bins $f(k)$:
-$$ C = \frac{\sum_{k=0}^{N-1} f(k) X(k)}{\sum_{k=0}^{N-1} X(k)} $$
+```math
+C = \frac{\sum_{k=0}^{N-1} f(k) X(k)}{\sum_{k=0}^{N-1} X(k)}
+```
 **Spectral Entropy** calculates the randomness (tonality vs. noise) by treating the normalized power spectrum $\hat{P}(k)$ as a probability mass function in Shannon's entropy formula:
-$$ H = -\sum_{k=0}^{N-1} \hat{P}(k) \log_2 \hat{P}(k) $$
+```math
+H = -\sum_{k=0}^{N-1} \hat{P}(k) \log_2 \hat{P}(k)
+```
 
 ### 5. Window Generators: The Kaiser Window
 Particelle generates all of its extremely high-fidelity grain envelopes (35+ types) offline in `f64` into static `Arc<[f64]>` tables before rendering. The highly sought-after Kaiser window explicitly balances main-lobe width against side-lobe attenuation using $\beta$ via the modified Bessel function of the first kind $I_0$:
-$$ w(n) = \frac{I_0 \left( \pi \beta \sqrt{ 1 - \left( \frac{2n}{N-1} - 1 \right)^2 } \right)}{I_0(\pi \beta)} \quad \text{for } 0 \le n \le N-1 $$
-$$ w(n) = \frac{I_0 \left( \pi \beta \sqrt{ 1 - \left( \frac{2n}{N-1} - 1 \right)^2 } \right)}{I_0(\pi \beta)} \quad \text{for } 0 \le n \le N-1 $$
+```math
+w(n) = \frac{I_0 \left( \pi \beta \sqrt{ 1 - \left( \frac{2n}{N-1} - 1 \right)^2 } \right)}{I_0(\pi \beta)} \quad \text{for } 0 \le n \le N-1
+```
 
 ### 6. Spatialization: Anisotropic Grain Directivity
 Traditional granular synthesis treats grains as perfect isotropic (omnidirectional) point sources. Particelle supports fully **anisotropic grain directivity**, allowing each individual grain to act as a focused acoustic beam (cardioid) or a dipole (figure-8) tumbling through 3D space.
 Given a grain's continuous orientation vector $\mathbf{o}$ and a unit vector $\mathbf{v}$ pointing from the grain to the listener, the relative incidence $\cos(\theta)$ is rapidly calculated via dot product: $\mathbf{o} \cdot \mathbf{v}$.
 The resulting acoustic attenuation gain $G$ is determined by the cardioid directivity index $\delta \in [0, 1]$:
-$$ G = \max(0, \delta + (1 - \delta) \cos(\theta)) $$
+```math
+G = \max(0, \delta + (1 - \delta) \cos(\theta))
+```
 When $\delta = 1.0$, the grain is completely omnidirectional. When $\delta = 0.5$, it acts as a perfect cardioid. When $\delta = 0.0$, it becomes a dipole. 
 
 ---
 
-## 🌪️ Phase 24 (Upcoming): Stochastic & Chaotic Modulators
+## 🌪️ Stochastic & Chaotic Modulators
 
-Particelle is currently implementing an expansive library of non-linear, chaotic, and stochastic generators for the `ParamSignal` AST. These modules will allow for the deterministic generation of complex, evolving macro-structures without relying on large external curve files. 
+Particelle features an expansive library of non-linear, chaotic, and stochastic generators for the `ParamSignal` AST. These modules allow for the deterministic generation of complex, evolving macro-structures without relying on large external curve files. 
 
 These generators are calculated sample-for-sample in `f64` within the signal graph and can drive any parameter from grain density to 3D spatial position.
 
 ### 1. Chaotic Attractors
 
 **Lorenz System:** A set of coupled, non-linear ordinary differential equations. By tapping into the $x$, $y$, or $z$ dimension of the solved system, users can generate smooth but permanently unpredictable modulation paths that never repeat.
-$$ \frac{dx}{dt} = \sigma (y - x) $$
-$$ \frac{dy}{dt} = x (\rho - z) - y $$
-$$ \frac{dz}{dt} = xy - \beta z $$
+```math
+\frac{dx}{dt} = \sigma (y - x)
+```
+```math
+\frac{dy}{dt} = x (\rho - z) - y
+```
+```math
+\frac{dz}{dt} = xy - \beta z
+```
 
 **Rössler Attractor:** Similar to Lorenz but designed to have a simpler phase space, producing signals that dwell in harmonic-like cycles before periodically erupting into chaos.
-$$ \frac{dx}{dt} = -y - z $$
-$$ \frac{dy}{dt} = x + ay $$
-$$ \frac{dz}{dt} = b + z(x - c) $$
+```math
+\frac{dx}{dt} = -y - z
+```
+```math
+\frac{dy}{dt} = x + ay
+```
+```math
+\frac{dz}{dt} = b + z(x - c)
+```
 
 **Hénon Map:** A discrete-time dynamical system. Because it is calculated iteratively rather than continuously, it produces highly jagged, granular sequences of values perfect for stochastic pitch quantization or erratic spatial scattering.
-$$ x_{n+1} = 1 - a x_n^2 + y_n $$
-$$ y_{n+1} = b x_n $$
+```math
+x_{n+1} = 1 - a x_n^2 + y_n
+```
+```math
+y_{n+1} = b x_n
+```
 
 ### 2. Stochastic & Noise Models
 
 - **Brownian Motion (Random Walk):** A continuously accumulated random value where the derivative (step size) is Gaussian. Excellent for simulating natural analog drift in tuning or density over long durations.
-$$ X_{t+dt} = X_t + \mathcal{N}(0, \sigma^2 \cdot dt) $$
+```math
+X_{t+dt} = X_t + \mathcal{N}(0, \sigma^2 \cdot dt)
+```
 - **Pink Noise ($1/f$):** Equal energy per octave. Mathematically modeled via the Voss-McCartney algorithm. Highly musical for modulating grain durations as it avoids the harsh jitter of white noise.
 - **Perlin & Simplex Noise:** Continuous gradient noise in 1D, 2D, or 3D space. By sweeping a clock through 3D Simplex space, smooth, organic, landscape-like modulation curves are generated.
 
-### 3. Usage Example (Preview)
+### 3. Usage Example 
 
-Once Phase 24 is merged, these nodes will integrate directly into the `op` graph:
+These mathematical nodes can be integrated directly into the `op` graph. For example, to bind a grain's spatial X-position to the Lorenz attractor:
 
 ```yaml
 position:
@@ -1086,11 +1127,15 @@ flowchart LR
 
 Continuous pitch logic is maintained throughout. For an $E$-EDO system, the base frequency $f(n)$ for a fractional scale degree $n$ relative to a reference frequency $f_{\text{ref}}$ is:
 
-$$ f(n) = f_{\text{ref}} \cdot 2^{\frac{n}{E}} $$
+```math
+f(n) = f_{\text{ref}} \cdot 2^{\frac{n}{E}}
+```
 
 Modulation ($\Delta$, in cents) from MIDI pitchbend or parameter curves is applied exponentially:
 
-$$ f_{\text{final}} = f(n) \cdot 2^{\frac{\Delta}{1200}} $$
+```math
+f_{\text{final}} = f(n) \cdot 2^{\frac{\Delta}{1200}}
+```
 
 All arithmetic is `f64`. No conversion to `f32` occurs before the hardware boundary.
 
