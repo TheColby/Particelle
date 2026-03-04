@@ -64,7 +64,7 @@ pub trait Spatializer: Send + Sync {
     /// Compute per-channel gains for a source at `position` with the given `width`.
     ///
     /// `out_gains` must have length equal to the layout's channel count.
-    fn distribute(&self, position: Vec3, width: f64, out_gains: &mut [f64]);
+    fn distribute(&self, position: Vec3, orientation: Vec3, directivity: f64, width: f64, out_gains: &mut [f64]);
 
     /// The layout this spatializer was constructed for.
     fn layout(&self) -> &AudioLayout;
@@ -90,9 +90,15 @@ impl AmplitudePanner {
 }
 
 impl Spatializer for AmplitudePanner {
-    fn distribute(&self, position: Vec3, width: f64, out_gains: &mut [f64]) {
+    fn distribute(&self, position: Vec3, orientation: Vec3, directivity: f64, width: f64, out_gains: &mut [f64]) {
         let n = out_gains.len().min(self.speaker_vecs.len());
         let source_dir = position.normalize();
+        
+        // Radiation gain (Anisotropic Directivity)
+        // Vector from grain to listener (origin)
+        let to_listener = Vec3::new(-source_dir.x, -source_dir.y, -source_dir.z);
+        let radiation_dot = orientation.dot(&to_listener);
+        let radiation_gain = (directivity + (1.0 - directivity) * radiation_dot).max(0.0);
         
         // Spread exponent controlled by width
         let p = if width >= 0.99 { 0.0 } else { 1.0 / (width.max(0.01) * 2.0) };
@@ -106,10 +112,10 @@ impl Spatializer for AmplitudePanner {
             sum_sq += gain * gain;
         }
         
-        // Constant power normalization
+        // Constant power normalization AND radiation attenuation
         let norm = if sum_sq > f64::EPSILON { 1.0 / sum_sq.sqrt() } else { 0.0 };
         for g in out_gains[..n].iter_mut() {
-            *g *= norm;
+            *g *= norm * radiation_gain;
         }
     }
 
@@ -160,10 +166,16 @@ impl HrtfSpatializer {
 }
 
 impl Spatializer for HrtfSpatializer {
-    fn distribute(&self, position: Vec3, _width: f64, out_gains: &mut [f64]) {
+    fn distribute(&self, position: Vec3, orientation: Vec3, directivity: f64, _width: f64, out_gains: &mut [f64]) {
         if out_gains.len() < 2 { return; }
         
         let source_dir = position.normalize();
+        
+        // Radiation gain (Anisotropic Directivity)
+        // Vector from grain to listener (origin)
+        let to_listener = Vec3::new(-source_dir.x, -source_dir.y, -source_dir.z);
+        let radiation_dot = orientation.dot(&to_listener);
+        let radiation_gain = (directivity + (1.0 - directivity) * radiation_dot).max(0.0);
         
         // Dot product gives cosine of angle between source and ear
         let l_dot = source_dir.dot(&self.left_ear);
@@ -184,8 +196,8 @@ impl Spatializer for HrtfSpatializer {
             r_gain = std::f64::consts::FRAC_1_SQRT_2;
         }
         
-        out_gains[0] = l_gain;
-        out_gains[1] = r_gain;
+        out_gains[0] = l_gain * radiation_gain;
+        out_gains[1] = r_gain * radiation_gain;
     }
 
     fn layout(&self) -> &AudioLayout {
@@ -221,7 +233,7 @@ impl AmbisonicEncoder {
 }
 
 impl Spatializer for AmbisonicEncoder {
-    fn distribute(&self, position: Vec3, _width: f64, out_gains: &mut [f64]) {
+    fn distribute(&self, position: Vec3, orientation: Vec3, directivity: f64, _width: f64, out_gains: &mut [f64]) {
         if out_gains.len() < self.channels { return; }
         
         // Normalize position to unit vector
@@ -230,17 +242,22 @@ impl Spatializer for AmbisonicEncoder {
         let y = v.y;
         let z = v.z;
         
+        // Radiation gain (Anisotropic Directivity)
+        let to_listener = Vec3::new(-x, -y, -z);
+        let radiation_dot = orientation.dot(&to_listener);
+        let radiation_gain = (directivity + (1.0 - directivity) * radiation_dot).max(0.0);
+        
         // Compute SN3D Spherical Harmonics up to 3rd Order incrementally
         // ACN Ordering (0 to 15)
         
         // Order 0
-        out_gains[0] = 1.0; // W
+        out_gains[0] = 1.0 * radiation_gain; // W
         
         // Order 1
         if self.order >= 1 {
-            out_gains[1] = y; // Y
-            out_gains[2] = z; // Z
-            out_gains[3] = x; // X
+            out_gains[1] = y * radiation_gain; // Y
+            out_gains[2] = z * radiation_gain; // Z
+            out_gains[3] = x * radiation_gain; // X
         }
         
         // Order 2
@@ -248,11 +265,11 @@ impl Spatializer for AmbisonicEncoder {
             let root3 = 3.0f64.sqrt();
             let root3_2 = root3 / 2.0;
 
-            out_gains[4] = root3 * x * y;                            // V
-            out_gains[5] = root3 * y * z;                            // T
-            out_gains[6] = 0.5 * (3.0 * z * z - 1.0);                // R
-            out_gains[7] = root3 * x * z;                            // S
-            out_gains[8] = root3_2 * (x * x - y * y);                // U
+            out_gains[4] = root3 * x * y * radiation_gain;                            // V
+            out_gains[5] = root3 * y * z * radiation_gain;                            // T
+            out_gains[6] = 0.5 * (3.0 * z * z - 1.0) * radiation_gain;                // R
+            out_gains[7] = root3 * x * z * radiation_gain;                            // S
+            out_gains[8] = root3_2 * (x * x - y * y) * radiation_gain;                // U
         }
         
         // Order 3
@@ -260,13 +277,13 @@ impl Spatializer for AmbisonicEncoder {
             let root15 = 15.0f64.sqrt();
             let root5_8 = (5.0 / 8.0_f64).sqrt();
 
-            out_gains[9]  = root5_8 * y * (3.0 * x * x - y * y);     // Q
-            out_gains[10] = root15 * x * y * z;                      // O
-            out_gains[11] = root5_8 * y * (5.0 * z * z - 1.0);       // M
-            out_gains[12] = 0.5 * z * (5.0 * z * z - 3.0);           // K
-            out_gains[13] = root5_8 * x * (5.0 * z * z - 1.0);       // L
-            out_gains[14] = root15 / 2.0 * z * (x * x - y * y);      // N
-            out_gains[15] = root5_8 * x * (x * x - 3.0 * y * y);     // P
+            out_gains[9]  = root5_8 * y * (3.0 * x * x - y * y) * radiation_gain;     // Q
+            out_gains[10] = root15 * x * y * z * radiation_gain;                      // O
+            out_gains[11] = root5_8 * y * (5.0 * z * z - 1.0) * radiation_gain;       // M
+            out_gains[12] = 0.5 * z * (5.0 * z * z - 3.0) * radiation_gain;           // K
+            out_gains[13] = root5_8 * x * (5.0 * z * z - 1.0) * radiation_gain;       // L
+            out_gains[14] = root15 / 2.0 * z * (x * x - y * y) * radiation_gain;      // N
+            out_gains[15] = root5_8 * x * (x * x - 3.0 * y * y) * radiation_gain;     // P
         }
     }
 
@@ -297,10 +314,10 @@ mod tests {
         let panner = AmplitudePanner::new(layout);
         let mut gains = vec![0.0; 2];
         
-        panner.distribute(Vec3::from_az_el(-30.0, 0.0), 0.1, &mut gains);
+        panner.distribute(Vec3::from_az_el(-30.0, 0.0), Vec3::from_az_el(0.0, 0.0), 1.0, 0.1, &mut gains);
         assert!(gains[0] > gains[1]); // Left speaker louder than right
 
-        panner.distribute(Vec3::from_az_el(0.0, 0.0), 0.1, &mut gains);
+        panner.distribute(Vec3::from_az_el(0.0, 0.0), Vec3::from_az_el(0.0, 0.0), 1.0, 0.1, &mut gains);
         assert!((gains[0] - gains[1]).abs() < 1e-10); // Center is equal
     }
 
@@ -311,12 +328,12 @@ mod tests {
         let mut gains = vec![0.0; 2];
         
         // Source heavily to the left
-        panner.distribute(Vec3::from_az_el(-90.0, 0.0), 0.1, &mut gains);
+        panner.distribute(Vec3::from_az_el(-90.0, 0.0), Vec3::from_az_el(0.0, 0.0), 1.0, 0.1, &mut gains);
         assert!(gains[0] > gains[1]); // Left ear receives significantly more gain
         assert!(gains[1] > 0.1);      // Right ear still receives acoustic shadow (not absolute 0)
 
         // Source dead center
-        panner.distribute(Vec3::from_az_el(0.0, 0.0), 0.1, &mut gains);
+        panner.distribute(Vec3::from_az_el(0.0, 0.0), Vec3::from_az_el(0.0, 0.0), 1.0, 0.1, &mut gains);
         assert!((gains[0] - gains[1]).abs() < 1e-10); // Perfectly balanced
     }
 
@@ -336,14 +353,14 @@ mod tests {
         let mut gains = vec![0.0; 4];
         
         // Encode source at front (y = 1)
-        encoder.distribute(Vec3::new(0.0, 1.0, 0.0), 0.1, &mut gains);
+        encoder.distribute(Vec3::new(0.0, 1.0, 0.0), Vec3::new(0.0, 1.0, 0.0), 1.0, 0.1, &mut gains);
         assert_eq!(gains[0], 1.0); // W is always 1.0 in SN3D
         assert_eq!(gains[1], 1.0); // Y = y = 1.0
         assert_eq!(gains[2], 0.0); // Z = z = 0.0
         assert_eq!(gains[3], 0.0); // X = x = 0.0
         
         // Encode source at right (x = 1)
-        encoder.distribute(Vec3::new(1.0, 0.0, 0.0), 0.1, &mut gains);
+        encoder.distribute(Vec3::new(1.0, 0.0, 0.0), Vec3::new(1.0, 0.0, 0.0), 1.0, 0.1, &mut gains);
         assert_eq!(gains[0], 1.0); // W
         assert_eq!(gains[1], 0.0); // Y
         assert_eq!(gains[2], 0.0); // Z

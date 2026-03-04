@@ -133,6 +133,9 @@ pub struct Cloud {
     pub listener_pos: crate::spatializer::Vec3,
     pub width: ParamSignal,
     pub playback_rate: ParamSignal,
+    pub directivity: ParamSignal,
+    pub orientation_azimuth: ParamSignal,
+    pub orientation_elevation: ParamSignal,
 }
 
 impl Cloud {
@@ -148,6 +151,9 @@ impl Cloud {
             listener_pos: crate::spatializer::Vec3::ORIGIN,
             width: ParamSignal::Const(0.5),
             playback_rate: ParamSignal::Const(1.0),
+            directivity: ParamSignal::Const(1.0),
+            orientation_azimuth: ParamSignal::Const(0.0),
+            orientation_elevation: ParamSignal::Const(0.0),
         }
     }
 
@@ -170,9 +176,13 @@ impl Cloud {
                 
                 let width_val = self.width.eval(ctx);
                 let amplitude_val = self.amplitude.eval(ctx);
+                let directivity_val = self.directivity.eval(ctx).clamp(0.0, 1.0);
+                let az = self.orientation_azimuth.eval(ctx);
+                let el = self.orientation_elevation.eval(ctx);
+                let orientation = crate::spatializer::Vec3::from_az_el(az, el);
                 
                 // Calculate spatial distribution
-                spatializer.distribute(self.listener_pos, width_val, &mut gains);
+                spatializer.distribute(self.listener_pos, orientation, directivity_val, width_val, &mut gains);
                 
                 // Apply overall amplitude
                 for g in &mut gains {

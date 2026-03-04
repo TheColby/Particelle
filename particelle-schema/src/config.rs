@@ -104,6 +104,12 @@ pub struct CloudConfig {
     pub window:       WindowSpecConfig,
     pub listener_pos: Vec3Config,
     pub width:        SignalExprConfig,
+    #[serde(default = "default_directivity")]
+    pub directivity:  SignalExprConfig,
+    #[serde(default = "default_orientation")]
+    pub orientation_azimuth: SignalExprConfig,
+    #[serde(default = "default_orientation")]
+    pub orientation_elevation: SignalExprConfig,
     #[serde(default)]
     pub max_particles: Option<usize>,
     /// When true (default), grain read-heads wrap around when they pass the end
@@ -113,6 +119,8 @@ pub struct CloudConfig {
 }
 
 fn default_loop_source() -> bool { true }
+fn default_directivity() -> SignalExprConfig { SignalExprConfig::Const(1.0) }
+fn default_orientation() -> SignalExprConfig { SignalExprConfig::Const(0.0) }
 
 /// An inline signal expression: a constant, a named reference, or an expression tree.
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -701,6 +701,14 @@ $$ H = -\sum_{k=0}^{N-1} \hat{P}(k) \log_2 \hat{P}(k) $$
 ### 5. Window Generators: The Kaiser Window
 Particelle generates all of its extremely high-fidelity grain envelopes (35+ types) offline in `f64` into static `Arc<[f64]>` tables before rendering. The highly sought-after Kaiser window explicitly balances main-lobe width against side-lobe attenuation using $\beta$ via the modified Bessel function of the first kind $I_0$:
 $$ w(n) = \frac{I_0 \left( \pi \beta \sqrt{ 1 - \left( \frac{2n}{N-1} - 1 \right)^2 } \right)}{I_0(\pi \beta)} \quad \text{for } 0 \le n \le N-1 $$
+$$ w(n) = \frac{I_0 \left( \pi \beta \sqrt{ 1 - \left( \frac{2n}{N-1} - 1 \right)^2 } \right)}{I_0(\pi \beta)} \quad \text{for } 0 \le n \le N-1 $$
+
+### 6. Spatialization: Anisotropic Grain Directivity
+Traditional granular synthesis treats grains as perfect isotropic (omnidirectional) point sources. Particelle supports fully **anisotropic grain directivity**, allowing each individual grain to act as a focused acoustic beam (cardioid) or a dipole (figure-8) tumbling through 3D space.
+Given a grain's continuous orientation vector $\mathbf{o}$ and a unit vector $\mathbf{v}$ pointing from the grain to the listener, the relative incidence $\cos(\theta)$ is rapidly calculated via dot product: $\mathbf{o} \cdot \mathbf{v}$.
+The resulting acoustic attenuation gain $G$ is determined by the cardioid directivity index $\delta \in [0, 1]$:
+$$ G = \max(0, \delta + (1 - \delta) \cos(\theta)) $$
+When $\delta = 1.0$, the grain is completely omnidirectional. When $\delta = 0.5$, it acts as a perfect cardioid. When $\delta = 0.0$, it becomes a dipole. 
 
 ---
 

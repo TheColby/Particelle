@@ -649,6 +649,9 @@ fn build_engine(config: &ParticelleConfig) -> Result<GranularEngine> {
         cloud.amplitude = compile_signal(&c.amplitude, base_dir.as_deref(), &analysis_buffers)?;
         cloud.position  = compile_signal(&c.position, base_dir.as_deref(), &analysis_buffers)?;
         cloud.width     = compile_signal(&c.width, base_dir.as_deref(), &analysis_buffers)?;
+        cloud.directivity = compile_signal(&c.directivity, base_dir.as_deref(), &analysis_buffers)?;
+        cloud.orientation_azimuth = compile_signal(&c.orientation_azimuth, base_dir.as_deref(), &analysis_buffers)?;
+        cloud.orientation_elevation = compile_signal(&c.orientation_elevation, base_dir.as_deref(), &analysis_buffers)?;
         
         let pos = &c.listener_pos;
         cloud.listener_pos = particelle_core::spatializer::Vec3::new(pos.x, pos.y, pos.z);

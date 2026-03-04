@@ -1,0 +1,35 @@
+engine:
+  sample_rate: 48000.0
+  block_size: 512
+
+layout:
+  channels:
+    - { name: "L", azimuth_deg: -30.0, elevation_deg: 0.0 }
+    - { name: "R", azimuth_deg: 30.0, elevation_deg: 0.0 }
+
+tuning:
+  mode: twelve_tet
+
+clouds:
+  - id: tumbling_dipoles
+    source: samples/drums.wav
+    density: 60.0
+    duration: 0.08
+    # Grain physically morphs from Omni (1.0) into a sharp Dipole (0.0)
+    directivity:
+      op: map
+      args:
+        - { op: osc, args: [sine, 0.2] } # Very slow 0.2hz morph
+        - abs
+    
+    # Fast rotation on the horizontal plane (Leslie effect)
+    orientation_azimuth: { op: osc, args: [phasor, 5.0] }
+    
+    # Stochastic tumbling on the vertical plane using Brownian drift
+    orientation_elevation: { op: brownian, args: [5.0, 0.01] }
+
+    position: 0.5
+    amplitude: 0.8
+    window: { type: hann }
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }
+    width: 0.5
