@@ -934,9 +934,28 @@ For a formal whitepaper exploring the signal flow and theoretical models of thes
 
 ---
 
-## 🤖 AI-Assisted Patch Generation
+## 🤖 LLM Integration & Prompt Engineering
 
-Particelle's YAML schema is precisely documented to work seamlessly with Large Language Models. There are two ways to use this:
+Particelle was designed from the ground up to be programmable by Large Language Models (LLMs). Because the engine has no GUI, and because every parameter—from file paths to recursive AST modulation graphs—is encapsulated in text-serializable YAML, AI agents excel at constructing massive, deeply complex granular environments in a single shot.
+
+### The `particelle-schema` Workflow
+
+LLMs often hallucinate parameters in GUI-based synth presets. Particelle solves this via its static schema. 
+
+1. **Export the Blueprint:** Run `cargo run --bin schema_export > schema.json`.
+2. **Set the Context:** Paste this schema (or the `examples/` directory) into the context window of models like Claude 3.5 Sonnet, GPT-4o, or Gemini 1.5 Pro.
+3. **Prompt for Sound:** The strict recursive nature of the `ParamSignal` AST is mathematically logical to an LLM. It can reason about scaling, offsetting, and mapping parameters deterministically based on the schema types.
+4. **Instant Validation:** Run `particelle validate <ai_generated.yaml>`. If the LLM made a typo, feed the compiler error back. The AI will fix it immediately.
+
+### Copy-Pasteable Meta-Prompts
+
+Here are two proven prompt templates for generating patches:
+
+**Example 1: The Ambient Texturizer**
+> "I want to build a Particelle YAML patch. The global sample rate is 48000 and block size is 256. Create a stereo `Cloud` that reads from `audio/piano.wav`. Give it a massive density (150 grains/sec) and long durations (0.8s) so they overlap deeply. Set the window to `tuky` with an alpha of 0.35. Now, make it sound organic: modulate the grain `position` (read head) using a continuous `brownian` drift so it slowly crawls through the file, and apply a 20ms `slew` filter to the density so it breathes. Output to a `stereo` layout."
+
+**Example 2: The Generative Spatial Router**
+> "Build a 16-channel `ambisonic_3d` surround patch in Particelle. Load `audio/water.wav`. I want the sound source to physically orbit the listener's head. Bind the `orientation_azimuth` property of the cloud to a `sine` oscillator running off the `$time` field at 0.1Hz, but scale the output from [-1, 1] to [-pi, pi] so it rotates a full 360 degrees. Make the spatial attenuation cardioid by setting `directivity` to 0.5. Add a 10% random `spread` to the pitch using `op: random`."
 
 ### 🖥️ Option A: `ai2yaml` CLI (Recommended)
 
