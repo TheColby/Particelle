@@ -1,4 +1,4 @@
-/// MPE (MIDI Polyphonic Expression) zone configuration and voice state.
+//! MPE (MIDI Polyphonic Expression) zone configuration and voice state.
 
 /// MPE zone: defines the master and member channel range.
 #[derive(Debug, Clone)]
@@ -40,10 +40,10 @@ impl MpeZone {
 pub struct MpeVoiceState {
     pub channel: u8,
     pub note: u8,
-    pub pitchbend: f64,   // [-1, 1]
-    pub pressure: f64,    // [0, 1]
-    pub timbre: f64,      // [0, 1] (CC74)
-    pub velocity: f64,    // [0, 1]
+    pub pitchbend: f64, // [-1, 1]
+    pub pressure: f64,  // [0, 1]
+    pub timbre: f64,    // [0, 1] (CC74)
+    pub velocity: f64,  // [0, 1]
     pub active: bool,
 }
 

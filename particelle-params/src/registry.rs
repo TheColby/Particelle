@@ -1,6 +1,6 @@
-use std::collections::HashMap;
 use crate::signal::ParamSignal;
 use crate::unit::Unit;
+use std::collections::HashMap;
 
 /// Describes the domain type of a parameter.
 #[derive(Debug, Clone, PartialEq)]
@@ -46,7 +46,8 @@ impl ParamRegistry {
         if self.descriptors.contains_key(&path) {
             return Err(RegistryError::AlreadyRegistered { path });
         }
-        self.signals.insert(path.clone(), ParamSignal::Const(descriptor.default));
+        self.signals
+            .insert(path.clone(), ParamSignal::Const(descriptor.default));
         self.descriptors.insert(path, descriptor);
         Ok(())
     }
@@ -54,7 +55,9 @@ impl ParamRegistry {
     /// Bind a `ParamSignal` to a registered parameter path.
     pub fn bind(&mut self, path: &str, signal: ParamSignal) -> Result<(), RegistryError> {
         if !self.descriptors.contains_key(path) {
-            return Err(RegistryError::NotFound { path: path.to_owned() });
+            return Err(RegistryError::NotFound {
+                path: path.to_owned(),
+            });
         }
         self.signals.insert(path.to_owned(), signal);
         Ok(())

@@ -64,7 +64,7 @@ impl YinBuffer {
         let refined_tau = self.parabolic_interpolation(tau_estimate, max_tau);
 
         let f0 = config.sample_rate / refined_tau;
-        
+
         // Final sanity check on bounds
         if f0 >= config.min_freq && f0 <= config.max_freq {
             Some(f0)
@@ -121,7 +121,7 @@ impl YinBuffer {
         // y(x) = ax^2 + bx + c
         // Standard parabolic interpolation offset
         let adjustment = 0.5 * (s0 - s2) / (s0 - 2.0 * s1 + s2);
-        
+
         tau as f64 + adjustment
     }
 }

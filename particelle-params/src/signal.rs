@@ -1,7 +1,7 @@
-use std::sync::Arc;
-use particelle_curve::CompiledCurve;
 use crate::context::SignalContext;
+use particelle_curve::CompiledCurve;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
 
 #[derive(Debug)]
 pub struct AtomicF64(AtomicU64);
@@ -40,7 +40,7 @@ impl ChaosState {
             last_frame: AtomicU64::new(u64::MAX),
         }
     }
-    
+
     pub fn advance(&self, frame: u64) -> bool {
         let last = self.last_frame.load(Ordering::Relaxed);
         if last != frame {
@@ -86,32 +86,73 @@ pub enum ParamSignal {
     Mul(Box<ParamSignal>, Box<ParamSignal>),
 
     /// Apply a named transformation function to an input signal.
-    Map { input: Box<ParamSignal>, func: MapFunc },
+    Map {
+        input: Box<ParamSignal>,
+        func: MapFunc,
+    },
 
     /// Clamp a signal to [min, max].
-    Clamp { input: Box<ParamSignal>, min: f64, max: f64 },
+    Clamp {
+        input: Box<ParamSignal>,
+        min: f64,
+        max: f64,
+    },
 
     /// Scale and shift: `output = input * scale + offset`.
-    ScaleOffset { input: Box<ParamSignal>, scale: f64, offset: f64 },
+    ScaleOffset {
+        input: Box<ParamSignal>,
+        scale: f64,
+        offset: f64,
+    },
 
     /// Programmatic Low Frequency Oscillator (LFO). Outputs between [0.0, 1.0].
-    Oscillator { shape: OscShape, freq: Box<ParamSignal>, phase: f64 },
+    Oscillator {
+        shape: OscShape,
+        freq: Box<ParamSignal>,
+        phase: f64,
+    },
 
     /// Offline audio feature analysis vector mapping (e.g. F0, RMS).
     /// Linearly interpolated at the audio `hop_rate` resolution.
-    Analysis { buffer: Arc<Vec<f64>>, hop_rate: f64 },
+    Analysis {
+        buffer: Arc<Vec<f64>>,
+        hop_rate: f64,
+    },
 
     /// Lorenz chaotic attractor. Output dimension is "x", "y", or "z".
-    Lorenz { state: Arc<ChaosState>, sigma: f64, rho: f64, beta: f64, dt: f64, out_dim: String },
-    
+    Lorenz {
+        state: Arc<ChaosState>,
+        sigma: f64,
+        rho: f64,
+        beta: f64,
+        dt: f64,
+        out_dim: String,
+    },
+
     /// Rössler chaotic attractor. Output dimension is "x", "y", or "z".
-    Rossler { state: Arc<ChaosState>, a: f64, b: f64, c: f64, dt: f64, out_dim: String },
-    
+    Rossler {
+        state: Arc<ChaosState>,
+        a: f64,
+        b: f64,
+        c: f64,
+        dt: f64,
+        out_dim: String,
+    },
+
     /// Hénon discrete map. Output dimension is "x" or "y".
-    Henon { state: Arc<ChaosState>, a: f64, b: f64, out_dim: String },
-    
+    Henon {
+        state: Arc<ChaosState>,
+        a: f64,
+        b: f64,
+        out_dim: String,
+    },
+
     /// Brownian motion (Random Walk) mapping to output dimension "x".
-    Brownian { state: Arc<ChaosState>, sigma: f64, dt: f64 },
+    Brownian {
+        state: Arc<ChaosState>,
+        sigma: f64,
+        dt: f64,
+    },
 }
 
 impl ParamSignal {
@@ -125,30 +166,36 @@ impl ParamSignal {
                 let t = ctx.frame as f64 / ctx.sample_rate;
                 curve.eval(t)
             }
-            ParamSignal::Control { field } => {
-                ctx.fields.get(field).unwrap_or(0.0)
-            }
+            ParamSignal::Control { field } => ctx.fields.get(field).unwrap_or(0.0),
             ParamSignal::Sum(a, b) => a.eval(ctx) + b.eval(ctx),
             ParamSignal::Mul(a, b) => a.eval(ctx) * b.eval(ctx),
             ParamSignal::Map { input, func } => func.apply(input.eval(ctx), ctx),
-            ParamSignal::Clamp { input, min, max } => {
-                input.eval(ctx).clamp(*min, *max)
-            }
-            ParamSignal::ScaleOffset { input, scale, offset } => {
-                input.eval(ctx) * scale + offset
-            }
+            ParamSignal::Clamp { input, min, max } => input.eval(ctx).clamp(*min, *max),
+            ParamSignal::ScaleOffset {
+                input,
+                scale,
+                offset,
+            } => input.eval(ctx) * scale + offset,
             ParamSignal::Oscillator { shape, freq, phase } => {
                 let t = ctx.frame as f64 / ctx.sample_rate;
                 let hz = freq.eval(ctx);
                 let current_phase = (t * hz + *phase).fract(); // [0.0, 1.0)
-                
+
                 match shape {
                     OscShape::Phasor => current_phase,
                     OscShape::Saw => current_phase, // Same as phasor natively
-                    OscShape::Square => if current_phase < 0.5 { 1.0 } else { 0.0 },
+                    OscShape::Square => {
+                        if current_phase < 0.5 {
+                            1.0
+                        } else {
+                            0.0
+                        }
+                    }
                     OscShape::Triangle => {
                         let mut v = current_phase * 4.0;
-                        if v > 2.0 { v = 4.0 - v; }
+                        if v > 2.0 {
+                            v = 4.0 - v;
+                        }
                         v * 0.5 // Map from [0, 2] down to [0, 1]
                     }
                     OscShape::Sine => {
@@ -162,38 +209,45 @@ impl ParamSignal {
                 if buffer.is_empty() {
                     return 0.0;
                 }
-                
+
                 let time_sec = ctx.frame as f64 / ctx.sample_rate;
                 let exact_idx = time_sec * hop_rate;
-                
+
                 let idx_floor = exact_idx.floor() as usize;
                 let idx_ceil = idx_floor + 1;
-                
+
                 if idx_ceil >= buffer.len() {
                     return *buffer.last().unwrap_or(&0.0);
                 }
-                
+
                 let frac = exact_idx - exact_idx.floor();
                 let val_a = buffer[idx_floor];
                 let val_b = buffer[idx_ceil];
-                
+
                 val_a + (val_b - val_a) * frac
             }
-            ParamSignal::Lorenz { state, sigma, rho, beta, dt, out_dim } => {
+            ParamSignal::Lorenz {
+                state,
+                sigma,
+                rho,
+                beta,
+                dt,
+                out_dim,
+            } => {
                 let frame = ctx.frame;
                 if state.advance(frame) {
                     let mut x = state.x.get();
                     let mut y = state.y.get();
                     let mut z = state.z.get();
-                    
+
                     let dx = sigma * (y - x);
                     let dy = x * (rho - z) - y;
                     let dz = x * y - beta * z;
-                    
+
                     x += dx * dt;
                     y += dy * dt;
                     z += dz * dt;
-                    
+
                     state.x.set(x);
                     state.y.set(y);
                     state.z.set(z);
@@ -204,21 +258,28 @@ impl ParamSignal {
                     _ => state.x.get(),
                 }
             }
-            ParamSignal::Rossler { state, a, b, c, dt, out_dim } => {
+            ParamSignal::Rossler {
+                state,
+                a,
+                b,
+                c,
+                dt,
+                out_dim,
+            } => {
                 let frame = ctx.frame;
                 if state.advance(frame) {
                     let mut x = state.x.get();
                     let mut y = state.y.get();
                     let mut z = state.z.get();
-                    
+
                     let dx = -y - z;
                     let dy = x + a * y;
                     let dz = b + z * (x - c);
-                    
+
                     x += dx * dt;
                     y += dy * dt;
                     z += dz * dt;
-                    
+
                     state.x.set(x);
                     state.y.set(y);
                     state.z.set(z);
@@ -229,15 +290,20 @@ impl ParamSignal {
                     _ => state.x.get(),
                 }
             }
-            ParamSignal::Henon { state, a, b, out_dim } => {
+            ParamSignal::Henon {
+                state,
+                a,
+                b,
+                out_dim,
+            } => {
                 let frame = ctx.frame;
                 if state.advance(frame) {
                     let x = state.x.get();
                     let y = state.y.get();
-                    
+
                     let nx = 1.0 - a * x * x + y;
                     let ny = b * x;
-                    
+
                     state.x.set(nx);
                     state.y.set(ny);
                 }
@@ -251,10 +317,12 @@ impl ParamSignal {
                 if state.advance(frame) {
                     let val = state.x.get();
                     // Fast pseudo-random via seeded LCG
-                    let mut seed = frame.wrapping_mul(6364136223846793005).wrapping_add(state.last_frame.load(Ordering::Relaxed));
+                    let mut seed = frame
+                        .wrapping_mul(6364136223846793005)
+                        .wrapping_add(state.last_frame.load(Ordering::Relaxed));
                     seed ^= seed >> 32;
                     let noise = (seed as f64 / u64::MAX as f64) * 2.0 - 1.0; // Uniform [-1, 1] Approximation
-                    
+
                     let next = val + noise * sigma * dt;
                     state.x.set(next);
                 }
@@ -276,7 +344,9 @@ pub enum MapFunc {
     Negate,
     Recip,
     /// Custom named transformer; implementation resolved at engine setup.
-    Custom { name: String },
+    Custom {
+        name: String,
+    },
 }
 
 impl MapFunc {
@@ -288,10 +358,14 @@ impl MapFunc {
             MapFunc::HzToMidiNote => 69.0 + 12.0 * (v / 440.0).log2(),
             MapFunc::Abs => v.abs(),
             MapFunc::Negate => -v,
-            MapFunc::Recip => if v == 0.0 { 0.0 } else { 1.0 / v },
-            MapFunc::Custom { name } => {
-                ctx.resolve_custom_map(name, v)
+            MapFunc::Recip => {
+                if v == 0.0 {
+                    0.0
+                } else {
+                    1.0 / v
+                }
             }
+            MapFunc::Custom { name } => ctx.resolve_custom_map(name, v),
         }
     }
 }
@@ -299,15 +373,20 @@ impl MapFunc {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::context::{SignalContext, NullFields};
+    use crate::context::{NullFields, SignalContext};
 
     fn ctx() -> SignalContext<'static> {
-        SignalContext { frame: 0, sample_rate: 48000.0, fields: &NullFields, custom_resolver: None }
+        SignalContext {
+            frame: 0,
+            sample_rate: 48000.0,
+            fields: &NullFields,
+            custom_resolver: None,
+        }
     }
 
     #[test]
     fn const_signal() {
-        assert_eq!(ParamSignal::Const(3.14).eval(&ctx()), 3.14);
+        assert_eq!(ParamSignal::Const(1.2345).eval(&ctx()), 1.2345);
     }
 
     #[test]

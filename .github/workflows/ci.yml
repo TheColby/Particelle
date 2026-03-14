@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  workspace:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Cache cargo artifacts
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install audio tools
+        run: sudo apt-get update && sudo apt-get install -y sox
+
+      - name: Verify canonical sample pack
+        run: ./scripts/verify_sample_pack.sh
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Lint
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Test
+        run: cargo test --workspace
+
+  examples:
+    needs: workspace
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard_index: [0, 1, 2, 3]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo artifacts
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install audio tools
+        run: sudo apt-get update && sudo apt-get install -y sox
+
+      - name: Example regression gate (sharded)
+        env:
+          EXAMPLE_SHARD_TOTAL: "4"
+          EXAMPLE_SHARD_INDEX: ${{ matrix.shard_index }}
+        run: ./scripts/check_examples.sh

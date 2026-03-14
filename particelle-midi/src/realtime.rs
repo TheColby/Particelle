@@ -1,13 +1,13 @@
-/// Realtime MIDI ingest via `midir`.
-///
-/// This module is only compiled when the `realtime` feature is enabled.
-/// It collects MIDI events off the audio thread and pushes them into a
-/// lock-free ring buffer for consumption by the engine on the audio thread.
-///
-/// No MIDI parsing or event dispatch occurs on the audio thread.
+//! Realtime MIDI ingest via `midir`.
+//!
+//! This module is only compiled when the `realtime` feature is enabled.
+//! It collects MIDI events off the audio thread and pushes them into a
+//! lock-free ring buffer for consumption by the engine on the audio thread.
+//!
+//! No MIDI parsing or event dispatch occurs on the audio thread.
 
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 /// Realtime MIDI host: opens a MIDI port and pushes events to a queue.
 pub struct RealtimeMidiHost {
@@ -16,7 +16,9 @@ pub struct RealtimeMidiHost {
 
 impl RealtimeMidiHost {
     pub fn new() -> Self {
-        Self { running: Arc::new(AtomicBool::new(false)) }
+        Self {
+            running: Arc::new(AtomicBool::new(false)),
+        }
     }
 
     /// Start listening on the named MIDI port.
@@ -35,6 +37,12 @@ impl RealtimeMidiHost {
 
     pub fn is_running(&self) -> bool {
         self.running.load(Ordering::Relaxed)
+    }
+}
+
+impl Default for RealtimeMidiHost {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

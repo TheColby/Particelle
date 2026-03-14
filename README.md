@@ -73,6 +73,7 @@ cp target/release/particelle /usr/local/bin/
 
 - **Rust 1.70+** (install via [rustup.rs](https://rustup.rs/)). On mac, you can install [Homebrew](https://brew.sh) and do `brew install rust`.
 - A C compiler for native audio dependencies (Xcode CLT on macOS, `build-essential` on Linux)
+- `sox` for regenerating the canonical example sample pack and running the audio regression gate
 
 ### ✅ Verify Installation
 
@@ -80,6 +81,19 @@ cp target/release/particelle /usr/local/bin/
 particelle --version
 # → particelle 0.1.0
 ```
+
+### 🎚️ Canonical Sample Pack
+
+Examples and documentation snippets that reference `samples/*.wav` target a deterministic repository-owned sample pack rather than placeholder symlinks.
+
+```sh
+./scripts/generate_sample_pack.sh
+```
+
+- Assets live in [`samples/`](/Users/cleider/dev/Particelle/samples) and are described in [`samples/README.md`](/Users/cleider/dev/Particelle/samples/README.md).
+- [`samples/manifest.sha256`](/Users/cleider/dev/Particelle/samples/manifest.sha256) records the canonical hashes for every generated file.
+- The generator scans `README.md`, `docs/`, and `examples/` for `samples/*.wav` references so the pack stays aligned with the documented surface area.
+- Run [`scripts/verify_sample_pack.sh`](/Users/cleider/dev/Particelle/scripts/verify_sample_pack.sh) to confirm deterministic regeneration and referenced-file coverage.
 
 ---
 
@@ -294,7 +308,7 @@ layout:
 
 clouds:
   - id: drone
-    source: samples/cello_sustain.flac
+    source: samples/cello_sustain.wav
     density: 8.0
     duration: 0.5
     amplitude: 0.4
@@ -356,7 +370,7 @@ Enough playing around; lets get serious. To test multicore hardware limits (like
 
 ```yaml
 engine:
-  sample_rate: 384000g.0   # 384 kHz DXD limit
+  sample_rate: 384000.0   # 384 kHz DXD limit
   block_size: 1024
   max_particles_per_cloud: 16384
 
@@ -1173,7 +1187,7 @@ tuning:
 
 clouds:
   - id: shimmer
-    source: samples/sustained_string.flac
+    source: samples/strings.wav
     density: { op: mul, args: [16.0, "$density_mod"] }
     duration: 0.18
     amplitude: 0.6
@@ -1206,6 +1220,9 @@ particelle render patch.yaml -o output.wav --duration 120.0
 
 # Run in realtime
 particelle run patch.yaml
+
+# Run in realtime with deterministic synthetic MPE pressure (demo/testing)
+particelle run patch.yaml --simulate-mpe
 
 # Generate a default patch
 particelle init > patch.yaml
@@ -1391,9 +1408,45 @@ The real-time mode selects a device by name, configures the sample rate and bloc
 
 MIDI and MPE are ingested off the audio thread and pushed into a lock-free ring buffer. The audio thread reads events from the queue without blocking. No MIDI parsing or event dispatch occurs on the audio thread.
 
+For automated coverage, `particelle-midi` now provides a deterministic looping event harness and an offline MIDI timeline that both operate in sample frames. Synthetic MPE pressure injection is now explicit opt-in (`--simulate-mpe`) and uses that same block-accurate harness, so demo modulation is deterministic and transparent.
+
 The internal f64 buffers are converted to f32 only at the hardware output boundary, if the driver requires it. The engine never operates in f32 internally.
 
 Offline and realtime modes share the same engine core. A deterministic offline render of a given patch is byte-identical across runs with equal inputs.
+
+## ✅ Verification
+
+The workspace ships a single regression entry point for examples:
+
+```sh
+./scripts/check_examples.sh
+```
+
+That script:
+
+1. regenerates the canonical sample pack,
+2. validates every YAML example,
+3. renders a 1-second offline WAV for every example,
+4. fails on silence or out-of-range dynamics, and
+5. writes per-example metrics and summary reports under [`target/example-metrics/`](/Users/cleider/dev/Particelle/target/example-metrics).
+
+The metrics files record peak amplitude, RMS amplitude, crest factor, active channel count, and per-channel RMS values so DSP regressions are visible even when a render is technically non-silent.
+
+For CI throughput, example checks support sharding:
+
+```sh
+EXAMPLE_SHARD_TOTAL=4 EXAMPLE_SHARD_INDEX=0 ./scripts/check_examples.sh
+```
+
+For launch preparation, run the full announcement gate:
+
+```sh
+./scripts/announcement_readiness.sh
+```
+
+## 📣 Announcement FAQ
+
+Anticipated launch objections and concrete mitigations are documented in [`docs/ANNOUNCEMENT_FAQ.md`](/Users/cleider/dev/Particelle/docs/ANNOUNCEMENT_FAQ.md), with each item tied to specific code and documentation changes.
 
 ---
 
@@ -1416,6 +1469,30 @@ Offline and realtime modes share the same engine core. A deterministic offline r
 15. **Smith, Julius O. (2010)** — *Physical Audio Signal Processing*. W3K Publishing. ISBN: 978-0974560724. [Online](https://ccrma.stanford.edu/~jos/pasp/)
 16. **Zölzer, Udo (Ed.) (2011)** — *DAFX: Digital Audio Effects* (2nd ed.). Wiley. ISBN: 9780470665992
 17. **Müller, Meinard (2015)** — *Fundamentals of Music Processing: Audio, Analysis, Algorithms, Applications*. Springer. [DOI: 10.1007/978-3-319-21945-5](https://doi.org/10.1007/978-3-319-21945-5)
+
+## 🛣️ Prioritized Roadmap
+
+1. **P0 — Lock example reliability in CI (implemented)**
+   CI validates every example patch, renders a short offline WAV for each one, and fails if any output is silent or any patch no longer parses.
+
+2. **P1 — Reduce clippy debt to a zero-warning baseline (implemented)**
+   The workspace is clean under `cargo clippy --workspace --all-targets -- -D warnings`, and CI enforces that baseline.
+
+3. **P1 — Formalize backward-compatible patch parsing (implemented)**
+   Legacy tuning fields and older signal-expression forms are normalized into the current schema during load, with tests covering the compatibility surface.
+
+4. **P2 — Replace placeholder example assets with a canonical sample pack (implemented)**
+   `samples/` is now a deterministic generated dataset with repository-owned recipes, documentation, and stable SHA-256 hashes.
+
+5. **P2 — Add DSP regression metrics beyond audibility (implemented)**
+   Example verification records peak, RMS, crest factor, active channel count, and per-channel RMS values for every render.
+
+6. **P3 — Add realtime and MPE regression harnesses (implemented)**
+   Deterministic synthetic MIDI and MPE event injection now runs through a shared block-accurate harness that is covered by unit tests and reused by the realtime runner.
+
+### Compatibility Policy
+
+Particelle accepts a compatibility layer for legacy patch syntax when field names or signal-expression forms are renamed. Compatibility is intentionally narrow: old syntax is normalized into the current canonical schema during load, covered by tests, and documented when introduced. New patches should still be authored in the current canonical form.
 
 ## ⚖️ License
 

@@ -42,7 +42,7 @@ clouds:
     amplitude: 0.6
     
     # Scrub slowly
-    position: { op: "$osc", args: ["phasor", 0.05] }
+    position: { op: osc, args: ["phasor", 0.05] }
     
     window:
       type: hann

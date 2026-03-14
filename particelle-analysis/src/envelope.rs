@@ -1,4 +1,4 @@
-//! Envelope and RMS extracting 
+//! Envelope and RMS extracting
 //!
 //! Provides utilities for extracting the amplitude contour of an audio signal
 //! via sliding window Root Mean Square (RMS) or simple peak tracking.
@@ -40,12 +40,12 @@ pub fn extract_rms_envelope(config: &EnvConfig, audio: &[f64]) -> Vec<f64> {
     while start < audio.len() {
         let end = (start + config.window_size).min(audio.len());
         let window = &audio[start..end];
-        
+
         let mut sum_sq = 0.0;
         for &sample in window {
             sum_sq += sample * sample;
         }
-        
+
         // Root mean square
         let rms = (sum_sq / window.len() as f64).sqrt();
         envelope.push(rms);

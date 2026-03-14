@@ -1,0 +1,26 @@
+engine:
+  sample_rate: 48000
+  block_size: 256
+
+layout:
+  channels:
+    - type: spherical
+      name: L
+      azimuth_deg: -30.0
+      elevation_deg: 0.0
+    - type: spherical
+      name: R
+      azimuth_deg: 30.0
+      elevation_deg: 0.0
+
+clouds:
+  - id: "stretch_4x"
+    source: "audio/music_example.wav"
+    density: 24.0
+    duration: 0.08
+    position: "curves/stretch_pos.json"
+    amplitude: 0.5
+    width: 0.8
+    window:
+      type: hann
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }

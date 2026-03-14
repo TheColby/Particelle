@@ -3,7 +3,7 @@
 //! Provides utilities for extracting frequency-domain information such as
 //! Spectral Flatness (Wiener Entropy) and Spectral Centroid over sliding windows.
 
-use rustfft::{FftPlanner, num_complex::Complex};
+use rustfft::{num_complex::Complex, FftPlanner};
 use std::sync::Arc;
 
 /// Configuration for Spectral Feature extractors.
@@ -29,17 +29,20 @@ impl Default for SpectralConfig {
 
 /// Helper to run a hann window and FFT on a slice, yielding power spectrum
 fn compute_power_spectrum(
-    audio_slice: &[f64], 
-    fft: &Arc<dyn rustfft::Fft<f64>>, 
+    audio_slice: &[f64],
+    fft: &Arc<dyn rustfft::Fft<f64>>,
     window_buf: &mut [f64],
-    complex_buf: &mut [Complex<f64>]
+    complex_buf: &mut [Complex<f64>],
 ) {
     // Apply Hann window
     let l = window_buf.len() as f64;
     for i in 0..window_buf.len() {
         let wr = 0.5 * (1.0 - (2.0 * std::f64::consts::PI * i as f64 / l).cos());
         window_buf[i] = audio_slice[i] * wr;
-        complex_buf[i] = Complex { re: window_buf[i], im: 0.0 };
+        complex_buf[i] = Complex {
+            re: window_buf[i],
+            im: 0.0,
+        };
     }
 
     fft.process(complex_buf);
@@ -54,7 +57,7 @@ pub fn extract_spectral_flatness(config: &SpectralConfig, audio: &[f64]) -> Vec<
 
     let mut planner = FftPlanner::new();
     let fft = planner.plan_fft_forward(config.window_size);
-    
+
     let mut window_buf = vec![0.0; config.window_size];
     let mut complex_buf = vec![Complex { re: 0.0, im: 0.0 }; config.window_size];
 
@@ -72,12 +75,12 @@ pub fn extract_spectral_flatness(config: &SpectralConfig, audio: &[f64]) -> Vec<
         let nyquist_bins = config.window_size / 2;
         let mut valid_bins = 0;
 
-        for i in 0..nyquist_bins {
-            let magnitude = complex_buf[i].norm();
+        for bin in complex_buf.iter().take(nyquist_bins) {
+            let magnitude = bin.norm();
             let power = magnitude * magnitude;
             // Prevent log(0)
             let padded_power = power.max(f64::MIN_POSITIVE);
-            
+
             sum_power += padded_power;
             sum_log_power += padded_power.ln();
             valid_bins += 1;
@@ -108,13 +111,13 @@ pub fn extract_spectral_centroid(config: &SpectralConfig, audio: &[f64]) -> Vec<
 
     let mut planner = FftPlanner::new();
     let fft = planner.plan_fft_forward(config.window_size);
-    
+
     let mut window_buf = vec![0.0; config.window_size];
     let mut complex_buf = vec![Complex { re: 0.0, im: 0.0 }; config.window_size];
 
     let mut start = 0;
     let mut contour = Vec::with_capacity(audio.len() / config.hop_size + 1);
-    
+
     let nyquist_bins = config.window_size / 2;
     let bin_resolution = config.sample_rate / config.window_size as f64;
 
@@ -125,10 +128,10 @@ pub fn extract_spectral_centroid(config: &SpectralConfig, audio: &[f64]) -> Vec<
         let mut numerator = 0.0;
         let mut denominator = 0.0;
 
-        for i in 0..nyquist_bins {
-            let magnitude = complex_buf[i].norm();
+        for (i, bin) in complex_buf.iter().enumerate().take(nyquist_bins) {
+            let magnitude = bin.norm();
             let freq_hz = i as f64 * bin_resolution;
-            
+
             numerator += freq_hz * magnitude;
             denominator += magnitude;
         }
@@ -155,13 +158,13 @@ pub fn extract_spectral_rolloff(config: &SpectralConfig, audio: &[f64]) -> Vec<f
 
     let mut planner = FftPlanner::new();
     let fft = planner.plan_fft_forward(config.window_size);
-    
+
     let mut window_buf = vec![0.0; config.window_size];
     let mut complex_buf = vec![Complex { re: 0.0, im: 0.0 }; config.window_size];
 
     let mut start = 0;
     let mut contour = Vec::with_capacity(audio.len() / config.hop_size + 1);
-    
+
     let nyquist_bins = config.window_size / 2;
     let bin_resolution = config.sample_rate / config.window_size as f64;
 
@@ -172,8 +175,8 @@ pub fn extract_spectral_rolloff(config: &SpectralConfig, audio: &[f64]) -> Vec<f
         let mut total_power = 0.0;
         let mut power_spectrum = Vec::with_capacity(nyquist_bins);
 
-        for i in 0..nyquist_bins {
-            let magnitude = complex_buf[i].norm();
+        for bin in complex_buf.iter().take(nyquist_bins) {
+            let magnitude = bin.norm();
             let power = magnitude * magnitude;
             power_spectrum.push(power);
             total_power += power;
@@ -207,13 +210,13 @@ pub fn extract_spectral_crest(config: &SpectralConfig, audio: &[f64]) -> Vec<f64
 
     let mut planner = FftPlanner::new();
     let fft = planner.plan_fft_forward(config.window_size);
-    
+
     let mut window_buf = vec![0.0; config.window_size];
     let mut complex_buf = vec![Complex { re: 0.0, im: 0.0 }; config.window_size];
 
     let mut start = 0;
     let mut contour = Vec::with_capacity(audio.len() / config.hop_size + 1);
-    
+
     let nyquist_bins = config.window_size / 2;
 
     while start + config.window_size <= audio.len() {
@@ -223,8 +226,8 @@ pub fn extract_spectral_crest(config: &SpectralConfig, audio: &[f64]) -> Vec<f64
         let mut max_power = 0.0f64;
         let mut sum_power = 0.0f64;
 
-        for i in 0..nyquist_bins {
-            let magnitude = complex_buf[i].norm();
+        for bin in complex_buf.iter().take(nyquist_bins) {
+            let magnitude = bin.norm();
             let power = magnitude * magnitude;
             if power > max_power {
                 max_power = power;
@@ -255,13 +258,13 @@ pub fn extract_spectral_flux(config: &SpectralConfig, audio: &[f64]) -> Vec<f64>
 
     let mut planner = FftPlanner::new();
     let fft = planner.plan_fft_forward(config.window_size);
-    
+
     let mut window_buf = vec![0.0; config.window_size];
     let mut complex_buf = vec![Complex { re: 0.0, im: 0.0 }; config.window_size];
 
     let mut start = 0;
     let mut contour = Vec::with_capacity(audio.len() / config.hop_size + 1);
-    
+
     let nyquist_bins = config.window_size / 2;
     let mut prev_magnitude = vec![0.0; nyquist_bins];
 
@@ -274,12 +277,12 @@ pub fn extract_spectral_flux(config: &SpectralConfig, audio: &[f64]) -> Vec<f64>
         for i in 0..nyquist_bins {
             let magnitude = complex_buf[i].norm();
             let diff = magnitude - prev_magnitude[i];
-            
+
             // Half-wave rectification for flux (only positive changes)
             if diff > 0.0 {
                 flux += diff * diff;
             }
-            
+
             prev_magnitude[i] = magnitude;
         }
 

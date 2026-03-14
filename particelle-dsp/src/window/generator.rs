@@ -1,5 +1,5 @@
-use std::f64::consts::PI;
 use super::schema::WindowSpec;
+use std::f64::consts::PI;
 
 /// Modified Bessel function of the first kind (order zero).
 /// Used in the Kaiser window implementation.
@@ -8,7 +8,7 @@ fn besseli0(x: f64) -> f64 {
     let mut u = 1.0;
     let half_x = x / 2.0;
     let mut n = 1.0;
-    
+
     // Series expansion: I0(x) = sum_{k=0}^inf ( (x/2)^k / k! )^2
     while u > 1e-15 {
         let temp = half_x / n;
@@ -16,7 +16,7 @@ fn besseli0(x: f64) -> f64 {
         sum += u;
         n += 1.0;
     }
-    
+
     sum
 }
 
@@ -26,7 +26,7 @@ pub fn generate(spec: &WindowSpec, len: usize) -> Vec<f64> {
     if len == 0 {
         return vec![];
     }
-    
+
     let mut out = vec![0.0; len];
     if len == 1 {
         out[0] = 1.0;
@@ -39,11 +39,9 @@ pub fn generate(spec: &WindowSpec, len: usize) -> Vec<f64> {
             let mid = len / 2;
             let left_win = generate(left, mid * 2);
             let right_win = generate(right, mid * 2);
-            for i in 0..mid {
-                out[i] = left_win[i];
-                out[mid + i] = right_win[mid + i];
-            }
-            if len % 2 != 0 {
+            out[..mid].copy_from_slice(&left_win[..mid]);
+            out[mid..(mid + mid)].copy_from_slice(&right_win[mid..(mid + mid)]);
+            if !len.is_multiple_of(2) {
                 out[len - 1] = right_win[mid * 2 - 1]; // Handle center point logic
             }
             return out;
@@ -67,7 +65,7 @@ pub fn generate(spec: &WindowSpec, len: usize) -> Vec<f64> {
 
     let n_f64 = (len - 1) as f64;
 
-    for i in 0..len {
+    for (i, out_sample) in out.iter_mut().enumerate().take(len) {
         let n = i as f64;
         let v = match spec {
             WindowSpec::Rectangular => 1.0,
@@ -81,8 +79,7 @@ pub fn generate(spec: &WindowSpec, len: usize) -> Vec<f64> {
                 let a1 = 0.48829;
                 let a2 = 0.14128;
                 let a3 = 0.01168;
-                a0 - a1 * (2.0 * PI * n / n_f64).cos()
-                    + a2 * (4.0 * PI * n / n_f64).cos()
+                a0 - a1 * (2.0 * PI * n / n_f64).cos() + a2 * (4.0 * PI * n / n_f64).cos()
                     - a3 * (6.0 * PI * n / n_f64).cos()
             }
             WindowSpec::Nuttall => {
@@ -90,8 +87,7 @@ pub fn generate(spec: &WindowSpec, len: usize) -> Vec<f64> {
                 let a1 = 0.487396;
                 let a2 = 0.144232;
                 let a3 = 0.012604;
-                a0 - a1 * (2.0 * PI * n / n_f64).cos()
-                    + a2 * (4.0 * PI * n / n_f64).cos()
+                a0 - a1 * (2.0 * PI * n / n_f64).cos() + a2 * (4.0 * PI * n / n_f64).cos()
                     - a3 * (6.0 * PI * n / n_f64).cos()
             }
             WindowSpec::BlackmanNuttall => {
@@ -99,8 +95,7 @@ pub fn generate(spec: &WindowSpec, len: usize) -> Vec<f64> {
                 let a1 = 0.4891775;
                 let a2 = 0.1365995;
                 let a3 = 0.0106411;
-                a0 - a1 * (2.0 * PI * n / n_f64).cos()
-                    + a2 * (4.0 * PI * n / n_f64).cos()
+                a0 - a1 * (2.0 * PI * n / n_f64).cos() + a2 * (4.0 * PI * n / n_f64).cos()
                     - a3 * (6.0 * PI * n / n_f64).cos()
             }
             WindowSpec::FlatTop => {
@@ -109,14 +104,11 @@ pub fn generate(spec: &WindowSpec, len: usize) -> Vec<f64> {
                 let a2 = 0.27726316;
                 let a3 = 0.08357895;
                 let a4 = 0.00694737;
-                a0 - a1 * (2.0 * PI * n / n_f64).cos()
-                    + a2 * (4.0 * PI * n / n_f64).cos()
+                a0 - a1 * (2.0 * PI * n / n_f64).cos() + a2 * (4.0 * PI * n / n_f64).cos()
                     - a3 * (6.0 * PI * n / n_f64).cos()
                     + a4 * (8.0 * PI * n / n_f64).cos()
             }
-            WindowSpec::Bartlett => {
-                2.0 / n_f64 * (n_f64 / 2.0 - (n - n_f64 / 2.0).abs())
-            }
+            WindowSpec::Bartlett => 2.0 / n_f64 * (n_f64 / 2.0 - (n - n_f64 / 2.0).abs()),
             WindowSpec::BartlettHann => {
                 let a0 = 0.62;
                 let a1 = 0.48;
@@ -131,12 +123,8 @@ pub fn generate(spec: &WindowSpec, len: usize) -> Vec<f64> {
                     0.0
                 }
             }
-            WindowSpec::Cosine => {
-                (PI * n / n_f64).sin()
-            }
-            WindowSpec::Sine => {
-                (PI * n / n_f64).sin()
-            }
+            WindowSpec::Cosine => (PI * n / n_f64).sin(),
+            WindowSpec::Sine => (PI * n / n_f64).sin(),
             WindowSpec::Lanczos => {
                 let t = 2.0 * n / n_f64 - 1.0;
                 if t == 0.0 {
@@ -198,6 +186,17 @@ pub fn generate(spec: &WindowSpec, len: usize) -> Vec<f64> {
                     0.0
                 }
             }
+            WindowSpec::Dpss { half_bandwidth } => {
+                // Approximate the first DPSS taper with a Kaiser-like concentration curve.
+                let beta = PI * half_bandwidth.max(0.5);
+                let m = n_f64 / 2.0;
+                let k = 1.0 - ((n - m) / m).powi(2);
+                if k < 0.0 {
+                    0.0
+                } else {
+                    besseli0(beta * k.sqrt()) / besseli0(beta)
+                }
+            }
             WindowSpec::TukeyHarris { alpha } => {
                 // Generalized Tukey-Harris interpolation
                 let a0 = 0.35875;
@@ -206,15 +205,13 @@ pub fn generate(spec: &WindowSpec, len: usize) -> Vec<f64> {
                 let a3 = 0.01168;
                 let t = n / n_f64;
                 if t < *alpha / 2.0 {
-                    a0 - a1 * (2.0 * PI * (t / *alpha)).cos()
-                        + a2 * (4.0 * PI * (t / *alpha)).cos()
+                    a0 - a1 * (2.0 * PI * (t / *alpha)).cos() + a2 * (4.0 * PI * (t / *alpha)).cos()
                         - a3 * (6.0 * PI * (t / *alpha)).cos()
                 } else if t <= 1.0 - *alpha / 2.0 {
                     1.0
                 } else {
                     let end_t = (1.0 - t) / *alpha;
-                    a0 - a1 * (2.0 * PI * end_t).cos()
-                        + a2 * (4.0 * PI * end_t).cos()
+                    a0 - a1 * (2.0 * PI * end_t).cos() + a2 * (4.0 * PI * end_t).cos()
                         - a3 * (6.0 * PI * end_t).cos()
                 }
             }
@@ -238,7 +235,7 @@ pub fn generate(spec: &WindowSpec, len: usize) -> Vec<f64> {
             }
         };
 
-        out[i] = v;
+        *out_sample = v;
     }
 
     out

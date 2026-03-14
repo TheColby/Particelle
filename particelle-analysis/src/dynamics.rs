@@ -56,7 +56,11 @@ pub fn extract_crest_factor(config: &EnvConfig, audio: &[f64]) -> Vec<f64> {
         let slice = &audio[start..start + config.window_size];
         let rms = (slice.iter().map(|&s| s * s).sum::<f64>() / slice.len() as f64).sqrt();
         let peak = slice.iter().cloned().fold(0.0f64, |a, x| a.max(x.abs()));
-        let crest = if rms > f64::MIN_POSITIVE { peak / rms } else { 0.0 };
+        let crest = if rms > f64::MIN_POSITIVE {
+            peak / rms
+        } else {
+            0.0
+        };
         contour.push(crest);
         start += config.hop_size;
     }
@@ -67,20 +71,24 @@ pub fn extract_crest_factor(config: &EnvConfig, audio: &[f64]) -> Vec<f64> {
 /// Returns a single scalar in log seconds; more negative = faster attack.
 /// This is a global measurement so the returned vector will have one element.
 pub fn estimate_log_attack_time(config: &EnvConfig, audio: &[f64]) -> Vec<f64> {
-    if audio.is_empty() { return Vec::new(); }
+    if audio.is_empty() {
+        return Vec::new();
+    }
 
     // Find global RMS peak
     let global_rms_vec = super::envelope::extract_rms_envelope(config, audio);
     let max_rms = global_rms_vec.iter().cloned().fold(0.0f64, f64::max);
-    
-    if max_rms < f64::MIN_POSITIVE { return vec![0.0]; }
-    
-    let onset_threshold = max_rms * 0.2;  // 20% of peak  
+
+    if max_rms < f64::MIN_POSITIVE {
+        return vec![0.0];
+    }
+
+    let onset_threshold = max_rms * 0.2; // 20% of peak
     let attack_threshold = max_rms * 0.9; // 90% of peak
 
     let mut onset_frame = 0;
     let mut attack_frame = 0;
-    
+
     for (i, &rms) in global_rms_vec.iter().enumerate() {
         if rms >= onset_threshold && onset_frame == 0 {
             onset_frame = i;
@@ -91,13 +99,12 @@ pub fn estimate_log_attack_time(config: &EnvConfig, audio: &[f64]) -> Vec<f64> {
         }
     }
 
-    if attack_frame <= onset_frame { 
+    if attack_frame <= onset_frame {
         return vec![-4.0]; // very fast: ~0.1ms
     }
 
-    let attack_time_sec = (attack_frame - onset_frame) as f64 
-        * config.hop_size as f64 
-        / config.sample_rate;
-    
+    let attack_time_sec =
+        (attack_frame - onset_frame) as f64 * config.hop_size as f64 / config.sample_rate;
+
     vec![attack_time_sec.max(1e-4).log10()]
 }

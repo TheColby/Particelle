@@ -40,7 +40,11 @@ pub struct EngineState {
 
 impl EngineState {
     pub fn new(config: EngineConfig, layout: AudioLayout) -> Self {
-        Self { frame: 0, config, layout }
+        Self {
+            frame: 0,
+            config,
+            layout,
+        }
     }
 
     pub fn advance(&mut self, frames: usize) {
@@ -68,10 +72,10 @@ pub struct GranularEngine {
 
 impl GranularEngine {
     pub fn new(
-        config: EngineConfig, 
-        layout: AudioLayout, 
+        config: EngineConfig,
+        layout: AudioLayout,
         spatializer: Box<dyn Spatializer>,
-        fields: Box<dyn particelle_params::context::FieldProvider>
+        fields: Box<dyn particelle_params::context::FieldProvider>,
     ) -> Result<Self, CoreError> {
         let state = EngineState::new(config, layout);
         Ok(Self {
@@ -90,10 +94,10 @@ impl GranularEngine {
 impl Engine for GranularEngine {
     fn process(&mut self, output: &mut AudioBlock) -> Result<(), CoreError> {
         output.silence();
-        
+
         let sample_rate = self.state.config.sample_rate;
         let start_frame = self.state.frame;
-        
+
         for cloud in &mut self.clouds {
             // For now, we update onset delay by the block size.
             // Better: loop sample-by-sample for accurate onsets.
@@ -106,7 +110,7 @@ impl Engine for GranularEngine {
                 };
                 cloud.update(sample_rate, self.spatializer.as_ref(), &ctx);
             }
-            
+
             cloud.pool.process_all(output);
         }
 
@@ -122,8 +126,8 @@ impl Engine for GranularEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pool::GrainPool;
     use crate::grain::Cloud;
+    use crate::pool::GrainPool;
     use crate::spatializer::AmplitudePanner;
     use std::sync::Arc;
 
@@ -133,10 +137,10 @@ mod tests {
         let layout = crate::layout::AudioLayout::stereo();
         let panner = Box::new(AmplitudePanner::new(layout.clone()));
         let mut engine = GranularEngine::new(
-            config, 
-            layout, 
+            config,
+            layout,
             panner,
-            Box::new(particelle_params::context::NullFields)
+            Box::new(particelle_params::context::NullFields),
         )?;
 
         // Dummy source: 1 second of 1.0 (constant signal)

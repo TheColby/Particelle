@@ -88,7 +88,7 @@ impl CompiledCurve {
                     let beta = m[i] / d[i];
                     if alpha * alpha + beta * beta > 9.0 {
                         let tau = 3.0 / (alpha * alpha + beta * beta).sqrt();
-                        m[i] = tau * m[i];
+                        m[i] *= tau;
                     }
                 }
             }
@@ -112,7 +112,9 @@ impl CompiledCurve {
 
         if x < x_min {
             match self.extrapolation.left {
-                crate::schema::ExtrapolationMode::Clamp => return self.segments.first().unwrap().seg.y,
+                crate::schema::ExtrapolationMode::Clamp => {
+                    return self.segments.first().unwrap().seg.y
+                }
                 crate::schema::ExtrapolationMode::Zero => return 0.0,
                 crate::schema::ExtrapolationMode::Linear => {
                     let first = self.segments.first().unwrap();
@@ -121,18 +123,26 @@ impl CompiledCurve {
                 }
                 crate::schema::ExtrapolationMode::Repeat => {
                     x = x_max - (x_min - x) % range;
-                    if x == x_min { x = x_max; }
+                    if x == x_min {
+                        x = x_max;
+                    }
                 }
                 crate::schema::ExtrapolationMode::Mirror => {
                     let dist = x_min - x;
                     let iteration = (dist / range).floor() as i64;
                     let rem = dist % range;
-                    x = if iteration % 2 == 0 { x_min + rem } else { x_max - rem };
+                    x = if iteration % 2 == 0 {
+                        x_min + rem
+                    } else {
+                        x_max - rem
+                    };
                 }
             }
         } else if x > x_max {
             match self.extrapolation.right {
-                crate::schema::ExtrapolationMode::Clamp => return self.segments.last().unwrap().seg.y_end,
+                crate::schema::ExtrapolationMode::Clamp => {
+                    return self.segments.last().unwrap().seg.y_end
+                }
                 crate::schema::ExtrapolationMode::Zero => return 0.0,
                 crate::schema::ExtrapolationMode::Linear => {
                     let last = self.segments.last().unwrap();
@@ -146,7 +156,11 @@ impl CompiledCurve {
                     let dist = x - x_max;
                     let iteration = (dist / range).floor() as i64;
                     let rem = dist % range;
-                    x = if iteration % 2 == 0 { x_max - rem } else { x_min + rem };
+                    x = if iteration % 2 == 0 {
+                        x_max - rem
+                    } else {
+                        x_min + rem
+                    };
                 }
             }
         }
@@ -160,7 +174,9 @@ impl CompiledCurve {
         while low <= high {
             let mid = (low + high) / 2;
             if x < self.segments[mid].seg.x {
-                if mid == 0 { break; }
+                if mid == 0 {
+                    break;
+                }
                 high = mid - 1;
             } else if x > self.segments[mid].seg.x_end {
                 low = mid + 1;
@@ -208,9 +224,9 @@ impl CompiledCurve {
                     seg.y + t * (seg.y_end - seg.y)
                 } else {
                     let _s = (k.exp() * t).exp() / k.exp(); // Placeholder, usually exp is (exp(kt)-1)/(exp(k)-1)
-                    // Let's use standard exp curve form:
+                                                            // Let's use standard exp curve form:
                     let _s = (k.powf(t) - 1.0) / (*k - 1.0); // If k is the base
-                    // Re-evaluating based on common audio exp:
+                                                             // Re-evaluating based on common audio exp:
                     let s = ((*k * t).exp() - 1.0) / (k.exp() - 1.0);
                     seg.y + s * (seg.y_end - seg.y)
                 }
@@ -219,9 +235,7 @@ impl CompiledCurve {
                 let s = ((*k * t + 1.0).ln()) / (k + 1.0).ln();
                 seg.y + s * (seg.y_end - seg.y)
             }
-            SegmentShape::Power { p } => {
-                seg.y + t.powf(*p) * (seg.y_end - seg.y)
-            }
+            SegmentShape::Power { p } => seg.y + t.powf(*p) * (seg.y_end - seg.y),
             SegmentShape::MonotoneCubic | SegmentShape::CubicHermite | SegmentShape::CatmullRom => {
                 // Cubic Hermite Spline: h00*y0 + h10*m0 + h01*y1 + h11*m1
                 let h = seg.x_end - seg.x;

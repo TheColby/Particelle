@@ -42,6 +42,7 @@ clouds:
 
     window:
       type: planck_taper
+      epsilon: 0.1
 
     listener_pos: { x: 0.0, y: 1.0, z: 0.0 }
     width: 1.8

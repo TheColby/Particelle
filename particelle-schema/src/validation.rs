@@ -1,5 +1,5 @@
-use thiserror::Error;
 use crate::config::{ParticelleConfig, TuningConfig};
+use thiserror::Error;
 
 /// Typed validation errors returned by the schema validator.
 ///
@@ -11,7 +11,12 @@ pub enum ValidationError {
     MissingRequired { field: String },
 
     #[error("Field '{field}': value {value} is out of range [{min}, {max}]")]
-    OutOfRange { field: String, value: f64, min: f64, max: f64 },
+    OutOfRange {
+        field: String,
+        value: f64,
+        min: f64,
+        max: f64,
+    },
 
     #[error("Layout has no channels defined")]
     EmptyLayout,
@@ -40,12 +45,39 @@ pub enum ValidationError {
 
 /// Known valid window type strings.
 const KNOWN_WINDOW_TYPES: &[&str] = &[
-    "rectangular", "hann", "hamming", "blackman", "blackman_harris", "nuttall",
-    "flat_top", "bartlett", "welch", "parzen", "sine", "power_sine", "tukey",
-    "planck_taper", "gaussian", "kaiser", "kbd", "dolph_chebyshev", "dpss",
-    "poisson", "exponential", "hann_poisson", "bartlett_hann", "hann_squared",
-    "hann_cubed", "rife_vincent", "generalized_blackman", "generalized_cosine",
-    "trapezoid", "half_hann", "half_blackman", "asymmetric_tukey", "lanczos",
+    "rectangular",
+    "hann",
+    "hamming",
+    "blackman",
+    "blackman_harris",
+    "nuttall",
+    "flat_top",
+    "bartlett",
+    "welch",
+    "parzen",
+    "sine",
+    "power_sine",
+    "tukey",
+    "planck_taper",
+    "gaussian",
+    "kaiser",
+    "kbd",
+    "dolph_chebyshev",
+    "dpss",
+    "poisson",
+    "exponential",
+    "hann_poisson",
+    "bartlett_hann",
+    "hann_squared",
+    "hann_cubed",
+    "rife_vincent",
+    "generalized_blackman",
+    "generalized_cosine",
+    "trapezoid",
+    "half_hann",
+    "half_blackman",
+    "asymmetric_tukey",
+    "lanczos",
     "cosine_sum",
 ];
 
@@ -133,8 +165,16 @@ mod tests {
             hardware: None,
             layout: LayoutConfig {
                 channels: vec![
-                    ChannelConfig::Spherical { name: "L".into(), azimuth_deg: -30.0, elevation_deg: 0.0 },
-                    ChannelConfig::Spherical { name: "R".into(), azimuth_deg:  30.0, elevation_deg: 0.0 },
+                    ChannelConfig::Spherical {
+                        name: "L".into(),
+                        azimuth_deg: -30.0,
+                        elevation_deg: 0.0,
+                    },
+                    ChannelConfig::Spherical {
+                        name: "R".into(),
+                        azimuth_deg: 30.0,
+                        elevation_deg: 0.0,
+                    },
                 ],
             },
             tuning: TuningConfig::TwelveTet,
@@ -155,20 +195,26 @@ mod tests {
         let mut cfg = minimal_config();
         cfg.engine.sample_rate = 0.0;
         let errors = validate(&cfg);
-        assert!(errors.iter().any(|e| matches!(e, ValidationError::OutOfRange { .. })));
+        assert!(errors
+            .iter()
+            .any(|e| matches!(e, ValidationError::OutOfRange { .. })));
     }
 
     #[test]
     fn empty_layout_errors() {
         let mut cfg = minimal_config();
         cfg.layout.channels.clear();
-        assert!(validate(&cfg).iter().any(|e| matches!(e, ValidationError::EmptyLayout)));
+        assert!(validate(&cfg)
+            .iter()
+            .any(|e| matches!(e, ValidationError::EmptyLayout)));
     }
 
     #[test]
     fn zero_edo_steps_errors() {
         let mut cfg = minimal_config();
         cfg.tuning = TuningConfig::Edo { steps: 0 };
-        assert!(validate(&cfg).iter().any(|e| matches!(e, ValidationError::InvalidEdoSteps)));
+        assert!(validate(&cfg)
+            .iter()
+            .any(|e| matches!(e, ValidationError::InvalidEdoSteps)));
     }
 }

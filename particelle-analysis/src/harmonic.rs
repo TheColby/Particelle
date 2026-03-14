@@ -3,20 +3,23 @@
 //! Utilities for quantifying the harmonic content of signals.
 //! Includes Harmonic Ratio (HNR), Inharmonicity, and Tristimulus.
 
-use rustfft::{FftPlanner, num_complex::Complex};
-use std::sync::Arc;
 use crate::spectral::SpectralConfig;
+use rustfft::{num_complex::Complex, FftPlanner};
+use std::sync::Arc;
 
 /// Compute a power spectrum from a windowed block (Hann window).
 fn windowed_power_spectrum(
-    audio_slice: &[f64], 
-    fft: &Arc<dyn rustfft::Fft<f64>>, 
-    complex_buf: &mut [Complex<f64>]
+    audio_slice: &[f64],
+    fft: &Arc<dyn rustfft::Fft<f64>>,
+    complex_buf: &mut [Complex<f64>],
 ) {
     let l = audio_slice.len() as f64;
     for i in 0..audio_slice.len() {
         let wr = 0.5 * (1.0 - (2.0 * std::f64::consts::PI * i as f64 / l).cos());
-        complex_buf[i] = Complex { re: audio_slice[i] * wr, im: 0.0 };
+        complex_buf[i] = Complex {
+            re: audio_slice[i] * wr,
+            im: 0.0,
+        };
     }
     fft.process(complex_buf);
 }
@@ -31,13 +34,13 @@ pub fn extract_harmonic_ratio(config: &SpectralConfig, audio: &[f64]) -> Vec<f64
 
     let mut start = 0;
     let mut contour = Vec::with_capacity(audio.len() / config.hop_size + 1);
-    
+
     let min_period = (config.sample_rate / 2000.0) as usize; // max 2kHz
-    let max_period = (config.sample_rate / 40.0) as usize;   // min 40Hz
+    let max_period = (config.sample_rate / 40.0) as usize; // min 40Hz
 
     while start + config.window_size <= audio.len() {
         let slice = &audio[start..start + config.window_size];
-        
+
         let mut r0 = 0.0;
         for &s in slice {
             r0 += s * s;
@@ -94,8 +97,8 @@ pub fn extract_inharmonicity(config: &SpectralConfig, audio: &[f64]) -> Vec<f64>
         // Find loudest peak = assume f0
         let mut f0_bin = 1;
         let mut max_mag = 0.0;
-        for i in 1..nyquist_bins {
-            let m = complex_buf[i].norm();
+        for (i, bin) in complex_buf.iter().enumerate().take(nyquist_bins).skip(1) {
+            let m = bin.norm();
             if m > max_mag {
                 max_mag = m;
                 f0_bin = i;
@@ -109,7 +112,7 @@ pub fn extract_inharmonicity(config: &SpectralConfig, audio: &[f64]) -> Vec<f64>
         }
 
         let f0 = f0_bin as f64 * bin_hz;
-        
+
         // Measure how far the first 8 local peaks deviate from ideal harmonics
         let mut total_dev = 0.0;
         let mut count = 0;
@@ -129,21 +132,25 @@ pub fn extract_inharmonicity(config: &SpectralConfig, audio: &[f64]) -> Vec<f64>
 
             let mut peak_bin = ideal_bin;
             let mut peak_mag = 0.0;
-            for b in low..=high {
-                let m = complex_buf[b].norm();
+            for (b, bin) in complex_buf.iter().enumerate().take(high + 1).skip(low) {
+                let m = bin.norm();
                 if m > peak_mag {
                     peak_mag = m;
                     peak_bin = b;
                 }
             }
-            
+
             let actual_hz = peak_bin as f64 * bin_hz;
             let deviation = (actual_hz - ideal_hz).abs() / ideal_hz;
             total_dev += deviation;
             count += 1;
         }
 
-        let inharmonicity = if count > 0 { total_dev / count as f64 } else { 0.0 };
+        let inharmonicity = if count > 0 {
+            total_dev / count as f64
+        } else {
+            0.0
+        };
         contour.push(inharmonicity.clamp(0.0, 1.0));
         start += config.hop_size;
     }
@@ -174,21 +181,24 @@ pub fn extract_tristimulus1(config: &SpectralConfig, audio: &[f64]) -> Vec<f64> 
         // Identify f0 as loudest bin
         let mut f0_bin = 1;
         let mut max_mag = 0.0;
-        for i in 1..nyquist_bins {
-            let m = complex_buf[i].norm();
-            if m > max_mag { max_mag = m; f0_bin = i; }
+        for (i, bin) in complex_buf.iter().enumerate().take(nyquist_bins).skip(1) {
+            let m = bin.norm();
+            if m > max_mag {
+                max_mag = m;
+                f0_bin = i;
+            }
         }
         let f0_hz = f0_bin as f64 * bin_hz;
-        
+
         let mut total = 0.0;
         let mut h1_energy = 0.0;
         let search = 2usize;
-        
-        for b in 0..nyquist_bins {
-            let m = complex_buf[b].norm();
+
+        for (b, bin) in complex_buf.iter().enumerate().take(nyquist_bins) {
+            let m = bin.norm();
             let power = m * m;
             total += power;
-            
+
             // Bins near f0 (harmonic 1)
             let freq = b as f64 * bin_hz;
             if (freq - f0_hz).abs() < bin_hz * search as f64 {
@@ -196,7 +206,11 @@ pub fn extract_tristimulus1(config: &SpectralConfig, audio: &[f64]) -> Vec<f64> 
             }
         }
 
-        let t1 = if total > f64::MIN_POSITIVE { h1_energy / total } else { 0.0 };
+        let t1 = if total > f64::MIN_POSITIVE {
+            h1_energy / total
+        } else {
+            0.0
+        };
         contour.push(t1.clamp(0.0, 1.0));
         start += config.hop_size;
     }

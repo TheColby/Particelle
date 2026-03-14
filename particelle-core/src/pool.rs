@@ -16,7 +16,11 @@ impl GrainPool {
     ) -> Self {
         let mut grains = Vec::with_capacity(capacity);
         for _ in 0..capacity {
-            grains.push(Grain::new(Arc::clone(&source), Arc::clone(&window), n_output_channels));
+            grains.push(Grain::new(
+                Arc::clone(&source),
+                Arc::clone(&window),
+                n_output_channels,
+            ));
         }
         Self { grains }
     }

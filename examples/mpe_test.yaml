@@ -16,10 +16,13 @@ clouds:
   - id: mpe_shimmer
     source: audio/music_example.wav
     density:
-      op: mul
+      op: add
       args:
-        - 15.0
-        - $pressure_mod
+        - 5.0
+        - op: mul
+          args:
+            - 10.0
+            - $pressure_mod
     duration: 0.1
     amplitude: 0.8
     position: 0.0

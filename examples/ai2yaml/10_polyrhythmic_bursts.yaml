@@ -17,8 +17,15 @@ layout:
     - { name: "C",  azimuth_deg:   0.0, elevation_deg: 0.0 }
 
 tuning:
-  mode: just_intonation
-  ratios: [1/1, 9/8, 5/4, 4/3, 3/2, 5/3, 15/8]
+  mode: ji
+  ratios:
+    - { degree: 0, num: 1, den: 1 }
+    - { degree: 1, num: 9, den: 8 }
+    - { degree: 2, num: 5, den: 4 }
+    - { degree: 3, num: 4, den: 3 }
+    - { degree: 4, num: 3, den: 2 }
+    - { degree: 5, num: 5, den: 3 }
+    - { degree: 6, num: 15, den: 8 }
 
 clouds:
   # Cloud α — prime 2 × base 20 = 40 grains/sec, 1/40 = 25ms grains

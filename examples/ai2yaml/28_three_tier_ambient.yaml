@@ -48,6 +48,6 @@ clouds:
     duration: 0.015
     amplitude: 0.25
     position: { op: osc, args: [phasor, 0.035] }
-    window: { type: planck_taper }
+    window: { type: planck_taper, epsilon: 0.1 }
     listener_pos: { x: 0.0, y: 1.0, z: 0.0 }
     width: 0.6

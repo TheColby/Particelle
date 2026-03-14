@@ -40,7 +40,7 @@ mod tests {
     #[test]
     fn test_twelve_tet() {
         let tuning = EdoTuning::twelve_tet(440.0);
-        
+
         // Degree 0 is A4 = 440
         assert!((tuning.frequency_for_degree(0) - 440.0).abs() < 1e-6);
 
@@ -57,10 +57,10 @@ mod tests {
     #[test]
     fn test_31_edo() {
         let tuning = EdoTuning::new(31, 440.0);
-        
+
         // Degree 31 is an octave up
         assert!((tuning.frequency_for_degree(31) - 880.0).abs() < 1e-6);
-        
+
         // Degree 1 is a dieselis interval in 31-EDO
         let step_ratio = 2.0_f64.powf(1.0 / 31.0);
         assert!((tuning.frequency_for_degree(1) - (440.0 * step_ratio)).abs() < 1e-6);

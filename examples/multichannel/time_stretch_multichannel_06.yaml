@@ -44,9 +44,7 @@ clouds:
     source: "audio/music_example.wav"
     density: 40.3
     duration: 0.182
-    position: 
-      op: curve
-      ref: "curves/sweep_up.json"
+    position: "curves/sweep_up.json"
     amplitude: 0.8
     width: 0.5
     window: { type: hann }

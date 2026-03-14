@@ -20,9 +20,7 @@ clouds:
     source: "audio/music_example.wav"
     density: 90.2
     duration: 0.13
-    position: 
-      op: curve
-      ref: "curves/sweep_up.json"
+    position: "curves/sweep_up.json"
     amplitude: 0.8
     width: 0.5
     window: { type: hann }

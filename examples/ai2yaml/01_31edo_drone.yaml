@@ -16,7 +16,7 @@ layout:
 
 tuning:
   mode: edo
-  divisions: 31
+  steps: 31
 
 clouds:
   - id: cello_drone

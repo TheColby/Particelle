@@ -23,5 +23,5 @@ clouds:
     position: 0.36
     amplitude: 0.8
     width: 0.5
-    window: { type: tukey }
+    window: { type: tukey, alpha: 0.5 }
     listener_pos: { x: 0.0, y: 1.0, z: 0.0 }

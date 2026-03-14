@@ -41,6 +41,6 @@ pub fn extract_zero_crossing_rate(config: &TemporalConfig, audio: &[f64]) -> Vec
         contour.push(crossings as f64 / slice.len() as f64);
         start += config.hop_size;
     }
-    
+
     contour
 }

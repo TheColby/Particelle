@@ -1,11 +1,11 @@
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
-use std::sync::Arc;
 use particelle_core::engine::{Engine, EngineConfig, GranularEngine};
-use particelle_core::spatializer::AmplitudePanner;
 use particelle_core::grain::Cloud;
 use particelle_core::pool::GrainPool;
+use particelle_core::spatializer::AmplitudePanner;
 use particelle_schema::ParticelleConfig;
+use std::sync::Arc;
 
 /// Particelle — granular synthesis engine command-line interface.
 ///
@@ -43,7 +43,7 @@ EXAMPLES:\n\
     # Override sample rate for a batch experiment\n\
     particelle set patch.yaml engine.sample_rate 96000 > patch_96k.yaml\n\n\
 DOCUMENTATION:\n\
-    https://github.com/TheColby/Particelle",
+    https://github.com/TheColby/Particelle"
 )]
 struct Cli {
     #[command(subcommand)]
@@ -69,16 +69,14 @@ enum Commands {
     /// Processes the full grain engine offline and writes a multichannel WAV file.
     /// Output is byte-identical across runs with equal inputs. Useful for batch
     /// rendering, regression testing, and non-real-time composition.
-    #[command(
-        after_help = "\
+    #[command(after_help = "\
 EXAMPLES:\n\
     particelle render shimmer.yaml -o shimmer.wav --duration 8.0\n\
     particelle render patch.yaml -o out.wav -d 60.0 --hash\n\n\
 NOTES:\n\
     The output channel count matches the layout declared in the YAML patch.\n\
     Sample rate and block size are taken from engine config.\n\
-    Use --hash to print a SHA-256 digest for deterministic regression tests."
-    )]
+    Use --hash to print a SHA-256 digest for deterministic regression tests.")]
     Render {
         /// Path to the YAML configuration file.
         patch: String,
@@ -88,7 +86,12 @@ NOTES:\n\
         output: String,
 
         /// Render duration in seconds.
-        #[arg(short, long, default_value = "10.0", help = "Duration in seconds to render")]
+        #[arg(
+            short,
+            long,
+            default_value = "10.0",
+            help = "Duration in seconds to render"
+        )]
         duration: f64,
 
         /// Print a deterministic SHA-256 hash of the output audio data.
@@ -102,38 +105,52 @@ NOTES:\n\
     /// Opens a multichannel output stream via CPAL, matching the channel count
     /// and sample rate declared in the patch. The audio callback runs on a
     /// dedicated thread with zero heap allocation. Press Ctrl+C to stop.
-    #[command(
-        after_help = "\
+    #[command(after_help = "\
 EXAMPLES:\n\
     particelle run shimmer.yaml\n\
-    particelle run immersive_7.1.4.yaml\n\n\
+    particelle run immersive_7.1.4.yaml\n\
+    particelle run mpe_demo.yaml --simulate-mpe\n\n\
 NOTES:\n\
     Hardware device is selected by name in the patch hardware section.\n\
     If no device is specified, the system default output is used.\n\
-    MIDI input is ingested off the audio thread via lock-free queue."
-    )]
+    MIDI input is ingested off the audio thread via lock-free queue.\n\
+    Synthetic MPE modulation is opt-in for demos via --simulate-mpe.")]
     Run {
         /// Path to the YAML configuration file.
         patch: String,
 
         /// Optional UDP port to listen for incoming OSC messages.
-        #[arg(long, help = "UDP port to listen for OSC parameter control (e.g., 9000)")]
+        #[arg(
+            long,
+            help = "UDP port to listen for OSC parameter control (e.g., 9000)"
+        )]
         osc_port: Option<u16>,
+
+        /// Enable deterministic synthetic MPE pressure events for demo/testing.
+        #[arg(
+            long,
+            default_value_t = false,
+            help = "Inject deterministic synthetic MPE pressure in realtime"
+        )]
+        simulate_mpe: bool,
     },
 
     /// Generate a default YAML patch to stdout.
     ///
     /// Produces a complete, valid starter patch with sensible defaults.
     /// Redirect to a file and edit to begin composing.
-    #[command(
-        after_help = "\
+    #[command(after_help = "\
 EXAMPLES:\n\
     particelle init > my_patch.yaml\n\
-    particelle init -n 12 > atmos_patch.yaml    # 12-channel layout"
-    )]
+    particelle init -n 12 > atmos_patch.yaml    # 12-channel layout")]
     Init {
         /// Number of output channels to include in the layout.
-        #[arg(short = 'n', long, default_value = "2", help = "Number of output channels (e.g., 2 for stereo, 12 for Atmos)")]
+        #[arg(
+            short = 'n',
+            long,
+            default_value = "2",
+            help = "Number of output channels (e.g., 2 for stereo, 12 for Atmos)"
+        )]
         channels: usize,
     },
 
@@ -141,19 +158,22 @@ EXAMPLES:\n\
     ///
     /// Compiles the curve and prints (x, y) sample pairs to stdout in TSV format.
     /// Pipe to a plotting tool or spreadsheet for visualization.
-    #[command(
-        after_help = "\
+    #[command(after_help = "\
 EXAMPLES:\n\
     particelle curve curves/density.json\n\
     particelle curve curves/position.json --resolution 1000\n\
-    particelle curve curves/envelope.json -r 500 > envelope.tsv"
-    )]
+    particelle curve curves/envelope.json -r 500 > envelope.tsv")]
     Curve {
         /// Path to the JSON curve file.
         curve: String,
 
         /// Number of evaluation points to print across the curve domain.
-        #[arg(short, long, default_value = "64", help = "Number of sample points to evaluate")]
+        #[arg(
+            short,
+            long,
+            default_value = "64",
+            help = "Number of sample points to evaluate"
+        )]
         resolution: usize,
     },
 
@@ -162,8 +182,7 @@ EXAMPLES:\n\
     /// Reads the YAML patch, substitutes the value at the given dot-separated
     /// parameter path, and prints the modified YAML to stdout. Useful for
     /// scripted batch experiments and parameter sweeps.
-    #[command(
-        after_help = "\
+    #[command(after_help = "\
 EXAMPLES:\n\
     particelle set patch.yaml engine.sample_rate 96000 > patch_96k.yaml\n\
     particelle set patch.yaml tuning.steps 19 > patch_19edo.yaml\n\n\
@@ -171,8 +190,7 @@ PARAMETER PATHS:\n\
     engine.sample_rate    Engine sample rate (Hz)\n\
     engine.block_size     Block size (samples)\n\
     tuning.steps          EDO step count\n\
-    clouds[0].density     First cloud grain density"
-    )]
+    clouds[0].density     First cloud grain density")]
     Set {
         /// Path to the YAML configuration file.
         patch: String,
@@ -192,11 +210,20 @@ fn main() -> Result<()> {
         Commands::Validate { patch } => {
             cmd_validate(&patch)?;
         }
-        Commands::Render { patch, output, duration, hash } => {
+        Commands::Render {
+            patch,
+            output,
+            duration,
+            hash,
+        } => {
             cmd_render(&patch, &output, duration, hash)?;
         }
-        Commands::Run { patch, osc_port } => {
-            cmd_run(&patch, osc_port)?;
+        Commands::Run {
+            patch,
+            osc_port,
+            simulate_mpe,
+        } => {
+            cmd_run(&patch, osc_port, simulate_mpe)?;
         }
         Commands::Init { channels } => {
             cmd_init(channels)?;
@@ -204,50 +231,71 @@ fn main() -> Result<()> {
         Commands::Curve { curve, resolution } => {
             cmd_curve(&curve, resolution)?;
         }
-        Commands::Set { patch, param, value } => {
+        Commands::Set {
+            patch,
+            param,
+            value,
+        } => {
             cmd_set(&patch, &param, &value)?;
         }
     }
 
     Ok(())
 }
+
+fn parse_patch_config(yaml: &str) -> Result<ParticelleConfig> {
+    particelle_schema::parse_yaml_compat(yaml).with_context(|| "YAML parse error")
+}
+
+fn load_patch_config(patch_path: &str) -> Result<ParticelleConfig> {
+    let yaml = std::fs::read_to_string(patch_path)
+        .with_context(|| format!("Cannot read '{}'", patch_path))?;
+    parse_patch_config(&yaml)
+}
+
 fn compile_signal(
-    expr: &particelle_schema::config::SignalExprConfig, 
+    expr: &particelle_schema::config::SignalExprConfig,
     base_dir: Option<&std::path::Path>,
     analysis_buffers: &std::collections::HashMap<String, std::sync::Arc<Vec<f64>>>,
 ) -> Result<particelle_params::signal::ParamSignal> {
-    use particelle_schema::config::SignalExprConfig;
     use particelle_params::signal::ParamSignal;
+    use particelle_schema::config::SignalExprConfig;
     match expr {
         SignalExprConfig::Const(val) => Ok(ParamSignal::Const(*val)),
         SignalExprConfig::Ref(path_str) => {
             // Check for analysis vectors
             if let Some(analysis_id) = path_str.strip_prefix("$analysis.") {
                 if let Some(buf) = analysis_buffers.get(analysis_id) {
-                    return Ok(ParamSignal::Analysis { buffer: buf.clone(), hop_rate: 100.0 }); // Hardcode 100hz tracking for now
+                    return Ok(ParamSignal::Analysis {
+                        buffer: buf.clone(),
+                        hop_rate: 100.0,
+                    }); // Hardcode 100hz tracking for now
                 }
             }
-            
+
             // If it starts with $, it's a control field
-            if path_str.starts_with('$') {
-                return Ok(ParamSignal::Control { field: path_str[1..].to_string() });
+            if let Some(field) = path_str.strip_prefix('$') {
+                return Ok(ParamSignal::Control {
+                    field: field.to_string(),
+                });
             }
-            
+
             // Otherwise treat as a curve file path
             let path = if let Some(base) = base_dir {
                 base.join(path_str)
             } else {
                 std::path::PathBuf::from(path_str)
             };
-            
+
             let json = std::fs::read_to_string(&path)
                 .with_context(|| format!("Cannot read curve file '{}'", path.display()))?;
             let def: particelle_curve::CurveSchema = serde_json::from_str(&json)
                 .with_context(|| format!("Failed to parse curve JSON from '{}'", path.display()))?;
             // Compile curve
-            let compiled = particelle_curve::CompiledCurve::compile(def)
-                .map_err(|e| anyhow::anyhow!("Failed to compile curve '{}': {:?}", path.display(), e))?;
-                
+            let compiled = particelle_curve::CompiledCurve::compile(def).map_err(|e| {
+                anyhow::anyhow!("Failed to compile curve '{}': {:?}", path.display(), e)
+            })?;
+
             Ok(ParamSignal::Curve(std::sync::Arc::new(compiled)))
         }
         SignalExprConfig::Expr(op_config) => {
@@ -273,12 +321,18 @@ fn compile_signal(
                         anyhow::bail!("'clamp' requires exactly 3 arguments: [input, min, max]");
                     }
                     let input = compile_signal(&op_config.args[0], base_dir, analysis_buffers)?;
-                    
-                    // We expect min and max to be parsed as Const configurations 
-                    let min_val = if let SignalExprConfig::Const(v) = &op_config.args[1] { *v } 
-                        else { anyhow::bail!("clamp min must be a constant") };
-                    let max_val = if let SignalExprConfig::Const(v) = &op_config.args[2] { *v } 
-                        else { anyhow::bail!("clamp max must be a constant") };
+
+                    // We expect min and max to be parsed as Const configurations
+                    let min_val = if let SignalExprConfig::Const(v) = &op_config.args[1] {
+                        *v
+                    } else {
+                        anyhow::bail!("clamp min must be a constant")
+                    };
+                    let max_val = if let SignalExprConfig::Const(v) = &op_config.args[2] {
+                        *v
+                    } else {
+                        anyhow::bail!("clamp max must be a constant")
+                    };
 
                     Ok(ParamSignal::Clamp {
                         input: Box::new(input),
@@ -291,8 +345,11 @@ fn compile_signal(
                         anyhow::bail!("'map' requires exactly 2 arguments: [input, func_name]");
                     }
                     let input = compile_signal(&op_config.args[0], base_dir, analysis_buffers)?;
-                    let func_str = if let SignalExprConfig::Ref(s) = &op_config.args[1] { s } 
-                        else { anyhow::bail!("map func_name must be a reference string") };
+                    let func_str = if let SignalExprConfig::Ref(s) = &op_config.args[1] {
+                        s
+                    } else {
+                        anyhow::bail!("map func_name must be a reference string")
+                    };
 
                     let func = match func_str.as_str() {
                         "db_to_linear" => particelle_params::signal::MapFunc::DbToLinear,
@@ -302,18 +359,28 @@ fn compile_signal(
                         "abs" => particelle_params::signal::MapFunc::Abs,
                         "negate" => particelle_params::signal::MapFunc::Negate,
                         "recip" => particelle_params::signal::MapFunc::Recip,
-                        other => particelle_params::signal::MapFunc::Custom { name: other.to_string() },
+                        other => particelle_params::signal::MapFunc::Custom {
+                            name: other.to_string(),
+                        },
                     };
 
-                    Ok(ParamSignal::Map { input: Box::new(input), func })
+                    Ok(ParamSignal::Map {
+                        input: Box::new(input),
+                        func,
+                    })
                 }
                 "osc" => {
                     if op_config.args.len() < 2 || op_config.args.len() > 3 {
-                        anyhow::bail!("'osc' requires 2 or 3 arguments: [shape, frequency, phase?]");
+                        anyhow::bail!(
+                            "'osc' requires 2 or 3 arguments: [shape, frequency, phase?]"
+                        );
                     }
-                    let shape_str = if let SignalExprConfig::Ref(s) = &op_config.args[0] { s.to_lowercase() }
-                        else { anyhow::bail!("osc shape must be a string") };
-                        
+                    let shape_str = if let SignalExprConfig::Ref(s) = &op_config.args[0] {
+                        s.to_lowercase()
+                    } else {
+                        anyhow::bail!("osc shape must be a string")
+                    };
+
                     let shape = match shape_str.as_str() {
                         "sine" => particelle_params::signal::OscShape::Sine,
                         "triangle" => particelle_params::signal::OscShape::Triangle,
@@ -322,63 +389,150 @@ fn compile_signal(
                         "phasor" => particelle_params::signal::OscShape::Phasor,
                         _ => anyhow::bail!("Unknown osc shape: '{}'", shape_str),
                     };
-                    
+
                     let freq = compile_signal(&op_config.args[1], base_dir, analysis_buffers)?;
-                    
+
                     let phase = if op_config.args.len() == 3 {
-                        if let SignalExprConfig::Const(p) = &op_config.args[2] { *p }
-                        else { anyhow::bail!("osc phase must be a constant number") }
+                        if let SignalExprConfig::Const(p) = &op_config.args[2] {
+                            *p
+                        } else {
+                            anyhow::bail!("osc phase must be a constant number")
+                        }
                     } else {
                         0.0
                     };
-                    
-                    
-                    Ok(particelle_params::signal::ParamSignal::Oscillator { shape, freq: Box::new(freq), phase })
+
+                    Ok(particelle_params::signal::ParamSignal::Oscillator {
+                        shape,
+                        freq: Box::new(freq),
+                        phase,
+                    })
                 }
                 "lorenz" => {
                     if op_config.args.len() != 5 {
-                        anyhow::bail!("'lorenz' requires 5 arguments: [sigma, rho, beta, out_dim, dt]");
+                        anyhow::bail!(
+                            "'lorenz' requires 5 arguments: [sigma, rho, beta, out_dim, dt]"
+                        );
                     }
-                    let sigma = if let SignalExprConfig::Const(v) = &op_config.args[0] { *v } else { anyhow::bail!("lorenz sigma must be constant") };
-                    let rho = if let SignalExprConfig::Const(v) = &op_config.args[1] { *v } else { anyhow::bail!("lorenz rho must be constant") };
-                    let beta = if let SignalExprConfig::Const(v) = &op_config.args[2] { *v } else { anyhow::bail!("lorenz beta must be constant") };
-                    let out_dim = if let SignalExprConfig::Ref(s) = &op_config.args[3] { s.clone() } else { anyhow::bail!("lorenz out_dim must be string") };
-                    let dt = if let SignalExprConfig::Const(v) = &op_config.args[4] { *v } else { anyhow::bail!("lorenz dt must be constant") };
-                    
+                    let sigma = if let SignalExprConfig::Const(v) = &op_config.args[0] {
+                        *v
+                    } else {
+                        anyhow::bail!("lorenz sigma must be constant")
+                    };
+                    let rho = if let SignalExprConfig::Const(v) = &op_config.args[1] {
+                        *v
+                    } else {
+                        anyhow::bail!("lorenz rho must be constant")
+                    };
+                    let beta = if let SignalExprConfig::Const(v) = &op_config.args[2] {
+                        *v
+                    } else {
+                        anyhow::bail!("lorenz beta must be constant")
+                    };
+                    let out_dim = if let SignalExprConfig::Ref(s) = &op_config.args[3] {
+                        s.clone()
+                    } else {
+                        anyhow::bail!("lorenz out_dim must be string")
+                    };
+                    let dt = if let SignalExprConfig::Const(v) = &op_config.args[4] {
+                        *v
+                    } else {
+                        anyhow::bail!("lorenz dt must be constant")
+                    };
+
                     let state = Arc::new(particelle_params::signal::ChaosState::new(0.1, 0.1, 0.1));
-                    Ok(particelle_params::signal::ParamSignal::Lorenz { state, sigma, rho, beta, dt, out_dim })
+                    Ok(particelle_params::signal::ParamSignal::Lorenz {
+                        state,
+                        sigma,
+                        rho,
+                        beta,
+                        dt,
+                        out_dim,
+                    })
                 }
                 "rossler" => {
                     if op_config.args.len() != 5 {
                         anyhow::bail!("'rossler' requires 5 arguments: [a, b, c, out_dim, dt]");
                     }
-                    let a = if let SignalExprConfig::Const(v) = &op_config.args[0] { *v } else { anyhow::bail!("rossler a must be constant") };
-                    let b = if let SignalExprConfig::Const(v) = &op_config.args[1] { *v } else { anyhow::bail!("rossler b must be constant") };
-                    let c = if let SignalExprConfig::Const(v) = &op_config.args[2] { *v } else { anyhow::bail!("rossler c must be constant") };
-                    let out_dim = if let SignalExprConfig::Ref(s) = &op_config.args[3] { s.clone() } else { anyhow::bail!("rossler out_dim must be string") };
-                    let dt = if let SignalExprConfig::Const(v) = &op_config.args[4] { *v } else { anyhow::bail!("rossler dt must be constant") };
-                    
+                    let a = if let SignalExprConfig::Const(v) = &op_config.args[0] {
+                        *v
+                    } else {
+                        anyhow::bail!("rossler a must be constant")
+                    };
+                    let b = if let SignalExprConfig::Const(v) = &op_config.args[1] {
+                        *v
+                    } else {
+                        anyhow::bail!("rossler b must be constant")
+                    };
+                    let c = if let SignalExprConfig::Const(v) = &op_config.args[2] {
+                        *v
+                    } else {
+                        anyhow::bail!("rossler c must be constant")
+                    };
+                    let out_dim = if let SignalExprConfig::Ref(s) = &op_config.args[3] {
+                        s.clone()
+                    } else {
+                        anyhow::bail!("rossler out_dim must be string")
+                    };
+                    let dt = if let SignalExprConfig::Const(v) = &op_config.args[4] {
+                        *v
+                    } else {
+                        anyhow::bail!("rossler dt must be constant")
+                    };
+
                     let state = Arc::new(particelle_params::signal::ChaosState::new(0.1, 0.1, 0.1));
-                    Ok(particelle_params::signal::ParamSignal::Rossler { state, a, b, c, dt, out_dim })
+                    Ok(particelle_params::signal::ParamSignal::Rossler {
+                        state,
+                        a,
+                        b,
+                        c,
+                        dt,
+                        out_dim,
+                    })
                 }
                 "henon" => {
                     if op_config.args.len() != 3 {
                         anyhow::bail!("'henon' requires 3 arguments: [a, b, out_dim]");
                     }
-                    let a = if let SignalExprConfig::Const(v) = &op_config.args[0] { *v } else { anyhow::bail!("henon a must be constant") };
-                    let b = if let SignalExprConfig::Const(v) = &op_config.args[1] { *v } else { anyhow::bail!("henon b must be constant") };
-                    let out_dim = if let SignalExprConfig::Ref(s) = &op_config.args[2] { s.clone() } else { anyhow::bail!("henon out_dim must be string") };
-                    
+                    let a = if let SignalExprConfig::Const(v) = &op_config.args[0] {
+                        *v
+                    } else {
+                        anyhow::bail!("henon a must be constant")
+                    };
+                    let b = if let SignalExprConfig::Const(v) = &op_config.args[1] {
+                        *v
+                    } else {
+                        anyhow::bail!("henon b must be constant")
+                    };
+                    let out_dim = if let SignalExprConfig::Ref(s) = &op_config.args[2] {
+                        s.clone()
+                    } else {
+                        anyhow::bail!("henon out_dim must be string")
+                    };
+
                     let state = Arc::new(particelle_params::signal::ChaosState::new(0.1, 0.1, 0.0));
-                    Ok(particelle_params::signal::ParamSignal::Henon { state, a, b, out_dim })
+                    Ok(particelle_params::signal::ParamSignal::Henon {
+                        state,
+                        a,
+                        b,
+                        out_dim,
+                    })
                 }
                 "brownian" => {
                     if op_config.args.len() != 2 {
                         anyhow::bail!("'brownian' requires 2 arguments: [sigma, dt]");
                     }
-                    let sigma = if let SignalExprConfig::Const(v) = &op_config.args[0] { *v } else { anyhow::bail!("brownian sigma must be constant") };
-                    let dt = if let SignalExprConfig::Const(v) = &op_config.args[1] { *v } else { anyhow::bail!("brownian dt must be constant") };
-                    
+                    let sigma = if let SignalExprConfig::Const(v) = &op_config.args[0] {
+                        *v
+                    } else {
+                        anyhow::bail!("brownian sigma must be constant")
+                    };
+                    let dt = if let SignalExprConfig::Const(v) = &op_config.args[1] {
+                        *v
+                    } else {
+                        anyhow::bail!("brownian dt must be constant")
+                    };
+
                     let state = Arc::new(particelle_params::signal::ChaosState::new(0.0, 0.0, 0.0));
                     Ok(particelle_params::signal::ParamSignal::Brownian { state, sigma, dt })
                 }
@@ -401,13 +555,41 @@ impl particelle_params::context::FieldProvider for MapProvider {
     }
 }
 
+fn analysis_hop_size(sample_rate: f64) -> usize {
+    (sample_rate / 100.0) as usize
+}
+
+fn spectral_config(sample_rate: f64) -> particelle_analysis::SpectralConfig {
+    particelle_analysis::SpectralConfig {
+        window_size: 2048,
+        hop_size: analysis_hop_size(sample_rate),
+        sample_rate,
+    }
+}
+
+fn env_config(sample_rate: f64) -> particelle_analysis::EnvConfig {
+    particelle_analysis::EnvConfig {
+        window_size: 1024,
+        hop_size: analysis_hop_size(sample_rate),
+        sample_rate,
+    }
+}
+
+fn temporal_config(sample_rate: f64) -> particelle_analysis::TemporalConfig {
+    particelle_analysis::TemporalConfig {
+        window_size: 1024,
+        hop_size: analysis_hop_size(sample_rate),
+        sample_rate,
+    }
+}
+
 fn build_engine(config: &ParticelleConfig) -> Result<GranularEngine> {
-    let sample_rate = config.engine.sample_rate as f64;
+    let sample_rate = config.engine.sample_rate;
     let block_size = config.engine.block_size;
-    
-    let engine_config = EngineConfig::new(sample_rate, block_size)
-        .with_context(|| "Invalid engine config")?;
-        
+
+    let engine_config =
+        EngineConfig::new(sample_rate, block_size).with_context(|| "Invalid engine config")?;
+
     let mut analysis_buffers = std::collections::HashMap::new();
     for a in &config.analysis {
         let mut reader = particelle_io::AudioFileReader::open(&a.source)
@@ -416,19 +598,21 @@ fn build_engine(config: &ParticelleConfig) -> Result<GranularEngine> {
         let mut block = particelle_core::audio_block::AudioBlock::new(reader.n_channels, 1024);
         loop {
             let read = reader.read_block(&mut block).unwrap();
-            if read == 0 { break; }
-            for i in 0..read {
-                mono.push(block.channels[0][i]); // Just use left channel for analysis
+            if read == 0 {
+                break;
             }
+            mono.extend_from_slice(&block.channels[0][..read]); // Just use left channel for analysis
         }
-        
+
         let vec = match a.extractor.as_str() {
             "f0_yin" => {
-                let mut yin_config = particelle_analysis::YinConfig::default();
-                yin_config.sample_rate = reader.sample_rate as f64;
+                let yin_config = particelle_analysis::YinConfig {
+                    sample_rate: reader.sample_rate,
+                    ..Default::default()
+                };
                 let mut yin = particelle_analysis::YinBuffer::new(&yin_config);
-                
-                let hop_size = (reader.sample_rate as f64 / 100.0) as usize; // 100 Hz tracking
+
+                let hop_size = analysis_hop_size(reader.sample_rate); // 100 Hz tracking
                 let mut f0_vec = Vec::new();
                 let mut start = 0;
                 while start < mono.len() {
@@ -443,126 +627,76 @@ fn build_engine(config: &ParticelleConfig) -> Result<GranularEngine> {
                 f0_vec
             },
             "rms" => {
-                let env_config = particelle_analysis::EnvConfig {
-                    window_size: 1024,
-                    hop_size: (reader.sample_rate as f64 / 100.0) as usize,
-                    sample_rate: reader.sample_rate as f64,
-                };
-                particelle_analysis::extract_rms_envelope(&env_config, &mono)
+                particelle_analysis::extract_rms_envelope(&env_config(reader.sample_rate), &mono)
             },
             "spectral_flatness" => {
-                let spec_config = particelle_analysis::SpectralConfig {
-                    window_size: 2048,
-                    hop_size: (reader.sample_rate as f64 / 100.0) as usize,
-                    sample_rate: reader.sample_rate as f64,
-                };
-                particelle_analysis::extract_spectral_flatness(&spec_config, &mono)
+                particelle_analysis::extract_spectral_flatness(&spectral_config(reader.sample_rate), &mono)
             },
             "spectral_centroid" => {
-                let spec_config = particelle_analysis::SpectralConfig {
-                    window_size: 2048,
-                    hop_size: (reader.sample_rate as f64 / 100.0) as usize,
-                    sample_rate: reader.sample_rate as f64,
-                };
-                particelle_analysis::extract_spectral_centroid(&spec_config, &mono)
+                particelle_analysis::extract_spectral_centroid(&spectral_config(reader.sample_rate), &mono)
             },
             "spectral_rolloff" => {
-                let spec_config = particelle_analysis::SpectralConfig {
-                    window_size: 2048,
-                    hop_size: (reader.sample_rate as f64 / 100.0) as usize,
-                    sample_rate: reader.sample_rate as f64,
-                };
-                particelle_analysis::extract_spectral_rolloff(&spec_config, &mono)
+                particelle_analysis::extract_spectral_rolloff(&spectral_config(reader.sample_rate), &mono)
             },
             "spectral_crest" => {
-                let spec_config = particelle_analysis::SpectralConfig {
-                    window_size: 2048,
-                    hop_size: (reader.sample_rate as f64 / 100.0) as usize,
-                    sample_rate: reader.sample_rate as f64,
-                };
-                particelle_analysis::extract_spectral_crest(&spec_config, &mono)
+                particelle_analysis::extract_spectral_crest(&spectral_config(reader.sample_rate), &mono)
             },
             "spectral_flux" => {
-                let spec_config = particelle_analysis::SpectralConfig {
-                    window_size: 2048,
-                    hop_size: (reader.sample_rate as f64 / 100.0) as usize,
-                    sample_rate: reader.sample_rate as f64,
-                };
-                particelle_analysis::extract_spectral_flux(&spec_config, &mono)
+                particelle_analysis::extract_spectral_flux(&spectral_config(reader.sample_rate), &mono)
             },
             "zero_crossing_rate" => {
-                let t_config = particelle_analysis::TemporalConfig {
-                    window_size: 1024,
-                    hop_size: (reader.sample_rate as f64 / 100.0) as usize,
-                    sample_rate: reader.sample_rate as f64,
-                };
-                particelle_analysis::extract_zero_crossing_rate(&t_config, &mono)
+                particelle_analysis::extract_zero_crossing_rate(&temporal_config(reader.sample_rate), &mono)
             },
             // --- Spectral Shape ---
             "spectral_spread" => {
-                let spec_config = particelle_analysis::SpectralConfig { window_size: 2048, hop_size: (reader.sample_rate as f64 / 100.0) as usize, sample_rate: reader.sample_rate as f64 };
-                particelle_analysis::extract_spectral_spread(&spec_config, &mono)
+                particelle_analysis::extract_spectral_spread(&spectral_config(reader.sample_rate), &mono)
             },
             "spectral_skewness" => {
-                let spec_config = particelle_analysis::SpectralConfig { window_size: 2048, hop_size: (reader.sample_rate as f64 / 100.0) as usize, sample_rate: reader.sample_rate as f64 };
-                particelle_analysis::extract_spectral_skewness(&spec_config, &mono)
+                particelle_analysis::extract_spectral_skewness(&spectral_config(reader.sample_rate), &mono)
             },
             "spectral_kurtosis" => {
-                let spec_config = particelle_analysis::SpectralConfig { window_size: 2048, hop_size: (reader.sample_rate as f64 / 100.0) as usize, sample_rate: reader.sample_rate as f64 };
-                particelle_analysis::extract_spectral_kurtosis(&spec_config, &mono)
+                particelle_analysis::extract_spectral_kurtosis(&spectral_config(reader.sample_rate), &mono)
             },
             "spectral_entropy" => {
-                let spec_config = particelle_analysis::SpectralConfig { window_size: 2048, hop_size: (reader.sample_rate as f64 / 100.0) as usize, sample_rate: reader.sample_rate as f64 };
-                particelle_analysis::extract_spectral_entropy(&spec_config, &mono)
+                particelle_analysis::extract_spectral_entropy(&spectral_config(reader.sample_rate), &mono)
             },
             "spectral_contrast" => {
-                let spec_config = particelle_analysis::SpectralConfig { window_size: 2048, hop_size: (reader.sample_rate as f64 / 100.0) as usize, sample_rate: reader.sample_rate as f64 };
-                particelle_analysis::extract_spectral_contrast(&spec_config, &mono)
+                particelle_analysis::extract_spectral_contrast(&spectral_config(reader.sample_rate), &mono)
             },
             // --- Harmonic ---
             "harmonic_ratio" => {
-                let spec_config = particelle_analysis::SpectralConfig { window_size: 2048, hop_size: (reader.sample_rate as f64 / 100.0) as usize, sample_rate: reader.sample_rate as f64 };
-                particelle_analysis::extract_harmonic_ratio(&spec_config, &mono)
+                particelle_analysis::extract_harmonic_ratio(&spectral_config(reader.sample_rate), &mono)
             },
             "inharmonicity" => {
-                let spec_config = particelle_analysis::SpectralConfig { window_size: 2048, hop_size: (reader.sample_rate as f64 / 100.0) as usize, sample_rate: reader.sample_rate as f64 };
-                particelle_analysis::extract_inharmonicity(&spec_config, &mono)
+                particelle_analysis::extract_inharmonicity(&spectral_config(reader.sample_rate), &mono)
             },
             "tristimulus1" => {
-                let spec_config = particelle_analysis::SpectralConfig { window_size: 2048, hop_size: (reader.sample_rate as f64 / 100.0) as usize, sample_rate: reader.sample_rate as f64 };
-                particelle_analysis::extract_tristimulus1(&spec_config, &mono)
+                particelle_analysis::extract_tristimulus1(&spectral_config(reader.sample_rate), &mono)
             },
             // --- MFCCs (1-12) ---
             extractor if extractor.starts_with("mfcc") => {
                 let idx: usize = extractor[4..].parse().unwrap_or(1);
-                let spec_config = particelle_analysis::SpectralConfig { window_size: 2048, hop_size: (reader.sample_rate as f64 / 100.0) as usize, sample_rate: reader.sample_rate as f64 };
-                particelle_analysis::mfcc::extract_mfcc(&spec_config, &mono, idx)
+                particelle_analysis::mfcc::extract_mfcc(&spectral_config(reader.sample_rate), &mono, idx)
             },
             // --- Dynamics ---
             "peak_amplitude" => {
-                let env_config = particelle_analysis::EnvConfig { window_size: 1024, hop_size: (reader.sample_rate as f64 / 100.0) as usize, sample_rate: reader.sample_rate as f64 };
-                particelle_analysis::extract_peak_amplitude(&env_config, &mono)
+                particelle_analysis::extract_peak_amplitude(&env_config(reader.sample_rate), &mono)
             },
             "loudness_dbfs" => {
-                let env_config = particelle_analysis::EnvConfig { window_size: 1024, hop_size: (reader.sample_rate as f64 / 100.0) as usize, sample_rate: reader.sample_rate as f64 };
-                particelle_analysis::extract_loudness_dbfs(&env_config, &mono)
+                particelle_analysis::extract_loudness_dbfs(&env_config(reader.sample_rate), &mono)
             },
             "crest_factor" => {
-                let env_config = particelle_analysis::EnvConfig { window_size: 1024, hop_size: (reader.sample_rate as f64 / 100.0) as usize, sample_rate: reader.sample_rate as f64 };
-                particelle_analysis::extract_crest_factor(&env_config, &mono)
+                particelle_analysis::extract_crest_factor(&env_config(reader.sample_rate), &mono)
             },
             "log_attack_time" => {
-                let env_config = particelle_analysis::EnvConfig { window_size: 1024, hop_size: (reader.sample_rate as f64 / 100.0) as usize, sample_rate: reader.sample_rate as f64 };
-                particelle_analysis::estimate_log_attack_time(&env_config, &mono)
+                particelle_analysis::estimate_log_attack_time(&env_config(reader.sample_rate), &mono)
             },
             // --- Chroma ---
             "chroma_active_class" => {
-                let spec_config = particelle_analysis::SpectralConfig { window_size: 2048, hop_size: (reader.sample_rate as f64 / 100.0) as usize, sample_rate: reader.sample_rate as f64 };
-                particelle_analysis::extract_chroma_active_class(&spec_config, &mono)
+                particelle_analysis::extract_chroma_active_class(&spectral_config(reader.sample_rate), &mono)
             },
             "chroma_strength" => {
-                let spec_config = particelle_analysis::SpectralConfig { window_size: 2048, hop_size: (reader.sample_rate as f64 / 100.0) as usize, sample_rate: reader.sample_rate as f64 };
-                particelle_analysis::extract_chroma_strength(&spec_config, &mono)
+                particelle_analysis::extract_chroma_strength(&spectral_config(reader.sample_rate), &mono)
             },
             extractor if extractor.starts_with("chroma_") => {
                 // chroma_C, chroma_Cs, chroma_D, chroma_Ds, chroma_E, chroma_F, chroma_Fs,
@@ -572,8 +706,7 @@ fn build_engine(config: &ParticelleConfig) -> Result<GranularEngine> {
                     "Fs" => 6, "G" => 7, "Gs" => 8, "A" => 9, "As" => 10, "B" => 11,
                     n => n.parse::<usize>().unwrap_or(0).min(11),
                 };
-                let spec_config = particelle_analysis::SpectralConfig { window_size: 2048, hop_size: (reader.sample_rate as f64 / 100.0) as usize, sample_rate: reader.sample_rate as f64 };
-                particelle_analysis::extract_chroma_energy(&spec_config, &mono, pc)
+                particelle_analysis::extract_chroma_energy(&spectral_config(reader.sample_rate), &mono, pc)
             },
             other => anyhow::bail!(
                 "Unknown extractor '{}'. See README § Offline Audio Feature Analysis for the full list.",
@@ -582,96 +715,120 @@ fn build_engine(config: &ParticelleConfig) -> Result<GranularEngine> {
         };
         analysis_buffers.insert(a.id.clone(), Arc::new(vec));
     }
-        
+
     let mut core_channels = Vec::new();
     for ch in &config.layout.channels {
         match ch {
-            particelle_schema::config::ChannelConfig::Spherical { name, azimuth_deg, elevation_deg } => {
+            particelle_schema::config::ChannelConfig::Spherical {
+                name,
+                azimuth_deg,
+                elevation_deg,
+            } => {
                 core_channels.push(particelle_core::layout::ChannelMeta {
                     name: name.clone(),
                     position: particelle_core::layout::SpeakerPosition::Spherical {
                         azimuth_deg: *azimuth_deg,
                         elevation_deg: *elevation_deg,
-                    }
+                    },
                 });
             }
             particelle_schema::config::ChannelConfig::Cartesian { name, x, y, z } => {
                 core_channels.push(particelle_core::layout::ChannelMeta {
                     name: name.clone(),
-                    position: particelle_core::layout::SpeakerPosition::Cartesian { x: *x, y: *y, z: *z }
+                    position: particelle_core::layout::SpeakerPosition::Cartesian {
+                        x: *x,
+                        y: *y,
+                        z: *z,
+                    },
                 });
             }
         }
     }
-    let layout = particelle_core::layout::AudioLayout { channels: core_channels };
+    let layout = particelle_core::layout::AudioLayout {
+        channels: core_channels,
+    };
     let n_channels = layout.channels.len();
-    
+
     let panner = Box::new(AmplitudePanner::new(layout.clone()));
     let fields = Box::new(particelle_params::context::NullFields);
     let mut engine = GranularEngine::new(engine_config, layout, panner, fields)
         .with_context(|| "Failed to create engine")?;
-        
+
     let window_cache = particelle_dsp::window::WindowCache::new();
-        
+
     for c in &config.clouds {
         let source_path = &c.source;
         let mut reader = particelle_io::AudioFileReader::open(source_path)
             .with_context(|| format!("Cannot open source audio '{}'", source_path))?;
-            
+
         let mut full_source = vec![vec![0.0; reader.n_frames as usize]; reader.n_channels];
         let mut block = particelle_core::audio_block::AudioBlock::new(reader.n_channels, 1024);
         let mut frame_idx = 0;
         loop {
             let read = reader.read_block(&mut block).unwrap();
-            if read == 0 { break; }
-            for ch in 0..reader.n_channels {
-                full_source[ch][frame_idx..frame_idx + read].copy_from_slice(&block.channels[ch][..read]);
+            if read == 0 {
+                break;
+            }
+            for (ch, channel) in full_source.iter_mut().enumerate().take(reader.n_channels) {
+                channel[frame_idx..frame_idx + read].copy_from_slice(&block.channels[ch][..read]);
             }
             frame_idx += read;
         }
-        
+
         let source_arc = Arc::new(full_source);
-        
-        let spec_json = serde_json::to_value(&c.window)
-            .with_context(|| "Failed to serialize window spec")?;
-        let window_spec: particelle_dsp::window::WindowSpec = serde_json::from_value(spec_json)
-            .with_context(|| "Failed to parse window spec")?;
-        let window_buf = window_cache.get(&window_spec, 8192, particelle_dsp::window::WindowNormalization::Peak);
-        
+
+        let spec_json =
+            serde_json::to_value(&c.window).with_context(|| "Failed to serialize window spec")?;
+        let window_spec: particelle_dsp::window::WindowSpec =
+            serde_json::from_value(spec_json).with_context(|| "Failed to parse window spec")?;
+        let window_buf = window_cache.get(
+            &window_spec,
+            8192,
+            particelle_dsp::window::WindowNormalization::Peak,
+        );
+
         let capacity = c.max_particles.unwrap_or(1024);
         let pool = GrainPool::new(capacity, source_arc, window_buf, n_channels);
         let mut cloud = Cloud::new(c.id.clone(), pool);
-        
+
         // Compile Signal Expressions
         let base_dir = std::path::Path::new(".").canonicalize().ok();
-        cloud.density   = compile_signal(&c.density, base_dir.as_deref(), &analysis_buffers)?;
-        cloud.duration  = compile_signal(&c.duration, base_dir.as_deref(), &analysis_buffers)?;
+        cloud.density = compile_signal(&c.density, base_dir.as_deref(), &analysis_buffers)?;
+        cloud.duration = compile_signal(&c.duration, base_dir.as_deref(), &analysis_buffers)?;
         cloud.amplitude = compile_signal(&c.amplitude, base_dir.as_deref(), &analysis_buffers)?;
-        cloud.position  = compile_signal(&c.position, base_dir.as_deref(), &analysis_buffers)?;
-        cloud.width     = compile_signal(&c.width, base_dir.as_deref(), &analysis_buffers)?;
+        cloud.position = compile_signal(&c.position, base_dir.as_deref(), &analysis_buffers)?;
+        cloud.width = compile_signal(&c.width, base_dir.as_deref(), &analysis_buffers)?;
         cloud.directivity = compile_signal(&c.directivity, base_dir.as_deref(), &analysis_buffers)?;
-        cloud.orientation_azimuth = compile_signal(&c.orientation_azimuth, base_dir.as_deref(), &analysis_buffers)?;
-        cloud.orientation_elevation = compile_signal(&c.orientation_elevation, base_dir.as_deref(), &analysis_buffers)?;
-        
+        cloud.orientation_azimuth = compile_signal(
+            &c.orientation_azimuth,
+            base_dir.as_deref(),
+            &analysis_buffers,
+        )?;
+        cloud.orientation_elevation = compile_signal(
+            &c.orientation_elevation,
+            base_dir.as_deref(),
+            &analysis_buffers,
+        )?;
+
         let pos = &c.listener_pos;
         cloud.listener_pos = particelle_core::spatializer::Vec3::new(pos.x, pos.y, pos.z);
-        
+
         engine.add_cloud(cloud);
     }
-    
+
     Ok(engine)
 }
 
 fn cmd_validate(patch_path: &str) -> Result<()> {
-    let yaml = std::fs::read_to_string(patch_path)
-        .with_context(|| format!("Cannot read '{}'", patch_path))?;
-    let config: particelle_schema::ParticelleConfig = serde_yaml::from_str(&yaml)
-        .with_context(|| "YAML parse error")?;
+    let config = load_patch_config(patch_path)?;
     let errors = particelle_schema::validate(&config);
     if errors.is_empty() {
         let n_ch = config.layout.channels.len();
         let n_clouds = config.clouds.len();
-        println!("✓ Patch is valid. {} cloud(s), {} channel(s).", n_clouds, n_ch);
+        println!(
+            "✓ Patch is valid. {} cloud(s), {} channel(s).",
+            n_clouds, n_ch
+        );
     } else {
         eprintln!("{} validation error(s):", errors.len());
         for e in &errors {
@@ -683,10 +840,7 @@ fn cmd_validate(patch_path: &str) -> Result<()> {
 }
 
 fn cmd_render(patch_path: &str, output_path: &str, duration: f64, emit_hash: bool) -> Result<()> {
-    let yaml = std::fs::read_to_string(patch_path)
-        .with_context(|| format!("Cannot read '{}'", patch_path))?;
-    let config: particelle_schema::ParticelleConfig = serde_yaml::from_str(&yaml)
-        .with_context(|| "YAML parse error")?;
+    let config = load_patch_config(patch_path)?;
     let errors = particelle_schema::validate(&config);
     if !errors.is_empty() {
         for e in &errors {
@@ -695,7 +849,7 @@ fn cmd_render(patch_path: &str, output_path: &str, duration: f64, emit_hash: boo
         anyhow::bail!("Configuration is invalid. Cannot render.");
     }
 
-    let sample_rate = config.engine.sample_rate as f64;
+    let sample_rate = config.engine.sample_rate;
     let block_size = config.engine.block_size;
     let n_channels = config.layout.channels.len();
     let total_frames = (duration * sample_rate) as u64;
@@ -710,7 +864,8 @@ fn cmd_render(patch_path: &str, output_path: &str, duration: f64, emit_hash: boo
         n_channels,
         sample_rate,
         32, // 32-bit float output
-    ).with_context(|| "Cannot create output file")?;
+    )
+    .with_context(|| "Cannot create output file")?;
 
     let mut engine = build_engine(&config)?;
     let mut frames_rendered = 0u64;
@@ -721,33 +876,38 @@ fn cmd_render(patch_path: &str, output_path: &str, duration: f64, emit_hash: boo
         let frames_this_block = block_size.min(remaining);
 
         // Process actual audio through the engine
-        engine.process(&mut block).with_context(|| "Engine process error")?;
+        engine
+            .process(&mut block)
+            .with_context(|| "Engine process error")?;
 
         // If this is the last block, we need a trimmed block
         if frames_this_block < block_size {
-            let mut trimmed = particelle_core::audio_block::AudioBlock::new(n_channels, frames_this_block);
+            let mut trimmed =
+                particelle_core::audio_block::AudioBlock::new(n_channels, frames_this_block);
             for ch in 0..n_channels {
                 trimmed.channels[ch][..frames_this_block]
                     .copy_from_slice(&block.channels[ch][..frames_this_block]);
             }
-            writer.write_block(&trimmed)
+            writer
+                .write_block(&trimmed)
                 .with_context(|| "Write error")?;
         } else {
-            writer.write_block(&block)
-                .with_context(|| "Write error")?;
+            writer.write_block(&block).with_context(|| "Write error")?;
         }
 
         frames_rendered += frames_this_block as u64;
     }
 
-    let written = writer.finalize()
-        .with_context(|| "Finalize error")?;
-    eprintln!("✓ Wrote {} frames ({} channels) to '{}'", written, n_channels, output_path);
+    let written = writer.finalize().with_context(|| "Finalize error")?;
+    eprintln!(
+        "✓ Wrote {} frames ({} channels) to '{}'",
+        written, n_channels, output_path
+    );
 
     if emit_hash {
-        use sha2::{Sha256, Digest};
-        let file_bytes = std::fs::read(output_path)
-            .with_context(|| "Cannot read output for hashing")?;
+        use sha2::{Digest, Sha256};
+        let file_bytes =
+            std::fs::read(output_path).with_context(|| "Cannot read output for hashing")?;
         let hash = Sha256::digest(&file_bytes);
         println!("SHA-256: {:x}", hash);
     }
@@ -755,11 +915,8 @@ fn cmd_render(patch_path: &str, output_path: &str, duration: f64, emit_hash: boo
     Ok(())
 }
 
-fn cmd_run(patch: &str, osc_port: Option<u16>) -> Result<()> {
-    let yaml = std::fs::read_to_string(patch)
-        .with_context(|| format!("Cannot read '{}'", patch))?;
-    let config: particelle_schema::ParticelleConfig = serde_yaml::from_str(&yaml)
-        .with_context(|| "YAML parse error")?;
+fn cmd_run(patch: &str, osc_port: Option<u16>, simulate_mpe: bool) -> Result<()> {
+    let config = load_patch_config(patch)?;
     let errors = particelle_schema::validate(&config);
     if !errors.is_empty() {
         for e in &errors {
@@ -769,7 +926,7 @@ fn cmd_run(patch: &str, osc_port: Option<u16>) -> Result<()> {
     }
 
     let n_channels = config.layout.channels.len();
-    let sample_rate = config.engine.sample_rate as f64;
+    let sample_rate = config.engine.sample_rate;
     let block_size = config.engine.block_size;
 
     let hw_config = particelle_io::HardwareConfig {
@@ -782,27 +939,35 @@ fn cmd_run(patch: &str, osc_port: Option<u16>) -> Result<()> {
 
     let mut rules = Vec::new();
     for b in config.routing.midi_bindings.iter() {
-        rules.push(particelle_midi::routing::RoutingRule::direct(&b.source, &b.target));
+        rules.push(particelle_midi::routing::RoutingRule::direct(
+            &b.source, &b.target,
+        ));
     }
     let router = particelle_midi::routing::MidiRouter::new(rules);
-    
+
+    if !simulate_mpe && !config.routing.midi_bindings.is_empty() {
+        eprintln!(
+            "→ MIDI bindings are configured. Use --simulate-mpe for deterministic demo modulation or OSC /field/* inputs for live control."
+        );
+    }
+
     let engine = build_engine(&config)?;
     let mut block = particelle_core::audio_block::AudioBlock::new(n_channels, block_size);
 
     let host = particelle_io::HardwareHost::new(hw_config);
-    
+
     // Wrap the engine and router in an Arc<Mutex> so they can be hot-swapped
     let safe_engine = Arc::new(std::sync::Mutex::new(engine));
     let safe_router = Arc::new(std::sync::Mutex::new(router));
-    
+
     // Setup file watcher for the patch
-    use notify::{Watcher, RecursiveMode, EventKind};
+    use notify::{EventKind, RecursiveMode, Watcher};
     use std::path::Path;
-    
+
     let patch_path = Path::new(patch).to_path_buf();
     let thread_engine = Arc::clone(&safe_engine);
     let thread_router = Arc::clone(&safe_router);
-    
+
     // We launch a background thread to listen for notify events
     std::thread::spawn(move || {
         let (tx, rx) = std::sync::mpsc::channel();
@@ -813,73 +978,78 @@ fn cmd_run(patch: &str, osc_port: Option<u16>) -> Result<()> {
                 return;
             }
         };
-        
+
         let target_dir = patch_path.parent().unwrap_or_else(|| Path::new("."));
         if let Err(e) = watcher.watch(target_dir, RecursiveMode::NonRecursive) {
             eprintln!("Failed to watch directory: {}", e);
             return;
         }
 
-        eprintln!("→ Live-reloading enabled. Edit '{}' to update the engine...", patch_path.display());
+        eprintln!(
+            "→ Live-reloading enabled. Edit '{}' to update the engine...",
+            patch_path.display()
+        );
 
         for res in rx {
             match res {
                 Ok(event) => {
                     // We only care about file modification events on our patch
-                    if matches!(event.kind, EventKind::Modify(_)) {
-                        if event.paths.iter().any(|p| p == &patch_path) {
-                            // Give the filesystem a tiny moment to finish writing
-                            std::thread::sleep(std::time::Duration::from_millis(50));
-                            
-                            eprintln!("→ Patch updated, attempting hot-swap...");
-                            
-                            // Attempt to parse and build the new engine
-                            let yaml_str = match std::fs::read_to_string(&patch_path) {
-                                Ok(s) => s,
-                                Err(_) => continue,
-                            };
-                            
-                            let new_config: particelle_schema::ParticelleConfig = match serde_yaml::from_str(&yaml_str) {
-                                Ok(c) => c,
-                                Err(e) => {
-                                    eprintln!("  [Config Error] {}", e);
-                                    continue;
-                                }
-                            };
-                            
-                            let schema_errors = particelle_schema::validate(&new_config);
-                            if !schema_errors.is_empty() {
-                                eprintln!("  [Validation Error] Schema failed.");
-                                for err in schema_errors {
-                                    eprintln!("    ✗ {}", err);
-                                }
+                    if matches!(event.kind, EventKind::Modify(_))
+                        && event.paths.iter().any(|p| p == &patch_path)
+                    {
+                        // Give the filesystem a tiny moment to finish writing
+                        std::thread::sleep(std::time::Duration::from_millis(50));
+
+                        eprintln!("→ Patch updated, attempting hot-swap...");
+
+                        // Attempt to parse and build the new engine
+                        let yaml_str = match std::fs::read_to_string(&patch_path) {
+                            Ok(s) => s,
+                            Err(_) => continue,
+                        };
+
+                        let new_config = match parse_patch_config(&yaml_str) {
+                            Ok(c) => c,
+                            Err(e) => {
+                                eprintln!("  [Config Error] {}", e);
                                 continue;
                             }
-                            
-                            let new_engine = match build_engine(&new_config) {
-                                Ok(e) => e,
-                                Err(e) => {
-                                    eprintln!("  [Engine Build Error] {}", e);
-                                    continue;
-                                }
-                            };
-                            
-                            let mut new_rules = Vec::new();
-                            for b in new_config.routing.midi_bindings.iter() {
-                                new_rules.push(particelle_midi::routing::RoutingRule::direct(&b.source, &b.target));
+                        };
+
+                        let schema_errors = particelle_schema::validate(&new_config);
+                        if !schema_errors.is_empty() {
+                            eprintln!("  [Validation Error] Schema failed.");
+                            for err in schema_errors {
+                                eprintln!("    ✗ {}", err);
                             }
-                            let new_router = particelle_midi::routing::MidiRouter::new(new_rules);
-                            
-                            // Swap them safely!
-                            if let Ok(mut lock) = thread_engine.lock() {
-                                *lock = new_engine;
-                            }
-                            if let Ok(mut lock) = thread_router.lock() {
-                                *lock = new_router;
-                            }
-                            
-                            eprintln!("✓ Hot-swap successful!");
+                            continue;
                         }
+
+                        let new_engine = match build_engine(&new_config) {
+                            Ok(e) => e,
+                            Err(e) => {
+                                eprintln!("  [Engine Build Error] {}", e);
+                                continue;
+                            }
+                        };
+
+                        let mut new_rules = Vec::new();
+                        for b in &new_config.routing.midi_bindings {
+                            new_rules.push(particelle_midi::routing::RoutingRule::direct(
+                                &b.source, &b.target,
+                            ));
+                        }
+                        let new_router = particelle_midi::routing::MidiRouter::new(new_rules);
+
+                        // Swap them safely!
+                        if let Ok(mut lock) = thread_engine.lock() {
+                            *lock = new_engine;
+                        }
+                        if let Ok(mut lock) = thread_router.lock() {
+                            *lock = new_router;
+                        }
+
+                        eprintln!("✓ Hot-swap successful!");
                     }
                 }
                 Err(e) => eprintln!("Watch error: {}", e),
@@ -942,52 +1112,57 @@ fn cmd_run(patch: &str, osc_port: Option<u16>) -> Result<()> {
         });
     }
 
-    let mut simulated_pressure = 0.0;
-    
+    let simulated_mpe = if simulate_mpe {
+        eprintln!("→ Synthetic MPE pressure modulation is enabled.");
+        Some(
+            particelle_midi::DeterministicMidiHarness::mpe_pressure_cycle(
+                2,
+                60,
+                block_size as u64,
+                &[0.0, 0.15, 0.35, 0.55, 0.75, 0.9, 0.75, 0.55, 0.35, 0.15],
+            ),
+        )
+    } else {
+        None
+    };
+
     let audio_engine = Arc::clone(&safe_engine);
     let audio_router = Arc::clone(&safe_router);
 
     // Enter real-time IO loop
     host.run(move |buffer: &mut [f32]| {
-        simulated_pressure += 0.005;
-        if simulated_pressure > 1.0 { simulated_pressure = 0.0; }
-        
         // Take a fast lock on the active patch state
         let router_guard = match audio_router.try_lock() {
             Ok(g) => g,
             Err(_) => return, // Drop the frame if the background thread happens to be hot-swapping right now
         };
-        
+
         let mut engine_guard = match audio_engine.try_lock() {
             Ok(g) => g,
             Err(_) => return, // Drop the frame if the background thread happens to be hot-swapping right now
         };
 
-        let sim_events = vec![particelle_midi::events::MidiEvent {
-            frame_offset: 0,
-            kind: particelle_midi::events::MidiEventKind::Expression(
-                particelle_midi::events::ExpressionEvent {
-                    channel: 0,
-                    note: 60,
-                    kind: particelle_midi::events::ExpressionKind::Pressure,
-                    value: simulated_pressure,
-                }
-            )
-        }];
-        
+        let sim_events = simulated_mpe
+            .as_ref()
+            .map(|h| h.events_for_block(engine_guard.state.frame, block_size))
+            .unwrap_or_default();
         let new_fields = router_guard.process(&sim_events);
-        
-        if let Some(map_provider) = engine_guard.fields.as_any_mut().and_then(|a| a.downcast_mut::<MapProvider>()) {
-             for (k, v) in new_fields {
-                 map_provider.fields.insert(k, v);
-             }
-             
-             // Drain OSC channel queue every block without blocking
-             for (field_name, val) in osc_rx.try_iter() {
-                 map_provider.fields.insert(field_name, val);
-             }
+
+        if let Some(map_provider) = engine_guard
+            .fields
+            .as_any_mut()
+            .and_then(|a| a.downcast_mut::<MapProvider>())
+        {
+            for (k, v) in new_fields {
+                map_provider.fields.insert(k, v);
+            }
+
+            // Drain OSC channel queue every block without blocking
+            for (field_name, val) in osc_rx.try_iter() {
+                map_provider.fields.insert(field_name, val);
+            }
         }
-        
+
         if let Err(e) = engine_guard.process(&mut block) {
             eprintln!("Engine error: {}", e);
             block.silence();
@@ -995,13 +1170,14 @@ fn cmd_run(patch: &str, osc_port: Option<u16>) -> Result<()> {
 
         let out_frames = buffer.len() / n_channels;
         let frames_to_copy = out_frames.min(block.frames);
-        
+
         for f in 0..frames_to_copy {
             for ch in 0..n_channels {
                 buffer[f * n_channels + ch] = block.channels[ch][f] as f32;
             }
         }
-    }).with_context(|| "Audio stream error")?;
+    })
+    .with_context(|| "Audio stream error")?;
 
     Ok(())
 }
@@ -1019,13 +1195,17 @@ fn cmd_init(channels: usize) -> Result<()> {
         (0..channels)
             .map(|i| {
                 let az = -180.0 + (360.0 * i as f64 / channels as f64);
-                format!("    - {{ name: \"CH{}\", azimuth_deg: {:.1}, elevation_deg: 0.0 }}", i + 1, az)
+                format!(
+                    "    - {{ name: \"CH{}\", azimuth_deg: {:.1}, elevation_deg: 0.0 }}",
+                    i + 1,
+                    az
+                )
             })
             .collect()
     };
 
     let yaml = format!(
-r#"# Particelle patch — generated by `particelle init -n {channels}`
+        r#"# Particelle patch — generated by `particelle init -n {channels}`
 # Edit this file to configure your grain clouds.
 # Documentation: https://github.com/TheColby/Particelle
 
@@ -1062,10 +1242,13 @@ clouds:
 fn cmd_curve(curve_path: &str, resolution: usize) -> Result<()> {
     let json = std::fs::read_to_string(curve_path)
         .with_context(|| format!("Cannot read '{}'", curve_path))?;
-    let curve = particelle_curve::CompiledCurve::from_json(&json)
-        .with_context(|| "Curve compile error")?;
+    let curve =
+        particelle_curve::CompiledCurve::from_json(&json).with_context(|| "Curve compile error")?;
     let (x_min, x_max) = curve.domain();
-    eprintln!("→ Evaluating '{}' over [{:.4}, {:.4}] at {} points", curve_path, x_min, x_max, resolution);
+    eprintln!(
+        "→ Evaluating '{}' over [{:.4}, {:.4}] at {} points",
+        curve_path, x_min, x_max, resolution
+    );
     println!("# x\ty");
     for i in 0..=resolution {
         let t = i as f64 / resolution as f64;
@@ -1082,7 +1265,9 @@ fn cmd_set(patch_path: &str, param: &str, value: &str) -> Result<()> {
     // Simple key-value replacement in YAML text
     // Find the line containing the param's last segment and replace its value
     let parts: Vec<&str> = param.split('.').collect();
-    let key = parts.last().ok_or_else(|| anyhow::anyhow!("Empty parameter path"))?;
+    let key = parts
+        .last()
+        .ok_or_else(|| anyhow::anyhow!("Empty parameter path"))?;
 
     let mut found = false;
     let mut output_lines: Vec<String> = Vec::new();

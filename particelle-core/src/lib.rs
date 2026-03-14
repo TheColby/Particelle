@@ -11,7 +11,7 @@ pub mod layout;
 pub mod pool;
 pub mod spatializer;
 
-pub use grain::{Grain, Cloud, GrainParams};
+pub use grain::{Cloud, Grain, GrainParams};
 pub use pool::GrainPool;
 
 /// Sample-accurate monotonic frame counter. All time is expressed in frames.

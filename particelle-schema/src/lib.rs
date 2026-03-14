@@ -4,13 +4,14 @@
 //! Validates cross-field constraints and returns typed error lists.
 //! This is the only crate that handles YAML parsing.
 
+pub mod compat;
 pub mod config;
 pub mod validation;
 
+pub use compat::{normalize_yaml_value, parse_yaml_compat};
 pub use config::{
-    ParticelleConfig, EngineConfig, LayoutConfig, ChannelConfig,
-    HardwareConfig, TuningConfig, JiRatioConfig, CloudConfig,
-    SignalExprConfig, SignalOpConfig, WindowSpecConfig, Vec3Config,
-    RoutingConfig, MidiBindingConfig,
+    ChannelConfig, CloudConfig, EngineConfig, HardwareConfig, JiRatioConfig, LayoutConfig,
+    MidiBindingConfig, ParticelleConfig, RoutingConfig, SignalExprConfig, SignalOpConfig,
+    TuningConfig, Vec3Config, WindowSpecConfig,
 };
 pub use validation::{validate, ValidationError};

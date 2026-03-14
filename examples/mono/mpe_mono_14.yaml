@@ -19,11 +19,14 @@ routing:
 clouds:
   - id: "mpe_mono_14"
     source: "audio/music_example.wav"
-    density: 
-      op: mul
+    density:
+      op: add
       args:
-        - 150.0
-        - $p_mod
+        - 15.0
+        - op: mul
+          args:
+            - 135.0
+            - $p_mod
 
     duration: 0.035
     position: 0.09
