@@ -16,7 +16,7 @@ This document captures the five objections most likely to appear immediately aft
 
 ## 2) "CI is too slow if every PR renders every example serially."
 
-**Complaint:** Full example rendering on every PR can bottleneck contribution flow.
+**Complaint:** Full example rendering on every PR can bottleneck contribution flow, and performance claims need explicit budgets.
 
 **Mitigation:**
 
@@ -24,8 +24,11 @@ This document captures the five objections most likely to appear immediately aft
   - `EXAMPLE_SHARD_TOTAL`
   - `EXAMPLE_SHARD_INDEX`
 - CI now runs example regression in a 4-way matrix after core checks.
+- Added `check_performance.sh` with representative render-throughput scenarios.
+- Added deterministic realtime block-latency benchmark (`particelle-core/examples/realtime_block_benchmark.rs`).
+- CI now fails when throughput or latency budgets are exceeded.
 
-**Code:** `scripts/check_examples.sh`, `.github/workflows/ci.yml`.
+**Code:** `scripts/check_performance.sh`, `.github/workflows/ci.yml`, `particelle-core/examples/realtime_block_benchmark.rs`.
 
 ## 3) "Audio gate says pass/fail, but not enough DSP signal detail."
 
@@ -64,7 +67,7 @@ This document captures the five objections most likely to appear immediately aft
 
 - Added one-command launch gate:
   - `./scripts/announcement_readiness.sh`
-- The script runs sample-pack verification, fmt, clippy (`-D warnings`), workspace tests, and full example regression.
+- The script runs sample-pack verification, fmt, clippy (`-D warnings`), workspace tests, the performance gate, and full example regression.
 - It emits a timestamped report in `target/announcement-readiness/report.md`.
 
 **Code:** `scripts/announcement_readiness.sh`.

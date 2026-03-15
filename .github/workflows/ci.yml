@@ -35,6 +35,9 @@ jobs:
       - name: Test
         run: cargo test --workspace
 
+      - name: Performance gate
+        run: ./scripts/check_performance.sh
+
   examples:
     needs: workspace
     runs-on: ubuntu-latest

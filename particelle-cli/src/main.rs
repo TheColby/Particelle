@@ -109,12 +109,14 @@ NOTES:\n\
 EXAMPLES:\n\
     particelle run shimmer.yaml\n\
     particelle run immersive_7.1.4.yaml\n\
-    particelle run mpe_demo.yaml --simulate-mpe\n\n\
+    particelle run mpe_demo.yaml --simulate-mpe\n\
+    particelle run mpe_demo.yaml --midi-port \"Your MIDI Device\"\n\n\
 NOTES:\n\
     Hardware device is selected by name in the patch hardware section.\n\
     If no device is specified, the system default output is used.\n\
     MIDI input is ingested off the audio thread via lock-free queue.\n\
-    Synthetic MPE modulation is opt-in for demos via --simulate-mpe.")]
+    Synthetic MPE modulation is opt-in for demos via --simulate-mpe.\n\
+    Use --midi-port to select a specific MIDI input port.")]
     Run {
         /// Path to the YAML configuration file.
         patch: String,
@@ -133,6 +135,10 @@ NOTES:\n\
             help = "Inject deterministic synthetic MPE pressure in realtime"
         )]
         simulate_mpe: bool,
+
+        /// Optional MIDI input port name.
+        #[arg(long, help = "MIDI input port name (exact match)")]
+        midi_port: Option<String>,
     },
 
     /// Generate a default YAML patch to stdout.
@@ -222,8 +228,9 @@ fn main() -> Result<()> {
             patch,
             osc_port,
             simulate_mpe,
+            midi_port,
         } => {
-            cmd_run(&patch, osc_port, simulate_mpe)?;
+            cmd_run(&patch, osc_port, simulate_mpe, midi_port)?;
         }
         Commands::Init { channels } => {
             cmd_init(channels)?;
@@ -915,7 +922,12 @@ fn cmd_render(patch_path: &str, output_path: &str, duration: f64, emit_hash: boo
     Ok(())
 }
 
-fn cmd_run(patch: &str, osc_port: Option<u16>, simulate_mpe: bool) -> Result<()> {
+fn cmd_run(
+    patch: &str,
+    osc_port: Option<u16>,
+    simulate_mpe: bool,
+    midi_port: Option<String>,
+) -> Result<()> {
     let config = load_patch_config(patch)?;
     let errors = particelle_schema::validate(&config);
     if !errors.is_empty() {
@@ -928,6 +940,12 @@ fn cmd_run(patch: &str, osc_port: Option<u16>, simulate_mpe: bool) -> Result<()>
     let n_channels = config.layout.channels.len();
     let sample_rate = config.engine.sample_rate;
     let block_size = config.engine.block_size;
+    let selected_midi_port = midi_port.or_else(|| {
+        config
+            .hardware
+            .as_ref()
+            .and_then(|h| h.midi_input.as_ref().cloned())
+    });
 
     let hw_config = particelle_io::HardwareConfig {
         device_name: config.hardware.as_ref().and_then(|h| h.device_name.clone()),
@@ -953,6 +971,12 @@ fn cmd_run(patch: &str, osc_port: Option<u16>, simulate_mpe: bool) -> Result<()>
 
     let engine = build_engine(&config)?;
     let mut block = particelle_core::audio_block::AudioBlock::new(n_channels, block_size);
+    let (midi_tx, midi_rx) = std::sync::mpsc::channel::<particelle_midi::MidiEvent>();
+    #[cfg(not(feature = "realtime"))]
+    let _ = &midi_tx;
+
+    #[cfg(feature = "realtime")]
+    let mut midi_host = particelle_midi::realtime::RealtimeMidiHost::new();
 
     let host = particelle_io::HardwareHost::new(hw_config);
 
@@ -1129,8 +1153,28 @@ fn cmd_run(patch: &str, osc_port: Option<u16>, simulate_mpe: bool) -> Result<()>
     let audio_engine = Arc::clone(&safe_engine);
     let audio_router = Arc::clone(&safe_router);
 
+    #[cfg(feature = "realtime")]
+    {
+        let midi_requested =
+            selected_midi_port.is_some() || !config.routing.midi_bindings.is_empty();
+        if midi_requested {
+            match midi_host.start(selected_midi_port.as_deref(), midi_tx.clone()) {
+                Ok(port_name) => eprintln!("→ MIDI input listening on '{}'", port_name),
+                Err(err) => {
+                    if selected_midi_port.is_some() {
+                        anyhow::bail!("Failed to open requested MIDI input: {}", err);
+                    }
+                    eprintln!(
+                        "→ MIDI input unavailable (continuing without MIDI): {}",
+                        err
+                    );
+                }
+            }
+        }
+    }
+
     // Enter real-time IO loop
-    host.run(move |buffer: &mut [f32]| {
+    let run_result = host.run(move |buffer: &mut [f32]| {
         // Take a fast lock on the active patch state
         let router_guard = match audio_router.try_lock() {
             Ok(g) => g,
@@ -1142,11 +1186,11 @@ fn cmd_run(patch: &str, osc_port: Option<u16>, simulate_mpe: bool) -> Result<()>
             Err(_) => return, // Drop the frame if the background thread happens to be hot-swapping right now
         };
 
-        let sim_events = simulated_mpe
-            .as_ref()
-            .map(|h| h.events_for_block(engine_guard.state.frame, block_size))
-            .unwrap_or_default();
-        let new_fields = router_guard.process(&sim_events);
+        let mut control_events: Vec<particelle_midi::MidiEvent> = midi_rx.try_iter().collect();
+        if let Some(harness) = simulated_mpe.as_ref() {
+            control_events.extend(harness.events_for_block(engine_guard.state.frame, block_size));
+        }
+        let new_fields = router_guard.process(&control_events);
 
         if let Some(map_provider) = engine_guard
             .fields
@@ -1176,10 +1220,12 @@ fn cmd_run(patch: &str, osc_port: Option<u16>, simulate_mpe: bool) -> Result<()>
                 buffer[f * n_channels + ch] = block.channels[ch][f] as f32;
             }
         }
-    })
-    .with_context(|| "Audio stream error")?;
+    });
 
-    Ok(())
+    #[cfg(feature = "realtime")]
+    midi_host.stop();
+
+    run_result.with_context(|| "Audio stream error")
 }
 
 fn cmd_init(channels: usize) -> Result<()> {

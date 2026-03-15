@@ -38,6 +38,8 @@ fn default_max_particles() -> usize {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HardwareConfig {
     pub device_name: Option<String>,
+    #[serde(default)]
+    pub midi_input: Option<String>,
     #[serde(default = "default_latency_ms")]
     pub latency_ms: f64,
     #[serde(default)]

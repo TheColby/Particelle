@@ -1221,6 +1221,9 @@ particelle render patch.yaml -o output.wav --duration 120.0
 # Run in realtime
 particelle run patch.yaml
 
+# Run in realtime with a specific MIDI input port
+particelle run patch.yaml --midi-port "Your MIDI Device"
+
 # Run in realtime with deterministic synthetic MPE pressure (demo/testing)
 particelle run patch.yaml --simulate-mpe
 
@@ -1400,13 +1403,14 @@ The curve is evaluated at control rate. The result is multiplied by a MIDI CC fi
 ```yaml
 hardware:
   device_name: "Focusrite USB Audio"
+  midi_input: "Your MIDI Device"
   latency_ms: 5.0
   duplex: false
 ```
 
-The real-time mode selects a device by name, configures the sample rate and block size from the engine config, and opens a multichannel output stream. Duplex mode enables audio input, which becomes available as Matter for clouds.
+The real-time mode selects a device by name, configures the sample rate and block size from the engine config, and opens a multichannel output stream. Duplex mode enables audio input, which becomes available as Matter for clouds. MIDI input can be chosen in patch config (`hardware.midi_input`) or overridden at runtime with `--midi-port`.
 
-MIDI and MPE are ingested off the audio thread and pushed into a lock-free ring buffer. The audio thread reads events from the queue without blocking. No MIDI parsing or event dispatch occurs on the audio thread.
+MIDI and MPE are ingested off the audio thread and pushed into a channel-backed queue. The audio thread drains queued events without blocking. No MIDI parsing or event dispatch occurs on the audio thread.
 
 For automated coverage, `particelle-midi` now provides a deterministic looping event harness and an offline MIDI timeline that both operate in sample frames. Synthetic MPE pressure injection is now explicit opt-in (`--simulate-mpe`) and uses that same block-accurate harness, so demo modulation is deterministic and transparent.
 
@@ -1416,13 +1420,17 @@ Offline and realtime modes share the same engine core. A deterministic offline r
 
 ## ✅ Verification
 
-The workspace ships a single regression entry point for examples:
+The workspace ships dedicated regression entry points:
 
 ```sh
+# Full example regression with audibility + DSP metrics
 ./scripts/check_examples.sh
+
+# Throughput and realtime block-latency budgets
+./scripts/check_performance.sh
 ```
 
-That script:
+`check_examples.sh`:
 
 1. regenerates the canonical sample pack,
 2. validates every YAML example,
@@ -1438,11 +1446,15 @@ For CI throughput, example checks support sharding:
 EXAMPLE_SHARD_TOTAL=4 EXAMPLE_SHARD_INDEX=0 ./scripts/check_examples.sh
 ```
 
+`check_performance.sh` runs representative render-throughput scenarios and a deterministic realtime block-latency benchmark (`particelle-core/examples/realtime_block_benchmark.rs`). It fails if configured latency/throughput budgets are exceeded.
+
 For launch preparation, run the full announcement gate:
 
 ```sh
 ./scripts/announcement_readiness.sh
 ```
+
+This gate runs sample-pack verification, fmt/clippy/tests, performance budgets, and full example regression in one command.
 
 ## 📣 Announcement FAQ
 
@@ -1489,6 +1501,23 @@ Anticipated launch objections and concrete mitigations are documented in [`docs/
 
 6. **P3 — Add realtime and MPE regression harnesses (implemented)**
    Deterministic synthetic MIDI and MPE event injection now runs through a shared block-accurate harness that is covered by unit tests and reused by the realtime runner.
+
+### Next Phase (Proposed)
+
+7. **P4 — Implement production realtime MIDI ingest (implemented)**
+   Realtime MIDI now uses `midir` port enumeration and callback wiring, supports explicit port selection (`hardware.midi_input` or `--midi-port`), and feeds live events into the routing layer.
+
+8. **P4 — Add performance benchmark and latency budget gates (implemented)**
+   CI now enforces performance budgets via representative render-throughput scenarios and a deterministic realtime block-latency benchmark.
+
+9. **P4 — Add schema versioning and migration metadata (planned)**
+   Introduce explicit patch schema version tags plus structured migration notes so compatibility guarantees are auditable across releases.
+
+10. **P5 — Ship release artifacts and platform install channels (planned)**
+   Publish signed binaries/packages for macOS and Linux and document upgrade paths so users can adopt new versions without building from source.
+
+11. **P5 — Expand deterministic integration tests for external control I/O (planned)**
+   Add end-to-end tests covering OSC control update timing and realtime control-path behavior to complement current offline and synthetic harness coverage.
 
 ### Compatibility Policy
 
