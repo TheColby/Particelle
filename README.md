@@ -938,11 +938,20 @@ To enable OSC, launch your patch with the network port flag:
 
 ```bash
 particelle run patch.yaml --osc-port 9000
+
+# Enable request/response OSC replies (/ack, /error, /pong)
+particelle run patch.yaml --osc-port 9000 --osc-reply
 ```
 
 Any OSC messages received at `0.0.0.0:9000` matching the address pattern `/field/<name>` will directly inject their numeric value into the `$name` control field graph, updating instantly on the next audio frame processing tick. 
 
 For example, sending `12.5` to `/field/density` will override a YAML node parameterized as `"$density"`.
+
+When `--osc-reply` is enabled:
+
+- `/field/<name> <number>` returns `/ack <name> <value>`.
+- `/ping` returns `/pong "particelle"`.
+- Invalid addresses or non-numeric/missing arguments return `/error "<reason>"`.
 
 ---
 

@@ -110,12 +110,14 @@ EXAMPLES:\n\
     particelle run shimmer.yaml\n\
     particelle run immersive_7.1.4.yaml\n\
     particelle run mpe_demo.yaml --simulate-mpe\n\
+    particelle run patch.yaml --osc-port 9000 --osc-reply\n\
     particelle run mpe_demo.yaml --midi-port \"Your MIDI Device\"\n\n\
 NOTES:\n\
     Hardware device is selected by name in the patch hardware section.\n\
     If no device is specified, the system default output is used.\n\
-    MIDI input is ingested off the audio thread via lock-free queue.\n\
+    MIDI input is ingested off the audio thread via channel-backed queue.\n\
     Synthetic MPE modulation is opt-in for demos via --simulate-mpe.\n\
+    Use --osc-reply to emit OSC /ack, /error, and /pong responses.\n\
     Use --midi-port to select a specific MIDI input port.")]
     Run {
         /// Path to the YAML configuration file.
@@ -127,6 +129,14 @@ NOTES:\n\
             help = "UDP port to listen for OSC parameter control (e.g., 9000)"
         )]
         osc_port: Option<u16>,
+
+        /// Send OSC replies (/ack, /error, /pong) back to sender.
+        #[arg(
+            long,
+            default_value_t = false,
+            help = "Enable OSC request/response replies back to sender"
+        )]
+        osc_reply: bool,
 
         /// Enable deterministic synthetic MPE pressure events for demo/testing.
         #[arg(
@@ -227,10 +237,11 @@ fn main() -> Result<()> {
         Commands::Run {
             patch,
             osc_port,
+            osc_reply,
             simulate_mpe,
             midi_port,
         } => {
-            cmd_run(&patch, osc_port, simulate_mpe, midi_port)?;
+            cmd_run(&patch, osc_port, osc_reply, simulate_mpe, midi_port)?;
         }
         Commands::Init { channels } => {
             cmd_init(channels)?;
@@ -925,6 +936,7 @@ fn cmd_render(patch_path: &str, output_path: &str, duration: f64, emit_hash: boo
 fn cmd_run(
     patch: &str,
     osc_port: Option<u16>,
+    osc_reply: bool,
     simulate_mpe: bool,
     midi_port: Option<String>,
 ) -> Result<()> {
@@ -1081,25 +1093,90 @@ fn cmd_run(
         }
     });
 
-    fn handle_osc_packet(packet: rosc::OscPacket, tx: &std::sync::mpsc::Sender<(String, f64)>) {
+    fn osc_arg_to_f64(arg: &rosc::OscType) -> Option<f64> {
+        match arg {
+            rosc::OscType::Float(v) => Some(*v as f64),
+            rosc::OscType::Double(v) => Some(*v),
+            rosc::OscType::Int(v) => Some(*v as f64),
+            _ => None,
+        }
+    }
+
+    fn osc_msg(addr: &str, args: Vec<rosc::OscType>) -> rosc::OscPacket {
+        rosc::OscPacket::Message(rosc::OscMessage {
+            addr: addr.to_string(),
+            args,
+        })
+    }
+
+    fn handle_osc_packet(
+        packet: rosc::OscPacket,
+        tx: &std::sync::mpsc::Sender<(String, f64)>,
+        replies: &mut Vec<rosc::OscPacket>,
+    ) {
         match packet {
             rosc::OscPacket::Message(msg) => {
+                if msg.addr == "/ping" {
+                    replies.push(osc_msg(
+                        "/pong",
+                        vec![rosc::OscType::String("particelle".to_string())],
+                    ));
+                    return;
+                }
+
                 if msg.addr.starts_with("/field/") {
                     let field_name = msg.addr.trim_start_matches("/field/").to_string();
-                    if let Some(arg) = msg.args.first() {
-                        let val = match arg {
-                            rosc::OscType::Float(f) => *f as f64,
-                            rosc::OscType::Double(d) => *d,
-                            rosc::OscType::Int(i) => *i as f64,
-                            _ => return,
-                        };
-                        let _ = tx.send((field_name, val));
+                    if field_name.is_empty() {
+                        replies.push(osc_msg(
+                            "/error",
+                            vec![rosc::OscType::String(
+                                "Field name cannot be empty".to_string(),
+                            )],
+                        ));
+                        return;
                     }
+                    if let Some(arg) = msg.args.first() {
+                        if let Some(val) = osc_arg_to_f64(arg) {
+                            let _ = tx.send((field_name.clone(), val));
+                            replies.push(osc_msg(
+                                "/ack",
+                                vec![
+                                    rosc::OscType::String(field_name),
+                                    rosc::OscType::Double(val),
+                                ],
+                            ));
+                        } else {
+                            replies.push(osc_msg(
+                                "/error",
+                                vec![rosc::OscType::String(format!(
+                                    "Unsupported argument type for {}",
+                                    msg.addr
+                                ))],
+                            ));
+                        }
+                    } else {
+                        replies.push(osc_msg(
+                            "/error",
+                            vec![rosc::OscType::String(format!(
+                                "Missing numeric argument for {}",
+                                msg.addr
+                            ))],
+                        ));
+                    }
+                    return;
                 }
+
+                replies.push(osc_msg(
+                    "/error",
+                    vec![rosc::OscType::String(format!(
+                        "Unsupported OSC address '{}'",
+                        msg.addr
+                    ))],
+                ));
             }
             rosc::OscPacket::Bundle(bundle) => {
                 for packet in bundle.content {
-                    handle_osc_packet(packet, tx);
+                    handle_osc_packet(packet, tx, replies);
                 }
             }
         }
@@ -1118,13 +1195,29 @@ fn cmd_run(
                 }
             };
             eprintln!("→ OSC Receiver listening on udp://{}", addr);
+            if osc_reply {
+                eprintln!("→ OSC replies enabled (/ack, /error, /pong).");
+            }
 
             let mut buf = [0u8; rosc::decoder::MTU];
             loop {
                 match sock.recv_from(&mut buf) {
-                    Ok((size, _addr)) => {
+                    Ok((size, remote_addr)) => {
                         if let Ok((_, packet)) = rosc::decoder::decode_udp(&buf[..size]) {
-                            handle_osc_packet(packet, &osc_tx);
+                            let mut replies = Vec::new();
+                            handle_osc_packet(packet, &osc_tx, &mut replies);
+                            if osc_reply {
+                                for reply in replies {
+                                    match rosc::encoder::encode(&reply) {
+                                        Ok(bytes) => {
+                                            let _ = sock.send_to(&bytes, remote_addr);
+                                        }
+                                        Err(e) => {
+                                            eprintln!("OSC encode error: {}", e);
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                     Err(e) => {
