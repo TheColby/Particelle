@@ -21,7 +21,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Install audio tools
-        run: sudo apt-get update && sudo apt-get install -y sox
+        run: sudo apt-get update && sudo apt-get install -y sox libasound2-dev pkg-config
 
       - name: Verify canonical sample pack
         run: ./scripts/verify_sample_pack.sh
@@ -57,7 +57,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Install audio tools
-        run: sudo apt-get update && sudo apt-get install -y sox
+        run: sudo apt-get update && sudo apt-get install -y sox libasound2-dev pkg-config
 
       - name: Example regression gate (sharded)
         env:

@@ -54,8 +54,12 @@ jobs:
       - name: Cache cargo artifacts
         uses: Swatinem/rust-cache@v2
 
+      - name: Install Linux audio build deps
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev pkg-config
+
       - name: Build release binary
-        run: cargo build --locked --release -p particelle-cli --target ${{ matrix.target }}
+        run: cargo build --release -p particelle-cli --target ${{ matrix.target }}
 
       - name: Package release artifact
         run: |

@@ -154,7 +154,7 @@ install_from_source() {
   require_cmd cargo
   require_cmd rustc
   echo "Building particelle from source..."
-  cargo build --locked --release -p particelle-cli
+  cargo build --release -p particelle-cli
   install_binary "target/release/particelle"
 }
 
