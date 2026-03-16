@@ -840,14 +840,29 @@ fn build_engine(config: &ParticelleConfig) -> Result<GranularEngine> {
 }
 
 fn cmd_validate(patch_path: &str) -> Result<()> {
-    let config = load_patch_config(patch_path)?;
+    let yaml = std::fs::read_to_string(patch_path)
+        .with_context(|| format!("Cannot read '{}'", patch_path))?;
+    let parsed = particelle_schema::parse_yaml_compat_with_report(&yaml)
+        .with_context(|| "YAML parse error")?;
+    let config = parsed.config;
+
+    if !parsed.report.notes.is_empty() {
+        println!(
+            "→ Schema migration applied: v{} -> v{}",
+            parsed.report.source_schema_version, parsed.report.target_schema_version
+        );
+        for note in &parsed.report.notes {
+            println!("  - [{}] {}", note.id, note.description);
+        }
+    }
+
     let errors = particelle_schema::validate(&config);
     if errors.is_empty() {
         let n_ch = config.layout.channels.len();
         let n_clouds = config.clouds.len();
         println!(
-            "✓ Patch is valid. {} cloud(s), {} channel(s).",
-            n_clouds, n_ch
+            "✓ Patch is valid. schema_version={}, {} cloud(s), {} channel(s).",
+            config.schema_version, n_clouds, n_ch
         );
     } else {
         eprintln!("{} validation error(s):", errors.len());
@@ -1259,6 +1274,8 @@ fn cmd_init(channels: usize) -> Result<()> {
 # Edit this file to configure your grain clouds.
 # Documentation: https://github.com/TheColby/Particelle
 
+schema_version: {schema_version}
+
 engine:
   sample_rate: 48000
   block_size: 256
@@ -1284,6 +1301,7 @@ clouds:
 "#,
         channels = channels,
         channel_lines = channel_defs.join("\n"),
+        schema_version = particelle_schema::CURRENT_SCHEMA_VERSION,
     );
     print!("{}", yaml);
     Ok(())

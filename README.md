@@ -1532,8 +1532,8 @@ Anticipated launch objections and concrete mitigations are documented in [`docs/
 8. **P4 — Add performance benchmark and latency budget gates (implemented)**
    CI now enforces performance budgets via representative render-throughput scenarios and a deterministic realtime block-latency benchmark.
 
-9. **P4 — Add schema versioning and migration metadata (planned)**
-   Introduce explicit patch schema version tags plus structured migration notes so compatibility guarantees are auditable across releases.
+9. **P4 — Add schema versioning and migration metadata (implemented)**
+   Patches now carry explicit `schema_version` tags, compatibility parsing emits stable migration-note IDs, and validation rejects unsupported future schema versions.
 
 10. **P5 — Ship release artifacts and platform install channels (implemented)**
    Automated release and nightly workflows now publish signed macOS/Linux tarballs with checksums, and the installer supports `stable`, `nightly`, and `source` channels plus version pinning for upgrades.
@@ -1544,6 +1544,10 @@ Anticipated launch objections and concrete mitigations are documented in [`docs/
 ### Compatibility Policy
 
 Particelle accepts a compatibility layer for legacy patch syntax when field names or signal-expression forms are renamed. Compatibility is intentionally narrow: old syntax is normalized into the current canonical schema during load, covered by tests, and documented when introduced. New patches should still be authored in the current canonical form.
+
+Patches now declare `schema_version` explicitly. `particelle init` emits the current version, and `particelle validate` reports any compatibility migrations it applied before validation.
+
+Migration IDs, source/target version semantics, and current-version policy are documented in [`docs/SCHEMA_MIGRATIONS.md`](/Users/cleider/dev/Particelle/docs/SCHEMA_MIGRATIONS.md).
 
 ## ⚖️ License
 

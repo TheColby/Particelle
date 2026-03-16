@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Schema Versioning:** Added explicit `schema_version` to the root patch schema with current-version defaulting and starter-patch emission via `particelle init`.
+- **Migration Metadata:** Added compatibility migration reporting with stable note IDs and source/target schema-version metadata (`parse_yaml_compat_with_report`).
+- **Schema Migration Docs:** Added [`docs/SCHEMA_MIGRATIONS.md`](docs/SCHEMA_MIGRATIONS.md) with migration IDs and policy.
+
+### Changed
+- **Validation Guardrail:** Validation now rejects unsupported future schema versions (`schema_version > CURRENT_SCHEMA_VERSION`).
+- **CLI Validation Output:** `particelle validate` now prints applied migration notes and the normalized schema version used for validation.
+
 ## [0.1.0] - 2026-03-03
 
 ### Added

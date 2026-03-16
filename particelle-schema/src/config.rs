@@ -1,12 +1,20 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+pub const CURRENT_SCHEMA_VERSION: u32 = 2;
+
+pub fn default_schema_version() -> u32 {
+    CURRENT_SCHEMA_VERSION
+}
+
 /// Root configuration. This is the single source of truth for a Particelle patch.
 ///
 /// Deserialized from YAML. All engine behavior is declared here.
 /// No parameter is hidden or configurable any other way.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ParticelleConfig {
+    #[serde(default = "default_schema_version")]
+    pub schema_version: u32,
     pub engine: EngineConfig,
     #[serde(default)]
     pub hardware: Option<HardwareConfig>,

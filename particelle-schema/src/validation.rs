@@ -1,4 +1,4 @@
-use crate::config::{ParticelleConfig, TuningConfig};
+use crate::config::{ParticelleConfig, TuningConfig, CURRENT_SCHEMA_VERSION};
 use thiserror::Error;
 
 /// Typed validation errors returned by the schema validator.
@@ -41,6 +41,9 @@ pub enum ValidationError {
 
     #[error("Binding #{index}: target '{target}' is not a registered parameter")]
     UnknownRoutingTarget { index: usize, target: String },
+
+    #[error("Unsupported schema_version {found}; maximum supported is {max_supported}")]
+    UnsupportedSchemaVersion { found: u32, max_supported: u32 },
 }
 
 /// Known valid window type strings.
@@ -87,6 +90,13 @@ const KNOWN_WINDOW_TYPES: &[&str] = &[
 /// The validator is non-destructive; the configuration is not modified.
 pub fn validate(config: &ParticelleConfig) -> Vec<ValidationError> {
     let mut errors = Vec::new();
+
+    if config.schema_version > CURRENT_SCHEMA_VERSION {
+        errors.push(ValidationError::UnsupportedSchemaVersion {
+            found: config.schema_version,
+            max_supported: CURRENT_SCHEMA_VERSION,
+        });
+    }
 
     // --- Engine ---
     if config.engine.sample_rate <= 0.0 {
@@ -157,6 +167,7 @@ mod tests {
 
     fn minimal_config() -> ParticelleConfig {
         ParticelleConfig {
+            schema_version: CURRENT_SCHEMA_VERSION,
             engine: EngineConfig {
                 sample_rate: 48000.0,
                 block_size: 256,
@@ -216,5 +227,14 @@ mod tests {
         assert!(validate(&cfg)
             .iter()
             .any(|e| matches!(e, ValidationError::InvalidEdoSteps)));
+    }
+
+    #[test]
+    fn future_schema_version_errors() {
+        let mut cfg = minimal_config();
+        cfg.schema_version = CURRENT_SCHEMA_VERSION + 1;
+        assert!(validate(&cfg)
+            .iter()
+            .any(|e| { matches!(e, ValidationError::UnsupportedSchemaVersion { .. }) }));
     }
 }
