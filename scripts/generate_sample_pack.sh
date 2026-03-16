@@ -187,9 +187,18 @@ render_sample() {
 
 mkdir -p "$samples_dir"
 
+collect_sample_refs() {
+  cd "$repo_root"
+  if command -v rg >/dev/null 2>&1; then
+    rg -No 'samples/[A-Za-z0-9_./-]+\.wav' README.md docs examples -g '*.md' -g '*.yaml'
+  else
+    find README.md docs examples -type f \( -name '*.md' -o -name '*.yaml' \) -print0 \
+      | xargs -0 grep -hoE 'samples/[A-Za-z0-9_./-]+\.wav' || true
+  fi
+}
+
 mapfile -t sample_names < <(
-  cd "$repo_root" &&
-    rg -No 'samples/[A-Za-z0-9_./-]+\.wav' README.md docs examples -g '*.md' -g '*.yaml' |
+  collect_sample_refs |
     sed 's/^[^:]*://' |
     sed 's#^samples/##' |
     sort -u
