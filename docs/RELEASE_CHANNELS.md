@@ -17,9 +17,14 @@ Use the root installer script:
 ./install.sh --channel nightly
 ./install.sh --channel source
 ./install.sh --channel stable --version v0.2.0
+./install.sh --channel stable --verify-signatures
 ```
 
-The installer verifies SHA-256 checksums by default for prebuilt channels.
+For prebuilt channels, the installer verifies SHA-256 checksums by default. Sigstore verification modes:
+
+- `auto` (default): verify signatures when `cosign` is installed; otherwise continue with checksum verification.
+- `--verify-signatures`: require signature verification and fail if `cosign` or signature assets are unavailable.
+- `--skip-signature-verify`: disable signature verification and use checksum verification only.
 
 ## Release Assets
 
@@ -34,6 +39,13 @@ Alongside:
 - `*.sha256` per artifact
 - consolidated `SHA256SUMS`
 - Sigstore keyless signatures/certificates (`*.sig`, `*.pem`)
+
+When signatures are verified, the installer validates keyless certificates against:
+
+- OIDC issuer: `https://token.actions.githubusercontent.com`
+- Workflow identity regex:
+  - release tags: `.../.github/workflows/release.yml@...`
+  - nightly channel: `.../.github/workflows/nightly.yml@...`
 
 ## CI/Automation
 

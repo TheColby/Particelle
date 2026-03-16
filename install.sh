@@ -6,6 +6,8 @@ PARTICELLE_REPO="${PARTICELLE_REPO:-TheColby/Particelle}"
 CHANNEL="stable"
 VERSION=""
 SKIP_VERIFY=0
+SIGNATURE_VERIFY_MODE="${SIGNATURE_VERIFY_MODE:-auto}"
+EXPECTED_OIDC_ISSUER="https://token.actions.githubusercontent.com"
 
 usage() {
   cat <<'USAGE'
@@ -20,6 +22,8 @@ Options:
   --install-dir <path>               Install directory (default: /usr/local/bin)
   --repo <owner/repo>                GitHub repo override (default: TheColby/Particelle)
   --skip-verify                      Skip SHA-256 verification (not recommended)
+  --verify-signatures                Require Sigstore signature verification for downloads
+  --skip-signature-verify            Disable Sigstore signature verification
   -h, --help                         Show help
 
 Examples:
@@ -116,6 +120,92 @@ verify_checksum() {
   fi
 }
 
+signature_identity_regex() {
+  local tag="$1"
+  if [[ "$tag" == "nightly" ]]; then
+    echo "^https://github.com/${PARTICELLE_REPO}/.github/workflows/nightly.yml@.*$"
+  else
+    echo "^https://github.com/${PARTICELLE_REPO}/.github/workflows/release.yml@.*$"
+  fi
+}
+
+verify_signature_blob() {
+  local blob="$1"
+  local sig="$2"
+  local cert="$3"
+  local identity_regex="$4"
+  cosign verify-blob \
+    --certificate "$cert" \
+    --signature "$sig" \
+    --certificate-identity-regexp "$identity_regex" \
+    --certificate-oidc-issuer "$EXPECTED_OIDC_ISSUER" \
+    "$blob" >/dev/null
+}
+
+maybe_verify_signatures() {
+  local release_url="$1"
+  local asset="$2"
+  local tag="$3"
+  local tmp_dir="$4"
+
+  case "$SIGNATURE_VERIFY_MODE" in
+    off)
+      echo "Signature verification disabled."
+      return 0
+      ;;
+    auto)
+      if ! command -v cosign >/dev/null 2>&1; then
+        echo "cosign not found; skipping signature verification (auto mode)."
+        return 0
+      fi
+      ;;
+    on)
+      require_cmd cosign
+      ;;
+    *)
+      echo "Invalid SIGNATURE_VERIFY_MODE '${SIGNATURE_VERIFY_MODE}'. Expected: auto, on, off." >&2
+      exit 1
+      ;;
+  esac
+
+  local signature_assets=(
+    "${asset}.sig"
+    "${asset}.pem"
+    "SHA256SUMS.sig"
+    "SHA256SUMS.pem"
+  )
+  local missing_signature_asset=0
+  for sig_asset in "${signature_assets[@]}"; do
+    if ! curl -fsSL -o "${tmp_dir}/${sig_asset}" "${release_url}/${sig_asset}"; then
+      missing_signature_asset=1
+      break
+    fi
+  done
+
+  if [[ "$missing_signature_asset" -ne 0 ]]; then
+    if [[ "$SIGNATURE_VERIFY_MODE" == "on" ]]; then
+      echo "Signature verification required, but one or more signature assets were unavailable." >&2
+      exit 1
+    fi
+    echo "Signature assets unavailable; skipping signature verification."
+    return 0
+  fi
+
+  local identity_regex
+  identity_regex="$(signature_identity_regex "$tag")"
+  verify_signature_blob \
+    "${tmp_dir}/SHA256SUMS" \
+    "${tmp_dir}/SHA256SUMS.sig" \
+    "${tmp_dir}/SHA256SUMS.pem" \
+    "$identity_regex"
+  verify_signature_blob \
+    "${tmp_dir}/${asset}" \
+    "${tmp_dir}/${asset}.sig" \
+    "${tmp_dir}/${asset}.pem" \
+    "$identity_regex"
+  echo "Verified Sigstore signatures for ${asset} and SHA256SUMS."
+}
+
 install_prebuilt() {
   local tag="$1"
   local target="$2"
@@ -133,6 +223,7 @@ install_prebuilt() {
   echo "Downloading ${asset} from ${release_url}"
   curl -fsSL -o "${tmp_dir}/${asset}" "${release_url}/${asset}"
   curl -fsSL -o "${tmp_dir}/SHA256SUMS" "${release_url}/SHA256SUMS"
+  maybe_verify_signatures "$release_url" "$asset" "$tag" "$tmp_dir"
 
   if [[ "$SKIP_VERIFY" -eq 0 ]]; then
     grep " ${asset}\$" "${tmp_dir}/SHA256SUMS" > "${tmp_dir}/${asset}.sha256"
@@ -178,6 +269,14 @@ while [[ $# -gt 0 ]]; do
       ;;
     --skip-verify)
       SKIP_VERIFY=1
+      shift
+      ;;
+    --verify-signatures)
+      SIGNATURE_VERIFY_MODE="on"
+      shift
+      ;;
+    --skip-signature-verify)
+      SIGNATURE_VERIFY_MODE="off"
       shift
       ;;
     -h|--help)

@@ -61,6 +61,7 @@ curl -fsSL https://raw.githubusercontent.com/TheColby/Particelle/main/install.sh
 ./install.sh --channel nightly
 ./install.sh --channel source
 ./install.sh --channel stable --version v0.2.0
+./install.sh --channel stable --verify-signatures
 ```
 
 Upgrade paths:
@@ -83,6 +84,7 @@ cd Particelle
 ### 📋 Requirements
 
 - Prebuilt channels (`stable`, `nightly`): `curl`, `tar`, and a SHA-256 tool (`sha256sum` or `shasum`).
+- Optional signature verification: `cosign` (recommended with `--verify-signatures`; in default `auto` mode signatures are verified when `cosign` is present).
 - Source channel (`source`): **Rust 1.70+** (install via [rustup.rs](https://rustup.rs/)) and a C compiler for native audio dependencies (Xcode CLT on macOS, `build-essential` on Linux).
 - `sox` is required only for regenerating the canonical sample pack and running the audio regression scripts.
 
@@ -1540,6 +1542,9 @@ Anticipated launch objections and concrete mitigations are documented in [`docs/
 
 11. **P5 — Expand deterministic integration tests for external control I/O (implemented)**
    Deterministic control-path tests now verify OSC queue drain timing semantics and OSC/MIDI interaction ordering (including same-field override behavior).
+
+12. **P6 — Harden install-channel supply-chain verification (implemented)**
+   `install.sh` now supports Sigstore verification modes (`auto`, `--verify-signatures`, `--skip-signature-verify`) and validates artifact/workflow identity when signatures are checked.
 
 ### Compatibility Policy
 
