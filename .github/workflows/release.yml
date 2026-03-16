@@ -1,0 +1,133 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (e.g., v0.2.0). If omitted, uses current ref tag."
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: macos-13
+            target: x86_64-apple-darwin
+          - os: macos-14
+            target: aarch64-apple-darwin
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve release version
+        id: version
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            version="${GITHUB_REF_NAME}"
+          elif [[ -n "${{ github.event.inputs.tag || '' }}" ]]; then
+            version="${{ github.event.inputs.tag }}"
+          else
+            version="manual-${GITHUB_RUN_NUMBER}"
+          fi
+          echo "value=${version}" >>"$GITHUB_OUTPUT"
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache cargo artifacts
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build release binary
+        run: cargo build --locked --release -p particelle-cli --target ${{ matrix.target }}
+
+      - name: Package release artifact
+        run: |
+          ./scripts/package_release.sh \
+            --target "${{ matrix.target }}" \
+            --version "${{ steps.version.outputs.value }}" \
+            --binary "target/${{ matrix.target }}/release/particelle" \
+            --out-dir dist
+
+      - name: Upload packaged artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.target }}
+          path: dist/*
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve release version
+        id: version
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            version="${GITHUB_REF_NAME}"
+          elif [[ -n "${{ github.event.inputs.tag || '' }}" ]]; then
+            version="${{ github.event.inputs.tag }}"
+          else
+            version="manual-${GITHUB_RUN_NUMBER}"
+          fi
+          echo "value=${version}" >>"$GITHUB_OUTPUT"
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: dist
+          merge-multiple: true
+
+      - name: Consolidate checksums
+        shell: bash
+        run: |
+          cat dist/*.sha256 > dist/SHA256SUMS
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign release payloads
+        shell: bash
+        run: |
+          for artifact in dist/*.tar.gz dist/SHA256SUMS; do
+            cosign sign-blob --yes \
+              --output-signature "${artifact}.sig" \
+              --output-certificate "${artifact}.pem" \
+              "$artifact"
+          done
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.value }}
+          name: Particelle ${{ steps.version.outputs.value }}
+          generate_release_notes: true
+          files: |
+            dist/*.tar.gz
+            dist/*.sha256
+            dist/SHA256SUMS
+            dist/*.tar.gz.sig
+            dist/*.tar.gz.pem
+            dist/SHA256SUMS.sig
+            dist/SHA256SUMS.pem

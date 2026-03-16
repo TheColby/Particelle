@@ -11,7 +11,7 @@ An algorithmic granular synthesis engine designed for extreme microtonal precisi
 
 ```sh
 # 60 seconds to granular sound — no toolchain required
-git clone https://github.com/TheColby/Particelle.git && cd Particelle && ./install.sh
+curl -fsSL https://raw.githubusercontent.com/TheColby/Particelle/main/install.sh | bash -s -- --channel stable
 particelle init > patch.yaml && particelle render patch.yaml -o out.wav --duration 10.0
 ```
 
@@ -51,29 +51,40 @@ This is a long-horizon platform. Compatibility, correctness, and architectural c
 ### ⚡ One-Liner
 
 ```sh
-git clone https://github.com/TheColby/Particelle.git && cd Particelle && ./install.sh
+curl -fsSL https://raw.githubusercontent.com/TheColby/Particelle/main/install.sh | bash -s -- --channel stable
 ```
+
+### 🚦 Install Channels
+
+```sh
+./install.sh --channel stable
+./install.sh --channel nightly
+./install.sh --channel source
+./install.sh --channel stable --version v0.2.0
+```
+
+Upgrade paths:
+
+1. `stable -> stable`: re-run `./install.sh --channel stable` to upgrade to the latest tagged release.
+2. `stable -> nightly`: run `./install.sh --channel nightly`.
+3. `nightly -> stable`: run `./install.sh --channel stable`.
+4. pin/unpin: use `--version <tag>` to pin, then omit `--version` to unpin.
+
+Release channels, signatures, and published artifact names are documented in [`docs/RELEASE_CHANNELS.md`](/Users/cleider/dev/Particelle/docs/RELEASE_CHANNELS.md).
 
 ### 🔧 From Source (manual)
 
 ```sh
-# Clone the repository
 git clone https://github.com/TheColby/Particelle.git
 cd Particelle
-
-# Build the release binary
-cargo build --release
-
-# The binary is at target/release/particelle
-# Optionally, copy it somewhere on your PATH:
-cp target/release/particelle /usr/local/bin/
+./install.sh --channel source
 ```
 
 ### 📋 Requirements
 
-- **Rust 1.70+** (install via [rustup.rs](https://rustup.rs/)). On mac, you can install [Homebrew](https://brew.sh) and do `brew install rust`.
-- A C compiler for native audio dependencies (Xcode CLT on macOS, `build-essential` on Linux)
-- `sox` for regenerating the canonical example sample pack and running the audio regression gate
+- Prebuilt channels (`stable`, `nightly`): `curl`, `tar`, and a SHA-256 tool (`sha256sum` or `shasum`).
+- Source channel (`source`): **Rust 1.70+** (install via [rustup.rs](https://rustup.rs/)) and a C compiler for native audio dependencies (Xcode CLT on macOS, `build-essential` on Linux).
+- `sox` is required only for regenerating the canonical sample pack and running the audio regression scripts.
 
 ### ✅ Verify Installation
 
@@ -702,7 +713,7 @@ All internal audio data is `f64`. Multichannel buffers are planar: one `Vec<f64>
 
 Curves are compiled from JSON into efficient evaluators before the first block is processed. Windows are computed once, cached by `(WindowSpec, length, normalization)`, and returned as shared `Arc<[f64]>` slices. No window is recomputed during rendering.
 
-The engine runs identically in offline mode (writing to file) and real-time mode (driving a hardware device). The audio callback in real-time mode performs no heap allocation. A lock-free ring buffer separates the audio thread from all I/O operations.
+The engine runs identically in offline mode (writing to file) and real-time mode (driving a hardware device). The audio callback in real-time mode performs no heap allocation. Control and I/O ingress are handled off the audio thread and transferred through non-blocking queues.
 
 ---
 
@@ -1457,6 +1468,8 @@ EXAMPLE_SHARD_TOTAL=4 EXAMPLE_SHARD_INDEX=0 ./scripts/check_examples.sh
 
 `check_performance.sh` runs representative render-throughput scenarios and a deterministic realtime block-latency benchmark (`particelle-core/examples/realtime_block_benchmark.rs`). It fails if configured latency/throughput budgets are exceeded.
 
+External control-path behavior is covered by deterministic tests in [`particelle-cli/tests/external_control_io.rs`](/Users/cleider/dev/Particelle/particelle-cli/tests/external_control_io.rs), including OSC queue timing semantics and OSC/MIDI same-field ordering.
+
 For launch preparation, run the full announcement gate:
 
 ```sh
@@ -1522,11 +1535,11 @@ Anticipated launch objections and concrete mitigations are documented in [`docs/
 9. **P4 — Add schema versioning and migration metadata (planned)**
    Introduce explicit patch schema version tags plus structured migration notes so compatibility guarantees are auditable across releases.
 
-10. **P5 — Ship release artifacts and platform install channels (planned)**
-   Publish signed binaries/packages for macOS and Linux and document upgrade paths so users can adopt new versions without building from source.
+10. **P5 — Ship release artifacts and platform install channels (implemented)**
+   Automated release and nightly workflows now publish signed macOS/Linux tarballs with checksums, and the installer supports `stable`, `nightly`, and `source` channels plus version pinning for upgrades.
 
-11. **P5 — Expand deterministic integration tests for external control I/O (planned)**
-   Add end-to-end tests covering OSC control update timing and realtime control-path behavior to complement current offline and synthetic harness coverage.
+11. **P5 — Expand deterministic integration tests for external control I/O (implemented)**
+   Deterministic control-path tests now verify OSC queue drain timing semantics and OSC/MIDI interaction ordering (including same-field override behavior).
 
 ### Compatibility Policy
 

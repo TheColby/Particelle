@@ -7,6 +7,8 @@ use particelle_core::spatializer::AmplitudePanner;
 use particelle_schema::ParticelleConfig;
 use std::sync::Arc;
 
+mod osc_control;
+
 /// Particelle — granular synthesis engine command-line interface.
 ///
 /// All engine behavior is configured via YAML. This CLI is a thin wrapper
@@ -1093,95 +1095,6 @@ fn cmd_run(
         }
     });
 
-    fn osc_arg_to_f64(arg: &rosc::OscType) -> Option<f64> {
-        match arg {
-            rosc::OscType::Float(v) => Some(*v as f64),
-            rosc::OscType::Double(v) => Some(*v),
-            rosc::OscType::Int(v) => Some(*v as f64),
-            _ => None,
-        }
-    }
-
-    fn osc_msg(addr: &str, args: Vec<rosc::OscType>) -> rosc::OscPacket {
-        rosc::OscPacket::Message(rosc::OscMessage {
-            addr: addr.to_string(),
-            args,
-        })
-    }
-
-    fn handle_osc_packet(
-        packet: rosc::OscPacket,
-        tx: &std::sync::mpsc::Sender<(String, f64)>,
-        replies: &mut Vec<rosc::OscPacket>,
-    ) {
-        match packet {
-            rosc::OscPacket::Message(msg) => {
-                if msg.addr == "/ping" {
-                    replies.push(osc_msg(
-                        "/pong",
-                        vec![rosc::OscType::String("particelle".to_string())],
-                    ));
-                    return;
-                }
-
-                if msg.addr.starts_with("/field/") {
-                    let field_name = msg.addr.trim_start_matches("/field/").to_string();
-                    if field_name.is_empty() {
-                        replies.push(osc_msg(
-                            "/error",
-                            vec![rosc::OscType::String(
-                                "Field name cannot be empty".to_string(),
-                            )],
-                        ));
-                        return;
-                    }
-                    if let Some(arg) = msg.args.first() {
-                        if let Some(val) = osc_arg_to_f64(arg) {
-                            let _ = tx.send((field_name.clone(), val));
-                            replies.push(osc_msg(
-                                "/ack",
-                                vec![
-                                    rosc::OscType::String(field_name),
-                                    rosc::OscType::Double(val),
-                                ],
-                            ));
-                        } else {
-                            replies.push(osc_msg(
-                                "/error",
-                                vec![rosc::OscType::String(format!(
-                                    "Unsupported argument type for {}",
-                                    msg.addr
-                                ))],
-                            ));
-                        }
-                    } else {
-                        replies.push(osc_msg(
-                            "/error",
-                            vec![rosc::OscType::String(format!(
-                                "Missing numeric argument for {}",
-                                msg.addr
-                            ))],
-                        ));
-                    }
-                    return;
-                }
-
-                replies.push(osc_msg(
-                    "/error",
-                    vec![rosc::OscType::String(format!(
-                        "Unsupported OSC address '{}'",
-                        msg.addr
-                    ))],
-                ));
-            }
-            rosc::OscPacket::Bundle(bundle) => {
-                for packet in bundle.content {
-                    handle_osc_packet(packet, tx, replies);
-                }
-            }
-        }
-    }
-
     // Setup OSC UDP Receiver Thread
     let (osc_tx, osc_rx) = std::sync::mpsc::channel::<(String, f64)>();
     if let Some(port) = osc_port {
@@ -1205,7 +1118,7 @@ fn cmd_run(
                     Ok((size, remote_addr)) => {
                         if let Ok((_, packet)) = rosc::decoder::decode_udp(&buf[..size]) {
                             let mut replies = Vec::new();
-                            handle_osc_packet(packet, &osc_tx, &mut replies);
+                            osc_control::handle_osc_packet(packet, &osc_tx, &mut replies);
                             if osc_reply {
                                 for reply in replies {
                                     match rosc::encoder::encode(&reply) {
@@ -1295,9 +1208,7 @@ fn cmd_run(
             }
 
             // Drain OSC channel queue every block without blocking
-            for (field_name, val) in osc_rx.try_iter() {
-                map_provider.fields.insert(field_name, val);
-            }
+            osc_control::drain_field_updates(&osc_rx, &mut map_provider.fields);
         }
 
         if let Err(e) = engine_guard.process(&mut block) {
