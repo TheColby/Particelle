@@ -63,3 +63,24 @@ impl Default for MpeConfig {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_lower_zone() {
+        let zone = MpeZone::lower_zone(48.0);
+        assert_eq!(zone.master_channel, 1);
+        assert_eq!(zone.member_channels, 2..=15);
+        assert_eq!(zone.pitchbend_range_semitones, 48.0);
+    }
+
+    #[test]
+    fn test_upper_zone() {
+        let zone = MpeZone::upper_zone(96.0);
+        assert_eq!(zone.master_channel, 16);
+        assert_eq!(zone.member_channels, 2..=15);
+        assert_eq!(zone.pitchbend_range_semitones, 96.0);
+    }
+}
