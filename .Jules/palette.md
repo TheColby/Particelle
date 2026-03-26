@@ -1,0 +1,3 @@
+## 2024-05-24 - Particelle is a headless CLI
+**Learning:** This repository contains a Rust-based command-line interface for a granular synthesis engine. It operates without any graphical user interface, web frontend, DOM, or HTML components.
+**Action:** Since there are no web UI elements (like buttons, inputs, or ARIA labels) to modify, no UX micro-enhancements can be applied. Following instructions, no PR will be created.
