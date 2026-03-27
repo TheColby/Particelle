@@ -1248,6 +1248,10 @@ fn cmd_run(
 }
 
 fn cmd_init(channels: usize) -> Result<()> {
+    if channels == 0 || channels > 256 {
+        anyhow::bail!("Invalid number of channels: {}. Must be between 1 and 256.", channels);
+    }
+
     let channel_defs: Vec<String> = if channels == 1 {
         vec!["    - { name: \"M\", azimuth_deg: 0.0, elevation_deg: 0.0 }".into()]
     } else if channels == 2 {
