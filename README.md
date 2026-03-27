@@ -30,7 +30,7 @@ The project is designed to scale. Adding a new window type, a new curve shape, o
 This is a long-horizon platform. Compatibility, correctness, and architectural clarity take precedence over feature velocity.
 
 > [!IMPORTANT]
-> **Particelle is currently pre-alpha.** It is highly experimental and its data schema is subject to change.
+> **Particelle is alpha.** The data schema is versioned; migrations are applied automatically and documented in [`docs/SCHEMA_MIGRATIONS.md`](docs/SCHEMA_MIGRATIONS.md).
 
 <div align="center">
   <h3>
@@ -1457,10 +1457,17 @@ The workspace ships dedicated regression entry points:
 1. regenerates the canonical sample pack,
 2. validates every YAML example,
 3. renders a 1-second offline WAV for every example,
-4. fails on silence or out-of-range dynamics, and
-5. writes per-example metrics and summary reports under [`target/example-metrics/`](/Users/cleider/dev/Particelle/target/example-metrics).
+4. computes deterministic per-example PCM16 SHA-256 fingerprints,
+5. fails on silence, out-of-range dynamics, or fingerprint drift, and
+6. writes per-example metrics and summary reports under [`target/example-metrics/`](/Users/cleider/dev/Particelle/target/example-metrics).
 
-The metrics files record peak amplitude, RMS amplitude, crest factor, active channel count, and per-channel RMS values so DSP regressions are visible even when a render is technically non-silent.
+The metrics files record peak amplitude, RMS amplitude, crest factor, active channel count, per-channel RMS values, and the deterministic PCM16 hash so DSP regressions are visible even when a render is technically non-silent.
+
+Golden fingerprint baseline file: [`examples/golden_fingerprints.tsv`](/Users/cleider/dev/Particelle/examples/golden_fingerprints.tsv). Update it with:
+
+```sh
+./scripts/update_golden_fingerprints.sh
+```
 
 For CI throughput, example checks support sharding:
 
@@ -1468,7 +1475,12 @@ For CI throughput, example checks support sharding:
 EXAMPLE_SHARD_TOTAL=4 EXAMPLE_SHARD_INDEX=0 ./scripts/check_examples.sh
 ```
 
-`check_performance.sh` runs representative render-throughput scenarios and a deterministic realtime block-latency benchmark (`particelle-core/examples/realtime_block_benchmark.rs`). It fails if configured latency/throughput budgets are exceeded.
+`check_performance.sh` runs representative render-throughput scenarios plus two deterministic realtime benchmarks:
+
+- block-latency benchmark: [`particelle-core/examples/realtime_block_benchmark.rs`](/Users/cleider/dev/Particelle/particelle-core/examples/realtime_block_benchmark.rs)
+- soak/XRUN stability benchmark: [`particelle-core/examples/realtime_soak_benchmark.rs`](/Users/cleider/dev/Particelle/particelle-core/examples/realtime_soak_benchmark.rs)
+
+It fails if configured throughput, latency, or XRUN-equivalent budgets are exceeded.
 
 External control-path behavior is covered by deterministic tests in [`particelle-cli/tests/external_control_io.rs`](/Users/cleider/dev/Particelle/particelle-cli/tests/external_control_io.rs), including OSC queue timing semantics and OSC/MIDI same-field ordering.
 
@@ -1545,6 +1557,12 @@ Anticipated launch objections and concrete mitigations are documented in [`docs/
 
 12. **P6 — Harden install-channel supply-chain verification (implemented)**
    `install.sh` now supports Sigstore verification modes (`auto`, `--verify-signatures`, `--skip-signature-verify`) and validates artifact/workflow identity when signatures are checked.
+
+13. **P7 — Add golden audio fingerprint gate (implemented)**
+   Example regression now verifies deterministic PCM16 SHA-256 fingerprints for every canonical example against a repository-owned baseline.
+
+14. **P7 — Add realtime soak and XRUN stability gate (implemented)**
+   Performance checks now include a long-run deterministic soak benchmark with p99 latency and XRUN-ratio/consecutive-XRUN budgets.
 
 ### Compatibility Policy
 

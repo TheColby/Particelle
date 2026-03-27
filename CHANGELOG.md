@@ -12,11 +12,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Migration Metadata:** Added compatibility migration reporting with stable note IDs and source/target schema-version metadata (`parse_yaml_compat_with_report`).
 - **Schema Migration Docs:** Added [`docs/SCHEMA_MIGRATIONS.md`](docs/SCHEMA_MIGRATIONS.md) with migration IDs and policy.
 - **Installer Signature Modes:** Added Sigstore verification controls to `install.sh` (`auto`, `--verify-signatures`, `--skip-signature-verify`) for prebuilt channels.
+- **Golden Fingerprint Baseline:** Added deterministic example-audio fingerprints in [`examples/golden_fingerprints.tsv`](examples/golden_fingerprints.tsv), plus a regeneration helper script [`scripts/update_golden_fingerprints.sh`](scripts/update_golden_fingerprints.sh).
+- **Realtime Soak Benchmark:** Added [`particelle-core/examples/realtime_soak_benchmark.rs`](particelle-core/examples/realtime_soak_benchmark.rs) with XRUN-equivalent budget checks.
 
 ### Changed
 - **Validation Guardrail:** Validation now rejects unsupported future schema versions (`schema_version > CURRENT_SCHEMA_VERSION`).
 - **CLI Validation Output:** `particelle validate` now prints applied migration notes and the normalized schema version used for validation.
 - **Release Channel Docs:** Documented checksum + signature verification behavior and workflow identity expectations in [`docs/RELEASE_CHANNELS.md`](docs/RELEASE_CHANNELS.md).
+- **Example Regression Gate:** `scripts/check_examples.sh` now computes/stores PCM16 SHA-256 fingerprints and fails on mismatch against the golden baseline.
+- **Performance Gate:** `scripts/check_performance.sh` now runs both block-latency and soak/XRUN stability benchmarks.
 
 ## [0.1.0] - 2026-03-03
 

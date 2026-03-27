@@ -35,6 +35,7 @@ generated_at="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
   printf -- '- checks: `verify_sample_pack`, `fmt`, `clippy -D warnings`, `cargo test --workspace`, `check_performance`, `check_examples`\n'
   printf -- '- metrics: [`target/example-metrics/summary.md`](/Users/cleider/dev/Particelle/target/example-metrics/summary.md)\n'
   printf -- '- details: [`target/example-metrics/examples.tsv`](/Users/cleider/dev/Particelle/target/example-metrics/examples.tsv)\n'
+  printf -- '- fingerprints: [`target/example-metrics/fingerprints.tsv`](/Users/cleider/dev/Particelle/target/example-metrics/fingerprints.tsv)\n'
   printf -- '- performance: [`target/performance/report.md`](/Users/cleider/dev/Particelle/target/performance/report.md)\n'
 } >"$report_path"
 
