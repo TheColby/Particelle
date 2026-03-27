@@ -33,6 +33,38 @@ impl OnePole {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_one_pole_new_valid_coeffs() {
+        let op = OnePole::new(0.0);
+        assert_eq!(op.coeff, 0.0);
+        assert_eq!(op.state, 0.0);
+
+        let op = OnePole::new(0.5);
+        assert_eq!(op.coeff, 0.5);
+        assert_eq!(op.state, 0.0);
+
+        let op = OnePole::new(1.0);
+        assert_eq!(op.coeff, 1.0);
+        assert_eq!(op.state, 0.0);
+    }
+
+    #[test]
+    #[should_panic(expected = "OnePole coeff must be in [0, 1]")]
+    fn test_one_pole_new_invalid_coeff_negative() {
+        OnePole::new(-0.1);
+    }
+
+    #[test]
+    #[should_panic(expected = "OnePole coeff must be in [0, 1]")]
+    fn test_one_pole_new_invalid_coeff_greater_than_one() {
+        OnePole::new(1.1);
+    }
+}
+
 /// Slew limiter: limits the rate of change (rise and fall) of a signal.
 pub struct SlewLimiter {
     /// Maximum rise per sample.
