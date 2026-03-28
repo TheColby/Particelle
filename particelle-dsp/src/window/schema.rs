@@ -123,3 +123,25 @@ impl WindowSpec {
         matches!(self, Self::Asymmetric { .. })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_is_composite() {
+        let asymmetric = WindowSpec::Asymmetric {
+            left: Box::new(WindowSpec::Hann),
+            right: Box::new(WindowSpec::Rectangular),
+        };
+        assert!(asymmetric.is_composite());
+
+        let hann = WindowSpec::Hann;
+        assert!(!hann.is_composite());
+
+        let symmetric = WindowSpec::Symmetric {
+            base: Box::new(WindowSpec::Hann),
+        };
+        assert!(!symmetric.is_composite());
+    }
+}
