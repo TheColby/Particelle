@@ -62,3 +62,40 @@ impl SlewLimiter {
         self.state = 0.0;
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_one_pole_reset() {
+        let mut filter = OnePole::new(0.5);
+
+        let out1 = filter.process(1.0);
+        assert_eq!(out1, 0.5);
+
+        let out2 = filter.process(1.0);
+        assert_eq!(out2, 0.75);
+
+        filter.reset();
+
+        let out3 = filter.process(1.0);
+        assert_eq!(out3, 0.5);
+    }
+
+    #[test]
+    fn test_slew_limiter_reset() {
+        let mut limiter = SlewLimiter::new(1.0, 1.0);
+
+        let out1 = limiter.process(10.0);
+        assert_eq!(out1, 1.0);
+
+        let out2 = limiter.process(10.0);
+        assert_eq!(out2, 2.0);
+
+        limiter.reset();
+
+        let out3 = limiter.process(10.0);
+        assert_eq!(out3, 1.0);
+    }
+}
