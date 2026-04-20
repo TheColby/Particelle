@@ -1,0 +1,3 @@
+## 2024-04-20 - Particelle is a Headless CLI
+**Learning:** Particelle is a completely headless CLI app. Web UX patterns (ARIA, CSS, HTML) do not apply. Since there's no web UI at all, any "Palette" UX changes must be strictly limited to CLI UX (e.g., progress indicators, better error formatting, colored output, or input validation improvements). If none of those are viable or requested, the agent should safely stop.
+**Action:** As Palette, safely stop. There are no web accessibility/UI components to enhance here. The only potential UX improvements are to the CLI itself (like adding a progress bar to rendering or colors to validation errors) but I am strictly limited to web UX as instructed in my prompt.
