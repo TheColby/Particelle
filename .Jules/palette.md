@@ -1,0 +1,1 @@
+## 2024-05-15 - Headless CLI App\n**Learning:** This is a headless CLI app with no web UI. Web-specific UX enhancements like ARIA labels are inapplicable.\n**Action:** Focus on CLI UX improvements (like help text) or safely stop.
