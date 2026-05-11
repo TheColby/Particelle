@@ -911,7 +911,9 @@ fn cmd_render(patch_path: &str, output_path: &str, duration: f64, emit_hash: boo
     while frames_rendered < total_frames {
         let progress_percent = ((frames_rendered as f64 / total_frames as f64) * 100.0) as i32;
         if progress_percent > last_progress_percent {
-            use std::io::Write; eprint!("\rRender Progress: {:>3}%", progress_percent); let _ = std::io::stderr().flush();
+            use std::io::Write;
+            eprint!("\rRender Progress: {:>3}%", progress_percent);
+            let _ = std::io::stderr().flush();
             last_progress_percent = progress_percent;
         }
 
