@@ -906,7 +906,17 @@ fn cmd_render(patch_path: &str, output_path: &str, duration: f64, emit_hash: boo
     let mut frames_rendered = 0u64;
     let mut block = particelle_core::audio_block::AudioBlock::new(n_channels, block_size);
 
+    let mut last_progress_percent = -1;
+
     while frames_rendered < total_frames {
+        let progress_percent = ((frames_rendered as f64 / total_frames as f64) * 100.0) as i32;
+        if progress_percent > last_progress_percent {
+            use std::io::Write;
+            eprint!("\rRender Progress: {:>3}%", progress_percent);
+            let _ = std::io::stderr().flush();
+            last_progress_percent = progress_percent;
+        }
+
         let remaining = (total_frames - frames_rendered) as usize;
         let frames_this_block = block_size.min(remaining);
 
@@ -933,6 +943,7 @@ fn cmd_render(patch_path: &str, output_path: &str, duration: f64, emit_hash: boo
         frames_rendered += frames_this_block as u64;
     }
 
+    eprintln!(); // clear progress line
     let written = writer.finalize().with_context(|| "Finalize error")?;
     eprintln!(
         "✓ Wrote {} frames ({} channels) to '{}'",
