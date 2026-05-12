@@ -920,7 +920,11 @@ fn cmd_render(patch_path: &str, output_path: &str, duration: f64, emit_hash: boo
                 let bar_len = 20;
                 let filled = (percent * bar_len) / 100;
                 let empty = bar_len - filled;
-                let bar = format!("{}{}", "█".repeat(filled as usize), "░".repeat(empty as usize));
+                let bar = format!(
+                    "{}{}",
+                    "█".repeat(filled as usize),
+                    "░".repeat(empty as usize)
+                );
                 eprint!("\r→ Rendering [{}] {}%", bar, percent);
                 let _ = std::io::Write::flush(&mut std::io::stderr());
                 last_percent = percent;
