@@ -5,6 +5,7 @@ use particelle_core::grain::Cloud;
 use particelle_core::pool::GrainPool;
 use particelle_core::spatializer::AmplitudePanner;
 use particelle_schema::ParticelleConfig;
+use std::io::{IsTerminal, Write};
 use std::sync::Arc;
 
 mod osc_control;
@@ -906,6 +907,8 @@ fn cmd_render(patch_path: &str, output_path: &str, duration: f64, emit_hash: boo
     let mut frames_rendered = 0u64;
     let mut block = particelle_core::audio_block::AudioBlock::new(n_channels, block_size);
 
+    let mut last_progress_pct = -1;
+
     while frames_rendered < total_frames {
         let remaining = (total_frames - frames_rendered) as usize;
         let frames_this_block = block_size.min(remaining);
@@ -931,9 +934,21 @@ fn cmd_render(patch_path: &str, output_path: &str, duration: f64, emit_hash: boo
         }
 
         frames_rendered += frames_this_block as u64;
+
+        let progress_pct = ((frames_rendered as f64 / total_frames as f64) * 100.0) as i32;
+        if progress_pct != last_progress_pct && std::io::stderr().is_terminal() {
+            eprint!("\r  [Rendering] {}% ", progress_pct);
+            let _ = std::io::stderr().flush();
+            last_progress_pct = progress_pct;
+        }
     }
 
     let written = writer.finalize().with_context(|| "Finalize error")?;
+
+    if std::io::stderr().is_terminal() {
+        eprint!("\r\x1b[2K"); // Clear the progress line
+    }
+
     eprintln!(
         "✓ Wrote {} frames ({} channels) to '{}'",
         written, n_channels, output_path
