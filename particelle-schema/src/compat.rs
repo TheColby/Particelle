@@ -144,9 +144,10 @@ fn normalize_window(window: &mut serde_yaml::Value, report: &mut MigrationReport
 
     match kind {
         "tukey" => {
-            if !mapping.contains_key(value_key("alpha")) {
+            let key = value_key("alpha");
+            if !mapping.contains_key(&key) {
                 mapping.insert(
-                    value_key("alpha"),
+                    key,
                     serde_yaml::Value::Number(serde_yaml::Number::from(0.5)),
                 );
                 push_note(
@@ -157,9 +158,10 @@ fn normalize_window(window: &mut serde_yaml::Value, report: &mut MigrationReport
             }
         }
         "planck_taper" => {
-            if !mapping.contains_key(value_key("epsilon")) {
+            let key = value_key("epsilon");
+            if !mapping.contains_key(&key) {
                 mapping.insert(
-                    value_key("epsilon"),
+                    key,
                     serde_yaml::Value::Number(serde_yaml::Number::from(0.1)),
                 );
                 push_note(
@@ -170,9 +172,10 @@ fn normalize_window(window: &mut serde_yaml::Value, report: &mut MigrationReport
             }
         }
         "dpss" => {
-            if !mapping.contains_key(value_key("half_bandwidth")) {
+            let key = value_key("half_bandwidth");
+            if !mapping.contains_key(&key) {
                 mapping.insert(
-                    value_key("half_bandwidth"),
+                    key,
                     serde_yaml::Value::Number(serde_yaml::Number::from(4.0)),
                 );
                 push_note(
