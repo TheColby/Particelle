@@ -906,20 +906,7 @@ fn cmd_render(patch_path: &str, output_path: &str, duration: f64, emit_hash: boo
     let mut frames_rendered = 0u64;
     let mut block = particelle_core::audio_block::AudioBlock::new(n_channels, block_size);
 
-    use std::io::{IsTerminal, Write};
-    let is_tty = std::io::stderr().is_terminal();
-    let mut last_percent = -1i32;
-
     while frames_rendered < total_frames {
-        if is_tty {
-            let percent = ((frames_rendered as f64 / total_frames as f64) * 100.0) as i32;
-            if percent != last_percent {
-                eprint!("\r\x1b[2K→ Rendering: {}%", percent);
-                let _ = std::io::stderr().flush();
-                last_percent = percent;
-            }
-        }
-
         let remaining = (total_frames - frames_rendered) as usize;
         let frames_this_block = block_size.min(remaining);
 
@@ -944,11 +931,6 @@ fn cmd_render(patch_path: &str, output_path: &str, duration: f64, emit_hash: boo
         }
 
         frames_rendered += frames_this_block as u64;
-    }
-
-    if is_tty {
-        eprint!("\r\x1b[2K");
-        let _ = std::io::stderr().flush();
     }
 
     let written = writer.finalize().with_context(|| "Finalize error")?;
