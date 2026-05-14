@@ -142,6 +142,7 @@ fn normalize_window(window: &mut serde_yaml::Value, report: &mut MigrationReport
         return;
     };
 
+    #[allow(clippy::collapsible_match)]
     match kind {
         "tukey" => {
             if !mapping.contains_key(value_key("alpha")) {
