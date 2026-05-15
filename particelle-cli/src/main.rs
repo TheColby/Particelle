@@ -906,6 +906,10 @@ fn cmd_render(patch_path: &str, output_path: &str, duration: f64, emit_hash: boo
     let mut frames_rendered = 0u64;
     let mut block = particelle_core::audio_block::AudioBlock::new(n_channels, block_size);
 
+    use std::io::IsTerminal;
+    let is_tty = std::io::stderr().is_terminal();
+    let mut last_progress_pct = -1;
+
     while frames_rendered < total_frames {
         let remaining = (total_frames - frames_rendered) as usize;
         let frames_this_block = block_size.min(remaining);
@@ -931,6 +935,21 @@ fn cmd_render(patch_path: &str, output_path: &str, duration: f64, emit_hash: boo
         }
 
         frames_rendered += frames_this_block as u64;
+
+        if is_tty {
+            let pct = (frames_rendered as f64 / total_frames as f64 * 100.0) as i32;
+            if pct > last_progress_pct {
+                eprint!(
+                    "\r\x1b[2K  [Processing] [{:<50}] {}%",
+                    "=".repeat((pct / 2) as usize),
+                    pct
+                );
+                last_progress_pct = pct;
+            }
+        }
+    }
+    if is_tty {
+        eprintln!();
     }
 
     let written = writer.finalize().with_context(|| "Finalize error")?;
