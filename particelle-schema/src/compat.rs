@@ -137,8 +137,10 @@ fn normalize_window(window: &mut serde_yaml::Value, report: &mut MigrationReport
         return;
     };
 
-    let Some(kind) = mapping_get_mut(mapping, "type").and_then(|value| string_value(&*value))
-    else {
+    let kind = mapping_get_mut(mapping, "type")
+        .and_then(|value| string_value(&*value))
+        .map(|s| s.to_owned());
+    let Some(kind) = kind.as_deref() else {
         return;
     };
 
