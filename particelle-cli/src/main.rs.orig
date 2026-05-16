@@ -5,7 +5,6 @@ use particelle_core::grain::Cloud;
 use particelle_core::pool::GrainPool;
 use particelle_core::spatializer::AmplitudePanner;
 use particelle_schema::ParticelleConfig;
-use std::io::{IsTerminal, Write};
 use std::sync::Arc;
 
 mod osc_control;
@@ -874,6 +873,8 @@ fn cmd_validate(patch_path: &str) -> Result<()> {
     }
     Ok(())
 }
+
+use std::io::{IsTerminal, Write};
 
 fn cmd_render(patch_path: &str, output_path: &str, duration: f64, emit_hash: bool) -> Result<()> {
     let config = load_patch_config(patch_path)?;
