@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Installer Signature Modes:** Added Sigstore verification controls to `install.sh` (`auto`, `--verify-signatures`, `--skip-signature-verify`) for prebuilt channels.
 - **Golden Fingerprint Baseline:** Added deterministic example-audio fingerprints in [`examples/golden_fingerprints.tsv`](examples/golden_fingerprints.tsv), plus a regeneration helper script [`scripts/update_golden_fingerprints.sh`](scripts/update_golden_fingerprints.sh).
 - **Realtime Soak Benchmark:** Added [`particelle-core/examples/realtime_soak_benchmark.rs`](particelle-core/examples/realtime_soak_benchmark.rs) with XRUN-equivalent budget checks.
+- **Homebrew Formula:** Added [`Formula/particelle.rb`](Formula/particelle.rb) for first-party Homebrew installs from release artifacts.
+- **Formula Updater:** Added [`scripts/update_homebrew_formula.sh`](scripts/update_homebrew_formula.sh) to regenerate formula URLs/checksums from GitHub release metadata.
 
 ### Changed
 - **Validation Guardrail:** Validation now rejects unsupported future schema versions (`schema_version > CURRENT_SCHEMA_VERSION`).
@@ -21,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Release Channel Docs:** Documented checksum + signature verification behavior and workflow identity expectations in [`docs/RELEASE_CHANNELS.md`](docs/RELEASE_CHANNELS.md).
 - **Example Regression Gate:** `scripts/check_examples.sh` now computes/stores PCM16 SHA-256 fingerprints and fails on mismatch against the golden baseline.
 - **Performance Gate:** `scripts/check_performance.sh` now runs both block-latency and soak/XRUN stability benchmarks.
+- **Release Channel Docs:** Added Homebrew install/update documentation in [`docs/RELEASE_CHANNELS.md`](docs/RELEASE_CHANNELS.md) and installer docs in [`README.md`](README.md).
 
 ## [0.1.0] - 2026-03-03
 

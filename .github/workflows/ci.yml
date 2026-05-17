@@ -26,6 +26,9 @@ jobs:
       - name: Verify canonical sample pack
         run: ./scripts/verify_sample_pack.sh
 
+      - name: Validate Homebrew formula syntax
+        run: ruby -c Formula/particelle.rb
+
       - name: Check formatting
         run: cargo fmt --all -- --check
 

@@ -26,6 +26,24 @@ For prebuilt channels, the installer verifies SHA-256 checksums by default. Sigs
 - `--verify-signatures`: require signature verification and fail if `cosign` or signature assets are unavailable.
 - `--skip-signature-verify`: disable signature verification and use checksum verification only.
 
+## Homebrew
+
+Particelle ships a first-party formula at [`Formula/particelle.rb`](/Users/cleider/dev/Particelle/Formula/particelle.rb).
+
+Install:
+
+```sh
+brew install --formula https://raw.githubusercontent.com/TheColby/Particelle/main/Formula/particelle.rb
+```
+
+Formula maintenance:
+
+```sh
+./scripts/update_homebrew_formula.sh --tag v0.2.3
+```
+
+This script refreshes release URLs and SHA-256 checksums in the formula from GitHub release metadata.
+
 ## Release Assets
 
 Each release publishes target-specific tarballs:

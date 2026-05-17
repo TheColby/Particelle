@@ -64,6 +64,12 @@ curl -fsSL https://raw.githubusercontent.com/TheColby/Particelle/main/install.sh
 ./install.sh --channel stable --verify-signatures
 ```
 
+### 🍺 Homebrew
+
+```sh
+brew install --formula https://raw.githubusercontent.com/TheColby/Particelle/main/Formula/particelle.rb
+```
+
 Upgrade paths:
 
 1. `stable -> stable`: re-run `./install.sh --channel stable` to upgrade to the latest tagged release.
