@@ -219,6 +219,8 @@ particelle init \
 
 ## 🎛️ Example Patches
 
+YAML blocks below are patch contents, not shell commands. Save them to files before running `particelle`.
+
 ### ✨ Example 1 — Stereo Shimmer
 
 ```yaml
@@ -244,6 +246,28 @@ clouds:
 ```
 
 ```sh
+cat > shimmer.yaml <<'YAML'
+engine:
+  sample_rate: 48000
+  block_size: 256
+
+layout:
+  channels:
+    - { name: "L", azimuth_deg: -30.0, elevation_deg: 0.0 }
+    - { name: "R", azimuth_deg:  30.0, elevation_deg: 0.0 }
+
+clouds:
+  - id: shimmer
+    source: audio/music_example.wav
+    density: 20.0
+    duration: 0.12
+    amplitude: 0.6
+    position: 0.5
+    window: { type: hann }
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }
+    width: 0.3
+YAML
+
 particelle render shimmer.yaml -o shimmer.wav --duration 8.0
 ```
 
