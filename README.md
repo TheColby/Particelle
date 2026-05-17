@@ -70,6 +70,17 @@ curl -fsSL https://raw.githubusercontent.com/TheColby/Particelle/main/install.sh
 brew install --formula https://raw.githubusercontent.com/TheColby/Particelle/main/Formula/particelle.rb
 ```
 
+### 🆕 What’s New
+
+- **Homebrew support:** install directly with `brew`.
+- **Stdin patch input:** `render`, `validate`, and `set` now accept `-` as patch path.
+
+```sh
+particelle init \
+  | sed -e 's/density: 10.0/density: 120.0/' -e 's/position: 0.5/position: "$random"/' \
+  | particelle render - -o chaos.wav --duration 5.0
+```
+
 Upgrade paths:
 
 1. `stable -> stable`: re-run `./install.sh --channel stable` to upgrade to the latest tagged release.
