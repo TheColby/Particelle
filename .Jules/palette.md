@@ -1,0 +1,3 @@
+## 2024-05-17 - CLI Progress Indicators & TTY Handling
+**Learning:** In headless CLI applications, it's crucial to write transient UI updates (like progress bars) to `stderr` rather than `stdout`, and conditionally disable them when not attached to a true terminal (`TTY`). This prevents polluting automated logs, pipes, or files with ANSI escape sequences (`\r`, `\x1b[2K`) while providing interactive users with helpful feedback.
+**Action:** Always verify `std::io::stderr().is_terminal()` and throttle the refresh rate (e.g., using `Instant` over a 100ms interval) to ensure a smooth, non-disruptive user experience when implementing CLI progress updates in Rust.
