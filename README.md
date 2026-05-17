@@ -167,7 +167,7 @@ particelle curve --help
 particelle init > my_first_patch.yaml
 ```
 
-This writes a complete, valid YAML patch with sensible defaults (stereo, 48kHz, Hann window, single cloud).
+This writes a complete, valid YAML patch with an animated dual-cloud stereo texture (stereo, 48kHz, evolving density/duration/position).
 
 ### ✔️ 2. Validate it
 
@@ -176,7 +176,7 @@ particelle validate my_first_patch.yaml
 ```
 
 ```text
-✓ Patch is valid. schema_version=2, 1 cloud(s), 2 channel(s).
+✓ Patch is valid. schema_version=2, 2 cloud(s), 2 channel(s).
 ```
 
 ### 🔊 3. Render to file
@@ -200,17 +200,17 @@ particelle run my_first_patch.yaml
 
 For fast experimentation, you can pipe `particelle init` directly into `particelle render` using `sed` or `yq` to override parameters on the fly without writing any files to disk.
 
-**Example: Render a 2-second pitch-shifted burst (-12 semitones)**
+**Example: Render a 2-second slower/broader burst texture**
 ```sh
 particelle init \
-  | sed -e 's/playback_rate: 1.0/playback_rate: 0.5/' -e 's/duration: 0.1/duration: 0.5/' \
-  | particelle render - -o downtuned.wav --duration 2.0
+  | sed -e 's/amplitude: 0.33/amplitude: 0.45/' -e 's/amplitude: 0.31/amplitude: 0.45/' -e 's/args: \["triangle", 0.09\]/args: ["triangle", 0.03]/' \
+  | particelle render - -o broader.wav --duration 2.0
 ```
 
 **Example: Fast asynchronous texture (high density, random position)**
 ```sh
 particelle init \
-  | sed -e 's/density: 10.0/density: 120.0/' -e 's/position: 0.5/position: "$random"/' \
+  | sed -e 's/args: \["phasor", 0.071, 0.0\]/args: ["phasor", 0.19, 0.0]/' -e 's/args: \["phasor", 0.073, 0.5\]/args: ["phasor", 0.23, 0.5]/' \
   | particelle render - -o chaos.wav --duration 5.0
 ```
 

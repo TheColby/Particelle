@@ -1299,16 +1299,63 @@ tuning:
   mode: twelve_tet
 
 clouds:
-  - id: my_cloud
+  - id: phase_left
     source: "audio/music_example.wav"
-    density: 16.0
-    duration: 0.1
-    amplitude: 0.5
-    position: 0.0
+    density:
+      op: sum
+      args:
+        - 18.0
+        - op: mul
+          args:
+            - 26.0
+            - op: osc
+              args: ["sine", 0.17]
+    duration:
+      op: sum
+      args:
+        - 0.03
+        - op: mul
+          args:
+            - 0.09
+            - op: osc
+              args: ["triangle", 0.09]
+    amplitude: 0.33
+    position:
+      op: osc
+      args: ["phasor", 0.071, 0.0]
     window:
       type: hann
-    listener_pos: {{ x: 0.0, y: 1.0, z: 0.0 }}
-    width: 0.5
+    listener_pos: {{ x: -0.8, y: 1.0, z: 0.0 }}
+    width: 0.25
+
+  - id: phase_right
+    source: "audio/music_example.wav"
+    density:
+      op: sum
+      args:
+        - 16.0
+        - op: mul
+          args:
+            - 24.0
+            - op: osc
+              args: ["triangle", 0.13]
+    duration:
+      op: sum
+      args:
+        - 0.04
+        - op: mul
+          args:
+            - 0.08
+            - op: osc
+              args: ["sine", 0.11]
+    amplitude: 0.31
+    position:
+      op: osc
+      args: ["phasor", 0.073, 0.5]
+    window:
+      type: hann
+    listener_pos: {{ x: 0.8, y: 1.0, z: 0.0 }}
+    width: 0.25
 "#,
         channels = channels,
         channel_lines = channel_defs.join("\n"),
