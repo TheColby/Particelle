@@ -5,6 +5,7 @@ use particelle_core::grain::Cloud;
 use particelle_core::pool::GrainPool;
 use particelle_core::spatializer::AmplitudePanner;
 use particelle_schema::ParticelleConfig;
+use std::io::Read;
 use std::sync::Arc;
 
 mod osc_control;
@@ -267,9 +268,20 @@ fn parse_patch_config(yaml: &str) -> Result<ParticelleConfig> {
     particelle_schema::parse_yaml_compat(yaml).with_context(|| "YAML parse error")
 }
 
+fn read_patch_yaml(patch_path: &str) -> Result<String> {
+    if patch_path == "-" {
+        let mut yaml = String::new();
+        std::io::stdin()
+            .read_to_string(&mut yaml)
+            .with_context(|| "Cannot read '-' from stdin")?;
+        Ok(yaml)
+    } else {
+        std::fs::read_to_string(patch_path).with_context(|| format!("Cannot read '{}'", patch_path))
+    }
+}
+
 fn load_patch_config(patch_path: &str) -> Result<ParticelleConfig> {
-    let yaml = std::fs::read_to_string(patch_path)
-        .with_context(|| format!("Cannot read '{}'", patch_path))?;
+    let yaml = read_patch_yaml(patch_path)?;
     parse_patch_config(&yaml)
 }
 
@@ -840,8 +852,7 @@ fn build_engine(config: &ParticelleConfig) -> Result<GranularEngine> {
 }
 
 fn cmd_validate(patch_path: &str) -> Result<()> {
-    let yaml = std::fs::read_to_string(patch_path)
-        .with_context(|| format!("Cannot read '{}'", patch_path))?;
+    let yaml = read_patch_yaml(patch_path)?;
     let parsed = particelle_schema::parse_yaml_compat_with_report(&yaml)
         .with_context(|| "YAML parse error")?;
     let config = parsed.config;
@@ -1327,8 +1338,7 @@ fn cmd_curve(curve_path: &str, resolution: usize) -> Result<()> {
 }
 
 fn cmd_set(patch_path: &str, param: &str, value: &str) -> Result<()> {
-    let yaml = std::fs::read_to_string(patch_path)
-        .with_context(|| format!("Cannot read '{}'", patch_path))?;
+    let yaml = read_patch_yaml(patch_path)?;
 
     // Simple key-value replacement in YAML text
     // Find the line containing the param's last segment and replace its value
