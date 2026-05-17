@@ -34,3 +34,6 @@ digest.workspace    = true
 serde_yaml.workspace = true
 notify = "6.1.1"
 rosc = "0.10.1"
+
+[dev-dependencies]
+hound.workspace = true
