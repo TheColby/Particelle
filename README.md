@@ -109,7 +109,6 @@ cd Particelle
 
 ```sh
 particelle --version
-# → particelle 0.1.0
 ```
 
 ### 🎚️ Canonical Sample Pack
@@ -174,21 +173,27 @@ This writes a complete, valid YAML patch with sensible defaults (stereo, 48kHz, 
 
 ```sh
 particelle validate my_first_patch.yaml
-# → ✓ Patch is valid. 1 cloud, 2 channels, 12-TET tuning.
+```
+
+```text
+✓ Patch is valid. schema_version=2, 1 cloud(s), 2 channel(s).
 ```
 
 ### 🔊 3. Render to file
 
 ```sh
 particelle render my_first_patch.yaml -o output.wav --duration 10.0
-# → Rendering 10.0s @ 48000Hz … done. Wrote output.wav (960000 frames, 2 channels)
+```
+
+```text
+→ Rendering 10.0s @ 48000Hz, 2 ch, block 256 → 'output.wav'
+✓ Wrote 480000 frames (2 channels) to 'output.wav'
 ```
 
 ### ▶️ 4. Play in real time
 
 ```sh
 particelle run my_first_patch.yaml
-# → Streaming to "Default Output" @ 48000Hz, 256 block … (Ctrl+C to stop)
 ```
 
 ### ⚡ Rapid Prototyping (No YAML Required)
