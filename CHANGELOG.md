@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Realtime Soak Benchmark:** Added [`particelle-core/examples/realtime_soak_benchmark.rs`](particelle-core/examples/realtime_soak_benchmark.rs) with XRUN-equivalent budget checks.
 - **Homebrew Formula:** Added [`Formula/particelle.rb`](Formula/particelle.rb) for first-party Homebrew installs from release artifacts.
 - **Formula Updater:** Added [`scripts/update_homebrew_formula.sh`](scripts/update_homebrew_formula.sh) to regenerate formula URLs/checksums from GitHub release metadata.
+- **Render Output Formats:** Added `particelle render --format {f32|pcm24|pcm16}` plus `--pcm24` shortcut for broader playback/tool compatibility.
 
 ### Changed
 - **Validation Guardrail:** Validation now rejects unsupported future schema versions (`schema_version > CURRENT_SCHEMA_VERSION`).

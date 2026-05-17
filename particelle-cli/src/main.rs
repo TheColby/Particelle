@@ -53,6 +53,17 @@ struct Cli {
     command: Commands,
 }
 
+#[derive(Copy, Clone, Debug, Eq, PartialEq, clap::ValueEnum)]
+#[value(rename_all = "lower")]
+enum RenderFormat {
+    /// 32-bit float WAV
+    F32,
+    /// 24-bit signed PCM WAV
+    Pcm24,
+    /// 16-bit signed PCM WAV
+    Pcm16,
+}
+
 #[derive(Subcommand)]
 enum Commands {
     /// Validate a YAML patch file and report all schema errors.
@@ -79,6 +90,7 @@ EXAMPLES:\n\
 NOTES:\n\
     The output channel count matches the layout declared in the YAML patch.\n\
     Sample rate and block size are taken from engine config.\n\
+    Use --format pcm24 (or --pcm24) for broad player/tool compatibility.\n\
     Use --hash to print a SHA-256 digest for deterministic regression tests.")]
     Render {
         /// Path to the YAML configuration file.
@@ -96,6 +108,19 @@ NOTES:\n\
             help = "Duration in seconds to render"
         )]
         duration: f64,
+
+        /// Output WAV encoding format.
+        #[arg(
+            long,
+            value_enum,
+            default_value_t = RenderFormat::F32,
+            help = "Output format: f32, pcm24, or pcm16"
+        )]
+        format: RenderFormat,
+
+        /// Shortcut for --format pcm24 (helpful for SoX/player compatibility).
+        #[arg(long, default_value_t = false, help = "Shortcut for --format pcm24")]
+        pcm24: bool,
 
         /// Print a deterministic SHA-256 hash of the output audio data.
         /// Useful for verifying byte-identical renders across runs.
@@ -233,9 +258,11 @@ fn main() -> Result<()> {
             patch,
             output,
             duration,
+            format,
+            pcm24,
             hash,
         } => {
-            cmd_render(&patch, &output, duration, hash)?;
+            cmd_render(&patch, &output, duration, format, pcm24, hash)?;
         }
         Commands::Run {
             patch,
@@ -885,7 +912,14 @@ fn cmd_validate(patch_path: &str) -> Result<()> {
     Ok(())
 }
 
-fn cmd_render(patch_path: &str, output_path: &str, duration: f64, emit_hash: bool) -> Result<()> {
+fn cmd_render(
+    patch_path: &str,
+    output_path: &str,
+    duration: f64,
+    format: RenderFormat,
+    force_pcm24: bool,
+    emit_hash: bool,
+) -> Result<()> {
     let config = load_patch_config(patch_path)?;
     let errors = particelle_schema::validate(&config);
     if !errors.is_empty() {
@@ -899,19 +933,24 @@ fn cmd_render(patch_path: &str, output_path: &str, duration: f64, emit_hash: boo
     let block_size = config.engine.block_size;
     let n_channels = config.layout.channels.len();
     let total_frames = (duration * sample_rate) as u64;
+    let (bit_depth, format_name) = if force_pcm24 {
+        (24u16, "pcm24")
+    } else {
+        match format {
+            RenderFormat::F32 => (32u16, "f32"),
+            RenderFormat::Pcm24 => (24u16, "pcm24"),
+            RenderFormat::Pcm16 => (16u16, "pcm16"),
+        }
+    };
 
     eprintln!(
-        "→ Rendering {:.1}s @ {}Hz, {} ch, block {} → '{}'",
-        duration, sample_rate as u32, n_channels, block_size, output_path
+        "→ Rendering {:.1}s @ {}Hz, {} ch, block {}, format {} → '{}'",
+        duration, sample_rate as u32, n_channels, block_size, format_name, output_path
     );
 
-    let mut writer = particelle_io::AudioFileWriter::create(
-        output_path,
-        n_channels,
-        sample_rate,
-        32, // 32-bit float output
-    )
-    .with_context(|| "Cannot create output file")?;
+    let mut writer =
+        particelle_io::AudioFileWriter::create(output_path, n_channels, sample_rate, bit_depth)
+            .with_context(|| "Cannot create output file")?;
 
     let mut engine = build_engine(&config)?;
     let mut frames_rendered = 0u64;

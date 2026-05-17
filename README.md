@@ -190,6 +190,12 @@ particelle render my_first_patch.yaml -o output.wav --duration 10.0
 ✓ Wrote 480000 frames (2 channels) to 'output.wav'
 ```
 
+For broader tool/player compatibility (including quieter `sox/play` behavior), render PCM:
+
+```sh
+particelle render my_first_patch.yaml -o output_pcm.wav --duration 10.0 --format pcm24
+```
+
 ### ▶️ 4. Play in real time
 
 ```sh
