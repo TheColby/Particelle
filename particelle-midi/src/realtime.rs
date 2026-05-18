@@ -149,3 +149,16 @@ pub enum MidiHostError {
     #[error("Failed to open MIDI port: {reason}")]
     OpenFailed { reason: String },
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_new_is_not_running() {
+        let host = RealtimeMidiHost::new();
+        // The host should not be running immediately after creation
+        assert!(!host.running.load(Ordering::Relaxed));
+        assert!(!host.is_running());
+    }
+}
