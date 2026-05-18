@@ -1,0 +1,3 @@
+## 2023-10-27 - [Progress Indicators in CLI loops]
+**Learning:** Adding a basic terminal UI progress loop in Rust applications can significantly impact performance if every block tries to write output. Checking `is_terminal` ensures logs don't pollute file redirects, and using `Instant::now()` to throttle updates (e.g. to 100ms) minimizes overhead on the hot loop while providing a smooth UX.
+**Action:** When adding progress feedback to batch or long-running computations, always throttle output using a timestamp and apply terminal checks (`stderr().is_terminal()`) to conditionally output carriage returns `\r`. Clear the line at the end using ANSI codes (`\x1b[2K\r`) to leave a clean stdout.
