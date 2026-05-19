@@ -1,0 +1,3 @@
+## 2024-05-17 - CLI Rendering Progress Indicator
+**Learning:** For a headless, pure CLI app like Particelle, implementing visual UX feedback requires special handling to not corrupt potential piped/redirected outputs. Using conditional TTY checks (`std::io::IsTerminal`) ensures progress indicators (like a rendering percentage) only appear for interactive users, and writing to `stderr` with ANSI escape codes (`\r\x1b[2K`) allows dynamic line overwriting without introducing new heavy dependencies (like `indicatif`) which might not fit the lightweight profile of the tool.
+**Action:** Always wrap CLI UI animations/updates in `is_terminal()` checks and use standard ANSI clear-line escapes before final messages to maintain clean log output and shell pipe behavior.
