@@ -124,6 +124,18 @@ Examples and documentation snippets that reference `samples/*.wav` target a dete
 - The generator scans `README.md`, `docs/`, and `examples/` for `samples/*.wav` references so the pack stays aligned with the documented surface area.
 - Run [`scripts/verify_sample_pack.sh`](/Users/cleider/dev/Particelle/scripts/verify_sample_pack.sh) to confirm deterministic regeneration and referenced-file coverage.
 
+### 🎧 Curated Listening Demos
+
+For fast, ear-first evaluation of output quality:
+
+```sh
+./scripts/render_listening_demos.sh
+```
+
+- Renders a curated 5-demo set from [`examples/listening_demos.tsv`](/Users/cleider/dev/Particelle/examples/listening_demos.tsv)
+- Writes WAV files, playlist, metrics, and manifest to `target/listening-demos/`
+- Full usage details in [`docs/LISTENING_DEMOS.md`](/Users/cleider/dev/Particelle/docs/LISTENING_DEMOS.md)
+
 ---
 
 ## 🆘 Help

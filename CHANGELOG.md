@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Homebrew Formula:** Added [`Formula/particelle.rb`](Formula/particelle.rb) for first-party Homebrew installs from release artifacts.
 - **Formula Updater:** Added [`scripts/update_homebrew_formula.sh`](scripts/update_homebrew_formula.sh) to regenerate formula URLs/checksums from GitHub release metadata.
 - **Render Output Formats:** Added `particelle render --format {f32|pcm24|pcm16}` plus `--pcm24` shortcut for broader playback/tool compatibility.
+- **Curated Listening Demos:** Added a 5-demo listening catalog [`examples/listening_demos.tsv`](examples/listening_demos.tsv), one-command renderer [`scripts/render_listening_demos.sh`](scripts/render_listening_demos.sh), and listening guide [`docs/LISTENING_DEMOS.md`](docs/LISTENING_DEMOS.md).
 
 ### Changed
 - **Validation Guardrail:** Validation now rejects unsupported future schema versions (`schema_version > CURRENT_SCHEMA_VERSION`).

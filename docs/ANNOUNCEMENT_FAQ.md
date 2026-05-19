@@ -71,3 +71,20 @@ This document captures the five objections most likely to appear immediately aft
 - It emits a timestamped report in `target/announcement-readiness/report.md`.
 
 **Code:** `scripts/announcement_readiness.sh`.
+
+## 6) "Sound-quality claims need curated listening demos."
+
+**Complaint:** Metrics and correctness checks are good, but listeners still want clear audio proof points.
+
+**Mitigation:**
+
+- Added a curated listening catalog: `examples/listening_demos.tsv`.
+- Added one-command demo rendering: `./scripts/render_listening_demos.sh`.
+- Script renders five representative demos to `target/listening-demos/` as PCM24 WAV for broad playback compatibility.
+- Script emits:
+  - `playlist.m3u`
+  - `metrics.tsv`
+  - `README.md` manifest with patch + intent per demo
+- Added dedicated usage docs: `docs/LISTENING_DEMOS.md`.
+
+**Code:** `scripts/render_listening_demos.sh`, `examples/listening_demos.tsv`, `docs/LISTENING_DEMOS.md`, `README.md`.

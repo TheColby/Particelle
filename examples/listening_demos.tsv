@@ -1,0 +1,6 @@
+id	patch	duration_s	title	focus
+phase_drift	examples/stereo/steve_reich_phase.yaml	20	Reich-Style Phase Drift	Two phasor-driven clouds drift in and out of lock.
+stretch_glass	examples/stretch_4x.yaml	12	Four-Times Time Stretch	Slow-motion granulation while preserving pitch center.
+impact_bloom	examples/ai2yaml/30_cinematic_impact.yaml	6	Cinematic Impact Bloom	High-density attack that blooms into a long granular tail.
+analysis_crossfade	examples/analysis/cross_file_flatness_window.yaml	12	Cross-File Analysis Modulation	Spectral flatness of one source drives grain size of another.
+directional_shimmer	examples/complex/directional_shimmer.yaml	10	Directional Shimmer	Rotating directivity and orientation for moving spatial texture.
