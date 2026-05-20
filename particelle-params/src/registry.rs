@@ -83,3 +83,62 @@ pub enum RegistryError {
     #[error("Parameter not found: '{path}'")]
     NotFound { path: String },
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_register_success() {
+        let mut registry = ParamRegistry::new();
+        let descriptor = ParamDescriptor {
+            path: "test.param".to_string(),
+            unit: Unit::Normalized,
+            domain: Domain::Continuous,
+            range: (0.0, 1.0),
+            default: 0.5,
+            description: None,
+        };
+
+        let result = registry.register(descriptor.clone());
+        assert!(result.is_ok());
+
+        let registered_descriptor = registry.get_descriptor("test.param");
+        assert!(registered_descriptor.is_some());
+        assert_eq!(registered_descriptor.unwrap().path, "test.param");
+        assert_eq!(registered_descriptor.unwrap().default, 0.5);
+
+        let registered_signal = registry.get_signal("test.param");
+        assert!(registered_signal.is_some());
+        if let ParamSignal::Const(val) = registered_signal.unwrap() {
+            assert_eq!(*val, 0.5);
+        } else {
+            panic!("Expected Const signal");
+        }
+    }
+
+    #[test]
+    fn test_register_already_registered() {
+        let mut registry = ParamRegistry::new();
+        let descriptor = ParamDescriptor {
+            path: "test.param".to_string(),
+            unit: Unit::Normalized,
+            domain: Domain::Continuous,
+            range: (0.0, 1.0),
+            default: 0.5,
+            description: None,
+        };
+
+        let result1 = registry.register(descriptor.clone());
+        assert!(result1.is_ok());
+
+        let result2 = registry.register(descriptor);
+        assert!(result2.is_err());
+        match result2.unwrap_err() {
+            RegistryError::AlreadyRegistered { path } => {
+                assert_eq!(path, "test.param");
+            }
+            _ => panic!("Expected AlreadyRegistered error"),
+        }
+    }
+}
