@@ -137,50 +137,50 @@ fn normalize_window(window: &mut serde_yaml::Value, report: &mut MigrationReport
         return;
     };
 
-    let Some(kind) = mapping_get_mut(mapping, "type").and_then(|value| string_value(&*value))
-    else {
+    let missing_alpha = !mapping.contains_key(value_key("alpha"));
+    let missing_epsilon = !mapping.contains_key(value_key("epsilon"));
+    let missing_hb = !mapping.contains_key(value_key("half_bandwidth"));
+
+    let kind = mapping_get_mut(mapping, "type")
+        .and_then(|value| string_value(&*value).map(|s| s.to_string()));
+
+    let Some(kind) = kind else {
         return;
     };
 
-    match kind {
-        "tukey" => {
-            if !mapping.contains_key(value_key("alpha")) {
-                mapping.insert(
-                    value_key("alpha"),
-                    serde_yaml::Value::Number(serde_yaml::Number::from(0.5)),
-                );
-                push_note(
-                    report,
-                    "window.defaults.tukey_alpha",
-                    "Added default alpha=0.5 for legacy tukey window nodes missing alpha.",
-                );
-            }
+    match kind.as_str() {
+        "tukey" if missing_alpha => {
+            mapping.insert(
+                value_key("alpha"),
+                serde_yaml::Value::Number(serde_yaml::Number::from(0.5)),
+            );
+            push_note(
+                report,
+                "window.defaults.tukey_alpha",
+                "Added default alpha=0.5 for legacy tukey window nodes missing alpha.",
+            );
         }
-        "planck_taper" => {
-            if !mapping.contains_key(value_key("epsilon")) {
-                mapping.insert(
-                    value_key("epsilon"),
-                    serde_yaml::Value::Number(serde_yaml::Number::from(0.1)),
-                );
-                push_note(
-                    report,
-                    "window.defaults.planck_epsilon",
-                    "Added default epsilon=0.1 for legacy planck_taper window nodes missing epsilon.",
-                );
-            }
+        "planck_taper" if missing_epsilon => {
+            mapping.insert(
+                value_key("epsilon"),
+                serde_yaml::Value::Number(serde_yaml::Number::from(0.1)),
+            );
+            push_note(
+                report,
+                "window.defaults.planck_epsilon",
+                "Added default epsilon=0.1 for legacy planck_taper window nodes missing epsilon.",
+            );
         }
-        "dpss" => {
-            if !mapping.contains_key(value_key("half_bandwidth")) {
-                mapping.insert(
-                    value_key("half_bandwidth"),
-                    serde_yaml::Value::Number(serde_yaml::Number::from(4.0)),
-                );
-                push_note(
-                    report,
-                    "window.defaults.dpss_half_bandwidth",
-                    "Added default half_bandwidth=4.0 for legacy dpss window nodes missing half_bandwidth.",
-                );
-            }
+        "dpss" if missing_hb => {
+            mapping.insert(
+                value_key("half_bandwidth"),
+                serde_yaml::Value::Number(serde_yaml::Number::from(4.0)),
+            );
+            push_note(
+                report,
+                "window.defaults.dpss_half_bandwidth",
+                "Added default half_bandwidth=4.0 for legacy dpss window nodes missing half_bandwidth.",
+            );
         }
         _ => {}
     }
