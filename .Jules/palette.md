@@ -1,0 +1,3 @@
+## 2024-05-23 - Add Progress Indicator to CLI Render Command
+**Learning:** Adding CLI UI features like progress indicators in headless environments should write to `stderr` and check `std::io::IsTerminal` to apply ANSI escapes conditionally only when a TTY is attached, avoiding log pollution. Also, UI refresh logic must be throttled (e.g., using `std::time::Instant` every 100ms) to prevent I/O jank and slowdowns.
+**Action:** Always wrap ANSI-escaped progress or UI terminal elements in `is_terminal()` conditional checks, use `\r` along with `\x1b[2K` to overwrite lines, and enforce a minimum throttling duration (100ms) for terminal output.
