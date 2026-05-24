@@ -1,0 +1,3 @@
+## 2023-10-27 - CLI Progress Indicator Throttling and TTY Awareness
+**Learning:** Adding a progress indicator to a tight rendering loop in a CLI application can severely degrade performance due to excessive I/O and terminal redraws. Furthermore, writing ANSI escape sequences to non-interactive streams (like file redirections or CI logs) pollutes the output with garbage characters.
+**Action:** Always throttle CLI progress updates (e.g., using `std::time::Instant` with a 100ms interval) and conditionally apply formatting and ANSI escape sequences (like `\r` and `\x1b[2K` to overwrite/clear lines) to `stderr` only when attached to a true TTY (verified via `std::io::stderr().is_terminal()`).
