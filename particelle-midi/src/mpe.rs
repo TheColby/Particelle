@@ -63,3 +63,43 @@ impl Default for MpeConfig {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_mpe_lower_zone() {
+        let zone = MpeZone::lower_zone(48.0);
+        assert_eq!(zone.master_channel, 1);
+        assert_eq!(zone.member_channels, 2..=15);
+        assert!((zone.pitchbend_range_semitones - 48.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_mpe_upper_zone() {
+        let zone = MpeZone::upper_zone(24.0);
+        assert_eq!(zone.master_channel, 16);
+        assert_eq!(zone.member_channels, 2..=15);
+        assert!((zone.pitchbend_range_semitones - 24.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_mpe_is_member_channel() {
+        let zone = MpeZone::lower_zone(48.0);
+        assert!(!zone.is_member_channel(1));
+        assert!(zone.is_member_channel(2));
+        assert!(zone.is_member_channel(15));
+        assert!(!zone.is_member_channel(16));
+    }
+
+    #[test]
+    fn test_mpe_config_default() {
+        let config = MpeConfig::default();
+        assert_eq!(config.zones.len(), 1);
+        assert_eq!(config.zones[0].master_channel, 1);
+        assert_eq!(config.zones[0].member_channels, 2..=15);
+        assert!((config.zones[0].pitchbend_range_semitones - 48.0).abs() < f64::EPSILON);
+        assert_eq!(config.max_voices, 16);
+    }
+}
