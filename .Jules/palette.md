@@ -1,0 +1,3 @@
+## 2026-05-27 - Offline Render Progress Indicator
+**Learning:** For command-line tools processing potentially large data streams (like offline audio rendering), users appreciate progress feedback. However, constantly writing to stdout/stderr per-block causes immense I/O overhead and unreadable terminal scroll. Also, we must only show progress when attached to a real TTY to avoid breaking pipes or log files.
+**Action:** When implementing CLI progress indicators, use `std::io::stderr().is_terminal()` to conditionally enable UI, throttle the update rate (e.g. max every 100ms), and use carriage return `\r` with clear-line ANSI escape `\x1b[2K` to overwrite a single line in place, yielding a smooth UX with zero external dependencies.
