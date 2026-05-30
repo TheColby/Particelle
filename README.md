@@ -1584,49 +1584,36 @@ Anticipated launch objections and concrete mitigations are documented in [`docs/
 
 ## 🛣️ Prioritized Roadmap
 
-1. **P0 — Lock example reliability in CI (implemented)**
-   CI validates every example patch, renders a short offline WAV for each one, and fails if any output is silent or any patch no longer parses.
+### Active Plan (Next)
 
-2. **P1 — Reduce clippy debt to a zero-warning baseline (implemented)**
-   The workspace is clean under `cargo clippy --workspace --all-targets -- -D warnings`, and CI enforces that baseline.
+1. **P8 — Hardware Realtime Soak Gate (planned)**
+   Add an automated long-run test path that exercises `particelle run` on real output devices (not only offline/core benchmarks), with underrun/drop/jitter metrics and explicit pass/fail budgets.
+   Acceptance: one command/script emits metrics + fails on threshold breaches; documented device constraints.
 
-3. **P1 — Formalize backward-compatible patch parsing (implemented)**
-   Legacy tuning fields and older signal-expression forms are normalized into the current schema during load, with tests covering the compatibility surface.
+2. **P8 — Realtime Telemetry and Diagnostics Surface (planned)**
+   Add optional runtime stats reporting for block timing, queue depth, MIDI/OSC event rates, and underrun counts.
+   Acceptance: `particelle run` can emit structured telemetry (stdout/file) suitable for bug reports and soak analysis.
 
-4. **P2 — Replace placeholder example assets with a canonical sample pack (implemented)**
-   `samples/` is now a deterministic generated dataset with repository-owned recipes, documentation, and stable SHA-256 hashes.
+3. **P8 — Public Listening Artifact Pipeline (planned)**
+   Promote curated listening demos to publishable release artifacts (playlist + rendered WAV pack + metrics manifest) so sound-quality claims are auditable without local setup.
+   Acceptance: CI/release job produces deterministic demo bundle and attaches it to nightly/release outputs.
 
-5. **P2 — Add DSP regression metrics beyond audibility (implemented)**
-   Example verification records peak, RMS, crest factor, active channel count, and per-channel RMS values for every render.
+4. **P9 — Provenance and SBOM for Release Artifacts (planned)**
+   Add software bill of materials and verifiable provenance metadata for distributed binaries and demo bundles.
+   Acceptance: generated SBOM/provenance files are published with release assets and linked from install docs.
 
-6. **P3 — Add realtime and MPE regression harnesses (implemented)**
-   Deterministic synthetic MIDI and MPE event injection now runs through a shared block-accurate harness that is covered by unit tests and reused by the realtime runner.
+5. **P9 — Cross-Platform Render Parity Policy (planned)**
+   Define and enforce acceptable tolerance windows for output parity across Linux/macOS x86_64/macOS arm64.
+   Acceptance: policy doc + automated parity report in CI/nightly indicating pass/fail by scenario.
 
-### Next Phase (Proposed)
+6. **P9 — Newcomer UX Compression Pass (planned)**
+   Reduce first-minute friction by collapsing the “first sound” path into a minimal, shell-safe flow with stronger error guidance.
+   Acceptance: first-run docs + commands validated in `zsh`, `bash`, and Homebrew install path.
 
-7. **P4 — Implement production realtime MIDI ingest (implemented)**
-   Realtime MIDI now uses `midir` port enumeration and callback wiring, supports explicit port selection (`hardware.midi_input` or `--midi-port`), and feeds live events into the routing layer.
+### Completed Phases (Archive)
 
-8. **P4 — Add performance benchmark and latency budget gates (implemented)**
-   CI now enforces performance budgets via representative render-throughput scenarios and a deterministic realtime block-latency benchmark.
-
-9. **P4 — Add schema versioning and migration metadata (implemented)**
-   Patches now carry explicit `schema_version` tags, compatibility parsing emits stable migration-note IDs, and validation rejects unsupported future schema versions.
-
-10. **P5 — Ship release artifacts and platform install channels (implemented)**
-   Automated release and nightly workflows now publish signed macOS/Linux tarballs with checksums, and the installer supports `stable`, `nightly`, and `source` channels plus version pinning for upgrades.
-
-11. **P5 — Expand deterministic integration tests for external control I/O (implemented)**
-   Deterministic control-path tests now verify OSC queue drain timing semantics and OSC/MIDI interaction ordering (including same-field override behavior).
-
-12. **P6 — Harden install-channel supply-chain verification (implemented)**
-   `install.sh` now supports Sigstore verification modes (`auto`, `--verify-signatures`, `--skip-signature-verify`) and validates artifact/workflow identity when signatures are checked.
-
-13. **P7 — Add golden audio fingerprint gate (implemented)**
-   Example regression now verifies deterministic PCM16 SHA-256 fingerprints for every canonical example against a repository-owned baseline.
-
-14. **P7 — Add realtime soak and XRUN stability gate (implemented)**
-   Performance checks now include a long-run deterministic soak benchmark with p99 latency and XRUN-ratio/consecutive-XRUN budgets.
+7. **P0–P7 foundational roadmap items (implemented)**
+   Reliability gates, compatibility parsing, deterministic assets/metrics, realtime + control-path harnesses, release channels, schema migration metadata, supply-chain checks, golden fingerprints, and soak benchmarks are complete.
 
 ### Compatibility Policy
 
