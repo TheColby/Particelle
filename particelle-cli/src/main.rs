@@ -6,7 +6,9 @@ use particelle_core::pool::GrainPool;
 use particelle_core::spatializer::AmplitudePanner;
 use particelle_schema::ParticelleConfig;
 use std::io::Read;
+use std::io::IsTerminal;
 use std::sync::Arc;
+use std::time::Instant;
 
 mod osc_control;
 
@@ -955,6 +957,8 @@ fn cmd_render(
     let mut engine = build_engine(&config)?;
     let mut frames_rendered = 0u64;
     let mut block = particelle_core::audio_block::AudioBlock::new(n_channels, block_size);
+    let mut last_update = Instant::now();
+    let is_tty = std::io::stderr().is_terminal();
 
     while frames_rendered < total_frames {
         let remaining = (total_frames - frames_rendered) as usize;
@@ -981,6 +985,16 @@ fn cmd_render(
         }
 
         frames_rendered += frames_this_block as u64;
+
+        if is_tty && last_update.elapsed().as_millis() > 100 {
+            let progress = (frames_rendered as f64 / total_frames as f64) * 100.0;
+            eprint!("\r\x1b[2K→ Rendering... {:.1}%", progress);
+            last_update = Instant::now();
+        }
+    }
+
+    if is_tty {
+        eprint!("\r\x1b[2K");
     }
 
     let written = writer.finalize().with_context(|| "Finalize error")?;
