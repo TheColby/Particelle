@@ -5,8 +5,8 @@ use particelle_core::grain::Cloud;
 use particelle_core::pool::GrainPool;
 use particelle_core::spatializer::AmplitudePanner;
 use particelle_schema::ParticelleConfig;
-use std::io::Read;
 use std::io::IsTerminal;
+use std::io::Read;
 use std::sync::Arc;
 use std::time::Instant;
 
