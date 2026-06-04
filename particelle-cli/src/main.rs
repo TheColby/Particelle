@@ -1,11 +1,11 @@
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
-use std::io::IsTerminal;
 use particelle_core::engine::{Engine, EngineConfig, GranularEngine};
 use particelle_core::grain::Cloud;
 use particelle_core::pool::GrainPool;
 use particelle_core::spatializer::AmplitudePanner;
 use particelle_schema::ParticelleConfig;
+use std::io::IsTerminal;
 use std::io::Read;
 use std::sync::Arc;
 
