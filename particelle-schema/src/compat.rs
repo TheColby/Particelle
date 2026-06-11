@@ -137,12 +137,12 @@ fn normalize_window(window: &mut serde_yaml::Value, report: &mut MigrationReport
         return;
     };
 
-    let Some(kind) = mapping_get_mut(mapping, "type").and_then(|value| string_value(&*value))
-    else {
+    let kind = mapping_get_mut(mapping, "type").and_then(|value| string_value(value).map(|s| s.to_string()));
+    let Some(kind_str) = kind else {
         return;
     };
 
-    match kind {
+    match kind_str.as_str() {
         "tukey" => {
             if !mapping.contains_key(value_key("alpha")) {
                 mapping.insert(
