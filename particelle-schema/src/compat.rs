@@ -137,12 +137,14 @@ fn normalize_window(window: &mut serde_yaml::Value, report: &mut MigrationReport
         return;
     };
 
-    let Some(kind) = mapping_get_mut(mapping, "type").and_then(|value| string_value(&*value))
-    else {
+    let Some(kind_val) = mapping_get_mut(mapping, "type") else {
+        return;
+    };
+    let Some(kind_str) = string_value(kind_val).map(|s| s.to_string()) else {
         return;
     };
 
-    match kind {
+    match kind_str.as_str() {
         "tukey" => {
             if !mapping.contains_key(value_key("alpha")) {
                 mapping.insert(
@@ -169,19 +171,18 @@ fn normalize_window(window: &mut serde_yaml::Value, report: &mut MigrationReport
                 );
             }
         }
-        "dpss" => {
-            if !mapping.contains_key(value_key("half_bandwidth")) {
-                mapping.insert(
-                    value_key("half_bandwidth"),
-                    serde_yaml::Value::Number(serde_yaml::Number::from(4.0)),
-                );
-                push_note(
-                    report,
-                    "window.defaults.dpss_half_bandwidth",
-                    "Added default half_bandwidth=4.0 for legacy dpss window nodes missing half_bandwidth.",
-                );
-            }
+        "dpss" if !mapping.contains_key(value_key("half_bandwidth")) => {
+            mapping.insert(
+                value_key("half_bandwidth"),
+                serde_yaml::Value::Number(serde_yaml::Number::from(4.0)),
+            );
+            push_note(
+                report,
+                "window.defaults.dpss_half_bandwidth",
+                "Added default half_bandwidth=4.0 for legacy dpss window nodes missing half_bandwidth.",
+            );
         }
+        "dpss" => {}
         _ => {}
     }
 }
