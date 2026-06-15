@@ -5,7 +5,7 @@ use particelle_core::grain::Cloud;
 use particelle_core::pool::GrainPool;
 use particelle_core::spatializer::AmplitudePanner;
 use particelle_schema::ParticelleConfig;
-use std::io::{Read, Write, IsTerminal};
+use std::io::{IsTerminal, Read, Write};
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -997,7 +997,6 @@ fn cmd_render(
         eprint!("\r\x1b[2K");
         let _ = std::io::stderr().flush();
     }
-
 
     let written = writer.finalize().with_context(|| "Finalize error")?;
     eprintln!(
