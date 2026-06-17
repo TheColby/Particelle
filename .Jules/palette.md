@@ -1,0 +1,3 @@
+## 2024-05-24 - CLI Render Progress Indicator
+**Learning:** When implementing CLI progress updates or terminal UI refresh loops in Rust, it's crucial to throttle the refresh rate (e.g., using `std::time::Instant` with a 100ms interval) to prevent excessive I/O, which can significantly degrade rendering performance. Additionally, conditionally checking `is_terminal()` ensures that CI environments are not spammed with intermediate carriage return logs.
+**Action:** Always wrap progress update prints with `is_terminal()` checks and an interval throttle to maintain smooth user experience and protect application performance.
