@@ -1,0 +1,3 @@
+## 2025-02-27 - CLI Progress Indicators
+**Learning:** When adding terminal progress updates to high-frequency loops (like audio rendering), two things are critical: First, naive `eprint!` without throttling causes severe I/O overhead that degrades performance. Second, emitting ANSI escapes without checking for a true TTY (`is_terminal()`) pollutes logs when stdout/stderr is piped or run in CI.
+**Action:** Always throttle CLI progress updates (e.g., to 100ms intervals) and conditionally wrap ANSI/carriage return logic with `std::io::stderr().is_terminal()` to ensure smooth performance and clean logs.
