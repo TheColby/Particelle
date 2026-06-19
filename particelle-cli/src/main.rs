@@ -5,7 +5,7 @@ use particelle_core::grain::Cloud;
 use particelle_core::pool::GrainPool;
 use particelle_core::spatializer::AmplitudePanner;
 use particelle_schema::ParticelleConfig;
-use std::io::{Read, Write, IsTerminal};
+use std::io::{IsTerminal, Read, Write};
 use std::sync::Arc;
 
 mod osc_control;
@@ -952,13 +952,11 @@ fn cmd_render(
         particelle_io::AudioFileWriter::create(output_path, n_channels, sample_rate, bit_depth)
             .with_context(|| "Cannot create output file")?;
 
-
     let mut engine = build_engine(&config)?;
     let mut frames_rendered = 0u64;
     let mut block = particelle_core::audio_block::AudioBlock::new(n_channels, block_size);
     let mut last_progress_update = std::time::Instant::now();
     let is_tty = std::io::stderr().is_terminal();
-
 
     while frames_rendered < total_frames {
         let remaining = (total_frames - frames_rendered) as usize;
