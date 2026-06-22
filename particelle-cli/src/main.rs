@@ -6,8 +6,8 @@ use particelle_core::pool::GrainPool;
 use particelle_core::spatializer::AmplitudePanner;
 use particelle_schema::ParticelleConfig;
 use std::io::{IsTerminal, Read, Write};
-use std::time::{Duration, Instant};
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 mod osc_control;
 
