@@ -1,0 +1,3 @@
+## 2024-05-18 - Added Progress Indicator to Render CLI
+**Learning:** Terminal output needs to consider whether standard streams are connected to an interactive TTY (Terminal) or a redirected pipe. When creating in-place CLI progress indicators for long running offline renders, ANSI escape codes (`\r\x1b[2K`) shouldn't be blindly emitted. Also, rate-limiting the screen updates (e.g. 100ms) prevents slowing down the render process itself from excessive IO.
+**Action:** Always check `std::io::stderr().is_terminal()` before emitting raw TTY progress updates, use `eprint!` and `flush()` to avoid interleaving with `stdout`, and rate limit the updates using `std::time::Instant`.
