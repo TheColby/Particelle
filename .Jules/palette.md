@@ -1,0 +1,3 @@
+## 2024-06-25 - Throttled CLI Progress Indicator
+**Learning:** In headless CLI environments, directly writing progress updates to the terminal on every loop iteration causes massive I/O overhead that significantly degrades rendering performance. Furthermore, printing without checking if stderr is a true TTY (`is_terminal()`) leads to severe log spam in CI pipelines or piped outputs.
+**Action:** Always throttle terminal updates (e.g., using a 100ms interval) and conditionally apply ANSI escapes only when attached to a real TTY. Use `\r\x1b[2K` for in-place replacement and ensure `stderr().flush()` is called.
