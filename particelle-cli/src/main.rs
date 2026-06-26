@@ -1,4 +1,3 @@
-use std::io::{IsTerminal, Write};
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use particelle_core::engine::{Engine, EngineConfig, GranularEngine};
@@ -7,6 +6,7 @@ use particelle_core::pool::GrainPool;
 use particelle_core::spatializer::AmplitudePanner;
 use particelle_schema::ParticelleConfig;
 use std::io::Read;
+use std::io::{IsTerminal, Write};
 use std::sync::Arc;
 
 mod osc_control;
