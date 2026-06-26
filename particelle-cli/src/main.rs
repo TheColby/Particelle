@@ -1,3 +1,4 @@
+use std::io::{IsTerminal, Write};
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use particelle_core::engine::{Engine, EngineConfig, GranularEngine};
@@ -956,6 +957,8 @@ fn cmd_render(
     let mut frames_rendered = 0u64;
     let mut block = particelle_core::audio_block::AudioBlock::new(n_channels, block_size);
 
+    let mut last_update = std::time::Instant::now();
+
     while frames_rendered < total_frames {
         let remaining = (total_frames - frames_rendered) as usize;
         let frames_this_block = block_size.min(remaining);
@@ -981,8 +984,19 @@ fn cmd_render(
         }
 
         frames_rendered += frames_this_block as u64;
+
+        if std::io::stderr().is_terminal() && last_update.elapsed().as_millis() >= 100 {
+            let percent = (frames_rendered as f64 / total_frames as f64) * 100.0;
+            eprint!("\r\x1b[2KRendering: {:.1}%", percent);
+            std::io::stderr().flush().unwrap();
+            last_update = std::time::Instant::now();
+        }
     }
 
+    if std::io::stderr().is_terminal() {
+        eprint!("\r\x1b[2K");
+        std::io::stderr().flush().unwrap();
+    }
     let written = writer.finalize().with_context(|| "Finalize error")?;
     eprintln!(
         "✓ Wrote {} frames ({} channels) to '{}'",
