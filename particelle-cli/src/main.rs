@@ -5,7 +5,7 @@ use particelle_core::grain::Cloud;
 use particelle_core::pool::GrainPool;
 use particelle_core::spatializer::AmplitudePanner;
 use particelle_schema::ParticelleConfig;
-use std::io::{Read, Write, IsTerminal};
+use std::io::{IsTerminal, Read, Write};
 use std::sync::Arc;
 
 mod osc_control;
