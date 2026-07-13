@@ -1,0 +1,3 @@
+## 2024-05-23 - Throttled TTY Ephemeral UI Updates
+**Learning:** Writing ephemeral terminal UI updates to stdout corrupts piped data, and unconditional ANSI escapes cause log spam in CI. Un-throttled UI refresh loops significantly degrade core process performance due to excessive I/O.
+**Action:** Always write in-place updates (`\r\x1b[2K`) to `stderr`, conditionalize them on `std::io::IsTerminal`, explicitly `flush()`, and throttle updates to a reasonable interval (e.g., 100ms) to ensure smooth user experience and maintain performance.
