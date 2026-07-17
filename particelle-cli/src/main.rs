@@ -989,7 +989,14 @@ fn cmd_render(
 
         if is_tty && last_update.elapsed() >= update_interval {
             let percent = (frames_rendered as f64 / total_frames as f64) * 100.0;
-            eprint!("\r\x1b[2K⧖ Rendering... {:.1}%", percent);
+            let width: usize = 30;
+            let filled: usize = (percent / 100.0 * width as f64).round() as usize;
+            let bar = format!(
+                "{}{}",
+                "█".repeat(filled),
+                "░".repeat(width.saturating_sub(filled))
+            );
+            eprint!("\r\x1b[2K⧖ Rendering... [{}] {:.1}%", bar, percent);
             let _ = std::io::stderr().flush();
             last_update = Instant::now();
         }
