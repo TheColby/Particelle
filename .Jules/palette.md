@@ -1,3 +1,7 @@
-## 2024-05-18 - CLI Progress Indicators
-**Learning:** When implementing in-place terminal progress bars in CI environments, relying solely on `\r` can cause log spam. It's critical to use `std::io::IsTerminal` to conditionally emit ANSI codes, throttle updates (e.g., 100ms) to prevent I/O bottlenecks during fast operations like offline rendering, and explicitly `flush()` to `stderr` (not `stdout`) to ensure real-time visibility without corrupting potential data pipes.
-**Action:** Always wrap ephemeral CLI progress updates in `.is_terminal()` checks, target `stderr`, and throttle the write frequency.
+## 2024-07-28 - Add lightweight visual progress bars
+**Learning:** External UI crates can be avoided for simple CLI progress indicators by relying on basic ANSI escape sequences and string repetition, which keeps the binary lightweight while significantly improving the user experience during long-running tasks.
+**Action:** Continue using `String::repeat` with Unicode blocks (`█` and `░`) for headless CLI visual feedback instead of heavy dependencies.
+
+## 2024-07-28 - Add lightweight visual progress bars
+**Learning:** External UI crates can be avoided for simple CLI progress indicators by relying on basic ANSI escape sequences and string repetition, which keeps the binary lightweight while significantly improving the user experience during long-running tasks.
+**Action:** Continue using `String::repeat` with Unicode blocks (`█` and `░`) for headless CLI visual feedback instead of heavy dependencies.
