@@ -157,7 +157,7 @@ mod tests {
 
     #[test]
     fn test_is_running() {
-        let host = RealtimeMidiHost::new();
+        let mut host = RealtimeMidiHost::new();
 
         // Initially, the host should not be running.
         assert!(!host.is_running());

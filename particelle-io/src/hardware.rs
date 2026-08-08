@@ -54,6 +54,21 @@ impl HardwareHost {
     where
         F: FnMut(&mut [f32]) + Send + 'static,
     {
+        self.run_for(_callback, None)
+    }
+
+    /// Open the stream for an optional bounded duration.
+    ///
+    /// A bounded run is intended for unattended device-soak automation. An
+    /// unbounded run retains the interactive behavior of [`Self::run`].
+    pub fn run_for<F>(
+        &self,
+        _callback: F,
+        duration: Option<std::time::Duration>,
+    ) -> Result<(), HardwareError>
+    where
+        F: FnMut(&mut [f32]) + Send + 'static,
+    {
         #[cfg(not(feature = "realtime"))]
         return Err(HardwareError::RealtimeNotEnabled);
 
@@ -114,10 +129,15 @@ impl HardwareHost {
                 self.config.block_size,
             );
 
-            // Block until Ctrl+C
-            let (tx, rx) = std::sync::mpsc::channel();
-            ctrlc_channel(tx);
-            let _ = rx.recv();
+            if let Some(duration) = duration {
+                std::thread::sleep(duration);
+            } else {
+                // Preserve the interactive stream lifetime. A bounded run is
+                // available for unattended diagnostics and soak automation.
+                loop {
+                    std::thread::sleep(std::time::Duration::from_secs(3600));
+                }
+            }
 
             drop(stream);
             eprintln!("→ Stream stopped.");
@@ -143,18 +163,6 @@ impl HardwareHost {
             Ok(names)
         }
     }
-}
-
-/// Set up a Ctrl+C handler that sends to the given channel.
-#[cfg(feature = "realtime")]
-fn ctrlc_channel(tx: std::sync::mpsc::Sender<()>) {
-    std::thread::spawn(move || {
-        // We move tx into the closure so it stays alive
-        let _keep_alive = tx;
-        loop {
-            std::thread::sleep(std::time::Duration::from_secs(3600));
-        }
-    });
 }
 
 #[derive(Debug, Error)]

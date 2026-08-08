@@ -41,6 +41,9 @@ jobs:
       - name: Performance gate
         run: ./scripts/check_performance.sh
 
+      - name: First-run onboarding gate
+        run: ./scripts/check_first_run.sh
+
   examples:
     needs: workspace
     runs-on: ubuntu-latest
@@ -67,3 +70,33 @@ jobs:
           EXAMPLE_SHARD_TOTAL: "4"
           EXAMPLE_SHARD_INDEX: ${{ matrix.shard_index }}
         run: ./scripts/check_examples.sh
+
+  render-parity:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-14]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo artifacts
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install Linux audio build deps
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev pkg-config
+
+      - name: Enforce native render parity
+        run: ./scripts/check_render_parity.sh
+
+      - name: Upload parity report
+        uses: actions/upload-artifact@v4
+        with:
+          name: render-parity-${{ runner.os }}
+          path: target/render-parity/report.json

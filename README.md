@@ -214,6 +214,14 @@ particelle render my_first_patch.yaml -o output_pcm.wav --duration 10.0 --format
 particelle run my_first_patch.yaml
 ```
 
+For an unattended device check or a shareable performance report, use a bounded run:
+
+```sh
+particelle run my_first_patch.yaml --duration 60 --telemetry-file telemetry.json
+```
+
+See [`docs/REALTIME_OPERATIONS.md`](docs/REALTIME_OPERATIONS.md) for hardware soak budgets and diagnostics fields.
+
 ### ⚡ Rapid Prototyping (No YAML Required)
 
 For fast experimentation, you can pipe `particelle init` directly into `particelle render` using `sed` or `yq` to override parameters on the fly without writing any files to disk.
@@ -1586,34 +1594,30 @@ Anticipated launch objections and concrete mitigations are documented in [`docs/
 
 ### Active Plan (Next)
 
-1. **P8 — Hardware Realtime Soak Gate (planned)**
-   Add an automated long-run test path that exercises `particelle run` on real output devices (not only offline/core benchmarks), with underrun/drop/jitter metrics and explicit pass/fail budgets.
-   Acceptance: one command/script emits metrics + fails on threshold breaches; documented device constraints.
+1. **P8 — Hardware Realtime Soak Gate (implemented)**
+   `scripts/realtime_soak.sh` performs bounded device runs with explicit deadline/drop budgets and writes `target/realtime-soak.json`.
 
-2. **P8 — Realtime Telemetry and Diagnostics Surface (planned)**
-   Add optional runtime stats reporting for block timing, queue depth, MIDI/OSC event rates, and underrun counts.
-   Acceptance: `particelle run` can emit structured telemetry (stdout/file) suitable for bug reports and soak analysis.
+2. **P8 — Realtime Telemetry and Diagnostics Surface (implemented)**
+   `particelle run --duration <seconds> --telemetry-file <path>` emits structured callback and MIDI/OSC control metrics.
 
-3. **P8 — Public Listening Artifact Pipeline (planned)**
-   Promote curated listening demos to publishable release artifacts (playlist + rendered WAV pack + metrics manifest) so sound-quality claims are auditable without local setup.
-   Acceptance: CI/release job produces deterministic demo bundle and attaches it to nightly/release outputs.
+3. **P8 — Public Listening Artifact Pipeline (implemented)**
+   Release and nightly workflows package the deterministic PCM24 listening bundle, playlist, and metrics manifest.
 
-4. **P9 — Provenance and SBOM for Release Artifacts (planned)**
-   Add software bill of materials and verifiable provenance metadata for distributed binaries and demo bundles.
-   Acceptance: generated SBOM/provenance files are published with release assets and linked from install docs.
+4. **P9 — Provenance and SBOM for Release Artifacts (implemented)**
+   Release workflows publish Cargo metadata SBOM and artifact-digest provenance alongside Sigstore signatures.
 
-5. **P9 — Cross-Platform Render Parity Policy (planned)**
-   Define and enforce acceptable tolerance windows for output parity across Linux/macOS x86_64/macOS arm64.
-   Acceptance: policy doc + automated parity report in CI/nightly indicating pass/fail by scenario.
+5. **P9 — Cross-Platform Render Parity Policy (implemented)**
+   CI runs native PCM16 parity checks on Linux and macOS and uploads scenario reports for release review.
 
-6. **P9 — Newcomer UX Compression Pass (planned)**
-   Reduce first-minute friction by collapsing the “first sound” path into a minimal, shell-safe flow with stronger error guidance.
-   Acceptance: first-run docs + commands validated in `zsh`, `bash`, and Homebrew install path.
+6. **P9 — Newcomer UX Compression Pass (implemented)**
+   CI validates the shell-safe first-run flow, including stdin validation and a non-empty PCM24 render.
 
 ### Completed Phases (Archive)
 
 7. **P0–P7 foundational roadmap items (implemented)**
    Reliability gates, compatibility parsing, deterministic assets/metrics, realtime + control-path harnesses, release channels, schema migration metadata, supply-chain checks, golden fingerprints, and soak benchmarks are complete.
+
+Operational and release policy details: [`docs/REALTIME_OPERATIONS.md`](docs/REALTIME_OPERATIONS.md) and [`docs/RELEASE_ASSURANCE.md`](docs/RELEASE_ASSURANCE.md).
 
 ### Compatibility Policy
 

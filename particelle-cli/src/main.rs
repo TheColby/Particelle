@@ -6,10 +6,75 @@ use particelle_core::pool::GrainPool;
 use particelle_core::spatializer::AmplitudePanner;
 use particelle_schema::ParticelleConfig;
 use std::io::{IsTerminal, Read, Write};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 mod osc_control;
+
+/// Lock-free counters sampled by the realtime callback and serialized on exit.
+struct RuntimeTelemetry {
+    callbacks: AtomicU64,
+    callback_ns_total: AtomicU64,
+    callback_ns_max: AtomicU64,
+    deadline_misses: AtomicU64,
+    dropped_callbacks: AtomicU64,
+    midi_events: AtomicU64,
+    osc_updates: AtomicU64,
+}
+
+impl RuntimeTelemetry {
+    fn new() -> Self {
+        Self {
+            callbacks: AtomicU64::new(0),
+            callback_ns_total: AtomicU64::new(0),
+            callback_ns_max: AtomicU64::new(0),
+            deadline_misses: AtomicU64::new(0),
+            dropped_callbacks: AtomicU64::new(0),
+            midi_events: AtomicU64::new(0),
+            osc_updates: AtomicU64::new(0),
+        }
+    }
+
+    fn record_callback(&self, elapsed: Duration, deadline: Duration) {
+        let ns = elapsed.as_nanos().min(u64::MAX as u128) as u64;
+        self.callbacks.fetch_add(1, Ordering::Relaxed);
+        self.callback_ns_total.fetch_add(ns, Ordering::Relaxed);
+        self.callback_ns_max.fetch_max(ns, Ordering::Relaxed);
+        if elapsed > deadline {
+            self.deadline_misses.fetch_add(1, Ordering::Relaxed);
+        }
+    }
+
+    fn json(
+        &self,
+        duration_s: Option<f64>,
+        sample_rate: f64,
+        block_size: usize,
+    ) -> serde_json::Value {
+        let callbacks = self.callbacks.load(Ordering::Relaxed);
+        let total_ns = self.callback_ns_total.load(Ordering::Relaxed);
+        let deadline_ns = ((block_size as f64 / sample_rate) * 1_000_000_000.0).round() as u64;
+        serde_json::json!({
+            "schema_version": 1,
+            "duration_s": duration_s,
+            "audio": {
+                "sample_rate": sample_rate,
+                "block_size": block_size,
+                "callbacks": callbacks,
+                "callback_ns_avg": if callbacks == 0 { 0 } else { total_ns / callbacks },
+                "callback_ns_max": self.callback_ns_max.load(Ordering::Relaxed),
+                "deadline_ns": deadline_ns,
+                "deadline_misses": self.deadline_misses.load(Ordering::Relaxed),
+                "dropped_callbacks": self.dropped_callbacks.load(Ordering::Relaxed),
+            },
+            "control": {
+                "midi_events": self.midi_events.load(Ordering::Relaxed),
+                "osc_updates": self.osc_updates.load(Ordering::Relaxed),
+            }
+        })
+    }
+}
 
 /// Particelle — granular synthesis engine command-line interface.
 ///
@@ -178,6 +243,14 @@ NOTES:\n\
         /// Optional MIDI input port name.
         #[arg(long, help = "MIDI input port name (exact match)")]
         midi_port: Option<String>,
+
+        /// Stop after this many seconds (for automation and device-soak runs).
+        #[arg(long, help = "Bound realtime run duration in seconds")]
+        duration: Option<f64>,
+
+        /// Write structured realtime diagnostics JSON when the run exits.
+        #[arg(long, help = "Path for structured realtime telemetry JSON")]
+        telemetry_file: Option<String>,
     },
 
     /// Generate a default YAML patch to stdout.
@@ -271,8 +344,18 @@ fn main() -> Result<()> {
             osc_reply,
             simulate_mpe,
             midi_port,
+            duration,
+            telemetry_file,
         } => {
-            cmd_run(&patch, osc_port, osc_reply, simulate_mpe, midi_port)?;
+            cmd_run(
+                &patch,
+                osc_port,
+                osc_reply,
+                simulate_mpe,
+                midi_port,
+                duration,
+                telemetry_file.as_deref(),
+            )?;
         }
         Commands::Init { channels } => {
             cmd_init(channels)?;
@@ -1032,7 +1115,14 @@ fn cmd_run(
     osc_reply: bool,
     simulate_mpe: bool,
     midi_port: Option<String>,
+    duration_s: Option<f64>,
+    telemetry_file: Option<&str>,
 ) -> Result<()> {
+    if let Some(seconds) = duration_s {
+        if !seconds.is_finite() || seconds <= 0.0 {
+            anyhow::bail!("--duration must be a positive finite number of seconds.");
+        }
+    }
     let config = load_patch_config(patch)?;
     let errors = particelle_schema::validate(&config);
     if !errors.is_empty() {
@@ -1249,6 +1339,9 @@ fn cmd_run(
 
     let audio_engine = Arc::clone(&safe_engine);
     let audio_router = Arc::clone(&safe_router);
+    let telemetry = Arc::new(RuntimeTelemetry::new());
+    let callback_telemetry = Arc::clone(&telemetry);
+    let callback_deadline = Duration::from_secs_f64(block_size as f64 / sample_rate);
 
     #[cfg(feature = "realtime")]
     {
@@ -1271,61 +1364,99 @@ fn cmd_run(
     }
 
     // Enter real-time IO loop
-    let run_result = host.run(move |buffer: &mut [f32]| {
-        // Take a fast lock on the active patch state
-        let router_guard = match audio_router.try_lock() {
-            Ok(g) => g,
-            Err(_) => return, // Drop the frame if the background thread happens to be hot-swapping right now
-        };
+    let run_result = host.run_for(
+        move |buffer: &mut [f32]| {
+            let callback_started = Instant::now();
+            // Take a fast lock on the active patch state
+            let router_guard = match audio_router.try_lock() {
+                Ok(g) => g,
+                Err(_) => {
+                    callback_telemetry
+                        .dropped_callbacks
+                        .fetch_add(1, Ordering::Relaxed);
+                    return;
+                }
+            };
 
-        let mut engine_guard = match audio_engine.try_lock() {
-            Ok(g) => g,
-            Err(_) => return, // Drop the frame if the background thread happens to be hot-swapping right now
-        };
+            let mut engine_guard = match audio_engine.try_lock() {
+                Ok(g) => g,
+                Err(_) => {
+                    callback_telemetry
+                        .dropped_callbacks
+                        .fetch_add(1, Ordering::Relaxed);
+                    return;
+                }
+            };
 
-        let mut control_events: Vec<particelle_midi::MidiEvent> = midi_rx.try_iter().collect();
-        if let Some(harness) = simulated_mpe.as_ref() {
-            control_events.extend(harness.events_for_block(engine_guard.state.frame, block_size));
-        }
-        let new_fields = router_guard.process(&control_events);
+            let mut control_events: Vec<particelle_midi::MidiEvent> = midi_rx.try_iter().collect();
+            callback_telemetry
+                .midi_events
+                .fetch_add(control_events.len() as u64, Ordering::Relaxed);
+            if let Some(harness) = simulated_mpe.as_ref() {
+                control_events
+                    .extend(harness.events_for_block(engine_guard.state.frame, block_size));
+            }
+            let new_fields = router_guard.process(&control_events);
 
-        if let Some(map_provider) = engine_guard
-            .fields
-            .as_any_mut()
-            .and_then(|a| a.downcast_mut::<MapProvider>())
-        {
-            for (k, v) in new_fields {
-                map_provider.fields.insert(k, v);
+            if let Some(map_provider) = engine_guard
+                .fields
+                .as_any_mut()
+                .and_then(|a| a.downcast_mut::<MapProvider>())
+            {
+                for (k, v) in new_fields {
+                    map_provider.fields.insert(k, v);
+                }
+
+                // Drain OSC channel queue every block without blocking
+                let osc_updates =
+                    osc_control::drain_field_updates(&osc_rx, &mut map_provider.fields);
+                callback_telemetry
+                    .osc_updates
+                    .fetch_add(osc_updates as u64, Ordering::Relaxed);
             }
 
-            // Drain OSC channel queue every block without blocking
-            osc_control::drain_field_updates(&osc_rx, &mut map_provider.fields);
-        }
-
-        if let Err(e) = engine_guard.process(&mut block) {
-            eprintln!("Engine error: {}", e);
-            block.silence();
-        }
-
-        let out_frames = buffer.len() / n_channels;
-        let frames_to_copy = out_frames.min(block.frames);
-
-        for f in 0..frames_to_copy {
-            for ch in 0..n_channels {
-                buffer[f * n_channels + ch] = block.channels[ch][f] as f32;
+            if let Err(e) = engine_guard.process(&mut block) {
+                eprintln!("Engine error: {}", e);
+                block.silence();
             }
-        }
-    });
+
+            let out_frames = buffer.len() / n_channels;
+            let frames_to_copy = out_frames.min(block.frames);
+
+            for f in 0..frames_to_copy {
+                for ch in 0..n_channels {
+                    buffer[f * n_channels + ch] = block.channels[ch][f] as f32;
+                }
+            }
+            callback_telemetry.record_callback(callback_started.elapsed(), callback_deadline);
+        },
+        duration_s.map(Duration::from_secs_f64),
+    );
 
     #[cfg(feature = "realtime")]
     midi_host.stop();
 
-    run_result.with_context(|| "Audio stream error")
+    run_result.with_context(|| "Audio stream error")?;
+
+    if let Some(path) = telemetry_file {
+        let report = telemetry.json(duration_s, sample_rate, block_size);
+        std::fs::write(
+            path,
+            format!("{}\n", serde_json::to_string_pretty(&report)?),
+        )
+        .with_context(|| format!("Cannot write telemetry file '{path}'"))?;
+        eprintln!("✓ Wrote realtime telemetry to '{path}'");
+    }
+
+    Ok(())
 }
 
 fn cmd_init(channels: usize) -> Result<()> {
     if channels == 0 || channels > 256 {
-        anyhow::bail!("Invalid number of channels: {}. Must be between 1 and 256.", channels);
+        anyhow::bail!(
+            "Invalid number of channels: {}. Must be between 1 and 256.",
+            channels
+        );
     }
 
     let channel_defs: Vec<String> = if channels == 1 {
