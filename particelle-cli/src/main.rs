@@ -64,7 +64,7 @@ impl RuntimeTelemetry {
                 "sample_rate": sample_rate,
                 "block_size": block_size,
                 "callbacks": callbacks,
-                "callback_ns_avg": if callbacks == 0 { 0 } else { total_ns / callbacks },
+                "callback_ns_avg": total_ns.checked_div(callbacks).unwrap_or(0),
                 "callback_ns_max": self.callback_ns_max.load(Ordering::Relaxed),
                 "deadline_ns": deadline_ns,
                 "deadline_misses": self.deadline_misses.load(Ordering::Relaxed),
