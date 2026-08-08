@@ -8,7 +8,7 @@ Use a bounded run when collecting a reproducible bug report or validating a devi
 particelle run patch.yaml --duration 60 --telemetry-file telemetry.json
 ```
 
-The JSON report includes callback count, average and maximum callback time, callback deadline, deadline misses, lock-contention drops, and MIDI/OSC control event counts. It is emitted only after a bounded run exits normally.
+The JSON report includes callback count, average and maximum callback time, callback deadline, deadline misses, lock-contention drops, MIDI/OSC control event counts, and maximum pending control batch depth. Deadline misses are the portable underrun-risk signal exposed by the CPAL callback contract. The report is emitted only after a bounded run exits normally.
 
 ## Hardware Soak Gate
 

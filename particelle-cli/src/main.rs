@@ -21,6 +21,7 @@ struct RuntimeTelemetry {
     dropped_callbacks: AtomicU64,
     midi_events: AtomicU64,
     osc_updates: AtomicU64,
+    control_queue_depth_max: AtomicU64,
 }
 
 impl RuntimeTelemetry {
@@ -33,6 +34,7 @@ impl RuntimeTelemetry {
             dropped_callbacks: AtomicU64::new(0),
             midi_events: AtomicU64::new(0),
             osc_updates: AtomicU64::new(0),
+            control_queue_depth_max: AtomicU64::new(0),
         }
     }
 
@@ -71,6 +73,7 @@ impl RuntimeTelemetry {
             "control": {
                 "midi_events": self.midi_events.load(Ordering::Relaxed),
                 "osc_updates": self.osc_updates.load(Ordering::Relaxed),
+                "queue_depth_max": self.control_queue_depth_max.load(Ordering::Relaxed),
             }
         })
     }
@@ -1389,14 +1392,15 @@ fn cmd_run(
             };
 
             let mut control_events: Vec<particelle_midi::MidiEvent> = midi_rx.try_iter().collect();
-            callback_telemetry
-                .midi_events
-                .fetch_add(control_events.len() as u64, Ordering::Relaxed);
             if let Some(harness) = simulated_mpe.as_ref() {
                 control_events
                     .extend(harness.events_for_block(engine_guard.state.frame, block_size));
             }
+            callback_telemetry
+                .midi_events
+                .fetch_add(control_events.len() as u64, Ordering::Relaxed);
             let new_fields = router_guard.process(&control_events);
+            let mut osc_updates = 0usize;
 
             if let Some(map_provider) = engine_guard
                 .fields
@@ -1408,12 +1412,15 @@ fn cmd_run(
                 }
 
                 // Drain OSC channel queue every block without blocking
-                let osc_updates =
-                    osc_control::drain_field_updates(&osc_rx, &mut map_provider.fields);
+                osc_updates = osc_control::drain_field_updates(&osc_rx, &mut map_provider.fields);
                 callback_telemetry
                     .osc_updates
                     .fetch_add(osc_updates as u64, Ordering::Relaxed);
             }
+            callback_telemetry.control_queue_depth_max.fetch_max(
+                (control_events.len() + osc_updates) as u64,
+                Ordering::Relaxed,
+            );
 
             if let Err(e) = engine_guard.process(&mut block) {
                 eprintln!("Engine error: {}", e);
