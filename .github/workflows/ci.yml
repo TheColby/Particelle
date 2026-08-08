@@ -90,7 +90,11 @@ jobs:
 
       - name: Install Linux audio build deps
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev pkg-config
+        run: sudo apt-get update && sudo apt-get install -y sox libasound2-dev pkg-config
+
+      - name: Install macOS audio build deps
+        if: runner.os == 'macOS'
+        run: brew install sox
 
       - name: Enforce native render parity
         run: ./scripts/check_render_parity.sh
