@@ -163,3 +163,83 @@ fn render_pcm24_flag_forces_pcm24() {
     assert_eq!(spec.bits_per_sample, 24);
     assert_eq!(spec.sample_format, hound::SampleFormat::Int);
 }
+
+#[test]
+fn dronoify_generates_valid_non_silent_multichannel_patch() {
+    let cwd = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+    let dir = test_dir("dronoify_multichannel");
+    let patch = dir.join("dronoify.yaml");
+    let wav = dir.join("dronoify.wav");
+    let source = cwd.join("audio/music_example.wav");
+    let source = source.to_str().expect("source path utf8");
+
+    let yaml = run_ok(
+        &[
+            "preset",
+            "dronoify",
+            source,
+            "--channels",
+            "8",
+            "--density",
+            "24",
+            "--grain-duration",
+            "0.6",
+        ],
+        &cwd,
+    );
+    assert_eq!(yaml.matches("name: \"CH").count(), 8);
+    std::fs::write(&patch, yaml).expect("write dronoify patch");
+    run_ok(
+        &["validate", patch.to_str().expect("patch path utf8")],
+        &cwd,
+    );
+    run_ok(
+        &[
+            "render",
+            patch.to_str().expect("patch path utf8"),
+            "-o",
+            wav.to_str().expect("wav path utf8"),
+            "--duration",
+            "0.25",
+            "--format",
+            "pcm24",
+        ],
+        &cwd,
+    );
+
+    let mut reader = hound::WavReader::open(&wav).expect("open drone render");
+    assert_eq!(reader.spec().channels, 8);
+    let peak = reader
+        .samples::<i32>()
+        .map(|sample| sample.expect("sample").unsigned_abs())
+        .max()
+        .expect("audio samples");
+    assert!(peak > 0, "dronoify render must be non-silent");
+}
+
+#[test]
+fn dronoify_accepts_channel_count_boundaries() {
+    let cwd = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+    let source = cwd.join("audio/music_example.wav");
+    let source = source.to_str().expect("source path utf8");
+    let dir = test_dir("dronoify_channel_boundaries");
+
+    for channels in [1usize, 2, 256] {
+        let yaml = run_ok(
+            &[
+                "preset",
+                "dronoify",
+                source,
+                "--channels",
+                &channels.to_string(),
+            ],
+            &cwd,
+        );
+        let patch = dir.join(format!("dronoify-{channels}.yaml"));
+        std::fs::write(&patch, yaml).expect("write boundary patch");
+        run_ok(
+            &["validate", patch.to_str().expect("patch path utf8")],
+            &cwd,
+        );
+    }
+}

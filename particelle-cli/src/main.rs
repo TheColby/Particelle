@@ -24,6 +24,19 @@ struct RuntimeTelemetry {
     control_queue_depth_max: AtomicU64,
 }
 
+struct DronoifyOptions<'a> {
+    source: &'a str,
+    channels: usize,
+    density: f64,
+    grain_duration: f64,
+    amplitude: f64,
+    position: f64,
+    width: f64,
+    movement_hz: f64,
+    drift_hz: f64,
+    window: &'a str,
+}
+
 impl RuntimeTelemetry {
     fn new() -> Self {
         Self {
@@ -275,6 +288,57 @@ EXAMPLES:\n\
         channels: usize,
     },
 
+    /// Generate a layered atmospheric-drone patch from any WAV source.
+    #[command(after_help = "\
+EXAMPLES:\n\
+    particelle preset dronoify field-recording.wav > drone.yaml\n\
+    particelle preset dronoify vocals.wav -n 8 --density 42 --grain-duration 1.2 > surround-drone.yaml\n\n\
+The generated layout supports 1 through 256 output channels. The source path is\n\
+preserved verbatim, so use a path relative to the patch file when practical.")]
+    Preset {
+        /// Preset name. Currently supported: dronoify.
+        name: String,
+
+        /// Input WAV file to transform into an atmospheric drone.
+        source: String,
+
+        /// Number of output channels to generate (1 through 256).
+        #[arg(short = 'n', long, default_value_t = 2)]
+        channels: usize,
+
+        /// Base grains per second across the primary cloud.
+        #[arg(long, default_value_t = 32.0)]
+        density: f64,
+
+        /// Primary grain duration in seconds.
+        #[arg(long, default_value_t = 0.85)]
+        grain_duration: f64,
+
+        /// Overall cloud amplitude before spatial distribution.
+        #[arg(long, default_value_t = 0.32)]
+        amplitude: f64,
+
+        /// Source scan center in seconds.
+        #[arg(long, default_value_t = 0.5)]
+        position: f64,
+
+        /// Spatial width from focused (0) to fully diffuse (1).
+        #[arg(long, default_value_t = 0.92)]
+        width: f64,
+
+        /// Slow directional movement rate in Hz.
+        #[arg(long, default_value_t = 0.012)]
+        movement_hz: f64,
+
+        /// Slow source-position drift rate in Hz.
+        #[arg(long, default_value_t = 0.021)]
+        drift_hz: f64,
+
+        /// Grain window type, for example hann, blackman_harris, or kaiser.
+        #[arg(long, default_value = "blackman_harris")]
+        window: String,
+    },
+
     /// Inspect, evaluate, and print a JSON curve file.
     ///
     /// Compiles the curve and prints (x, y) sample pairs to stdout in TSV format.
@@ -362,6 +426,35 @@ fn main() -> Result<()> {
         }
         Commands::Init { channels } => {
             cmd_init(channels)?;
+        }
+        Commands::Preset {
+            name,
+            source,
+            channels,
+            density,
+            grain_duration,
+            amplitude,
+            position,
+            width,
+            movement_hz,
+            drift_hz,
+            window,
+        } => {
+            cmd_preset(
+                &name,
+                DronoifyOptions {
+                    source: &source,
+                    channels,
+                    density,
+                    grain_duration,
+                    amplitude,
+                    position,
+                    width,
+                    movement_hz,
+                    drift_hz,
+                    window: &window,
+                },
+            )?;
         }
         Commands::Curve { curve, resolution } => {
             cmd_curve(&curve, resolution)?;
@@ -1458,7 +1551,7 @@ fn cmd_run(
     Ok(())
 }
 
-fn cmd_init(channels: usize) -> Result<()> {
+fn channel_defs(channels: usize) -> Result<Vec<String>> {
     if channels == 0 || channels > 256 {
         anyhow::bail!(
             "Invalid number of channels: {}. Must be between 1 and 256.",
@@ -1466,7 +1559,7 @@ fn cmd_init(channels: usize) -> Result<()> {
         );
     }
 
-    let channel_defs: Vec<String> = if channels == 1 {
+    Ok(if channels == 1 {
         vec!["    - { name: \"M\", azimuth_deg: 0.0, elevation_deg: 0.0 }".into()]
     } else if channels == 2 {
         vec![
@@ -1485,7 +1578,157 @@ fn cmd_init(channels: usize) -> Result<()> {
                 )
             })
             .collect()
-    };
+    })
+}
+
+fn yaml_string(value: &str) -> String {
+    format!("\"{}\"", value.replace('\\', "\\\\").replace('"', "\\\""))
+}
+
+fn cmd_preset(name: &str, options: DronoifyOptions<'_>) -> Result<()> {
+    if name != "dronoify" {
+        anyhow::bail!("Unknown preset '{name}'. Available presets: dronoify.");
+    }
+    let DronoifyOptions {
+        source,
+        channels,
+        density,
+        grain_duration,
+        amplitude,
+        position,
+        width,
+        movement_hz,
+        drift_hz,
+        window,
+    } = options;
+    for (label, value) in [
+        ("density", density),
+        ("grain-duration", grain_duration),
+        ("amplitude", amplitude),
+        ("position", position),
+        ("width", width),
+        ("movement-hz", movement_hz),
+        ("drift-hz", drift_hz),
+    ] {
+        if !value.is_finite() || value < 0.0 {
+            anyhow::bail!("--{label} must be a finite value greater than or equal to zero.");
+        }
+    }
+    if density == 0.0 || grain_duration == 0.0 || amplitude == 0.0 {
+        anyhow::bail!("--density, --grain-duration, and --amplitude must be greater than zero.");
+    }
+    if width > 1.0 {
+        anyhow::bail!("--width must be between 0 and 1.");
+    }
+
+    let channel_lines = channel_defs(channels)?.join("\n");
+    let source = yaml_string(source);
+    let window = yaml_string(window);
+    let yaml = format!(
+        r#"# Particelle preset: dronoify
+# Layered, long-grain atmospheric drone generated from the source below.
+# Controls: density, grain duration, amplitude, source scan center, drift,
+# spatial width, movement rate, window, and output channel count.
+
+schema_version: {schema_version}
+
+engine:
+  sample_rate: 48000
+  block_size: 256
+
+layout:
+  channels:
+{channel_lines}
+
+tuning:
+  mode: twelve_tet
+
+clouds:
+  - id: dronoify_foundation
+    source: {source}
+    density: {density:.6}
+    duration: {grain_duration:.6}
+    amplitude: {amplitude:.6}
+    position:
+      op: sum
+      args:
+        - {position:.6}
+        - op: mul
+          args: [0.120000, {{ op: osc, args: ["sine", {drift_hz:.6}] }}]
+    window: {{ type: {window} }}
+    listener_pos: {{ x: 0.0, y: 1.0, z: 0.0 }}
+    width: {width:.6}
+    directivity: 0.280000
+    orientation_azimuth: {{ op: mul, args: [180.0, {{ op: osc, args: ["sine", {movement_hz:.6}] }}] }}
+
+  - id: dronoify_halo
+    source: {source}
+    density: {halo_density:.6}
+    duration: {halo_duration:.6}
+    amplitude: {halo_amplitude:.6}
+    position:
+      op: sum
+      args:
+        - {halo_position:.6}
+        - op: mul
+          args: [0.180000, {{ op: osc, args: ["triangle", {halo_drift_hz:.6}] }}]
+    window: {{ type: {window} }}
+    listener_pos: {{ x: 0.0, y: 1.0, z: 0.0 }}
+    width: 1.000000
+    directivity: 0.180000
+    orientation_azimuth: {{ op: mul, args: [-180.0, {{ op: osc, args: ["sine", {halo_movement_hz:.6}] }}] }}
+
+  - id: dronoify_sparkle
+    source: {source}
+    density: {sparkle_density:.6}
+    duration: {sparkle_duration:.6}
+    amplitude: {sparkle_amplitude:.6}
+    position:
+      op: sum
+      args:
+        - {sparkle_position:.6}
+        - op: mul
+          args: [0.070000, {{ op: osc, args: ["sine", {sparkle_drift_hz:.6}] }}]
+    window: {{ type: {window} }}
+    listener_pos: {{ x: 0.0, y: 1.0, z: 0.0 }}
+    width: {sparkle_width:.6}
+    directivity: 0.420000
+    orientation_azimuth: {{ op: mul, args: [120.0, {{ op: osc, args: ["triangle", {sparkle_movement_hz:.6}] }}] }}
+"#,
+        schema_version = particelle_schema::CURRENT_SCHEMA_VERSION,
+        channel_lines = channel_lines,
+        source = source,
+        window = window,
+        density = density,
+        grain_duration = grain_duration,
+        amplitude = amplitude,
+        position = position,
+        width = width.min(1.0),
+        movement_hz = movement_hz,
+        drift_hz = drift_hz,
+        halo_density = density * 0.55,
+        halo_duration = grain_duration * 1.75,
+        halo_amplitude = amplitude * 0.55,
+        halo_position = position + 0.22,
+        halo_drift_hz = drift_hz * 0.61,
+        halo_movement_hz = movement_hz * 0.71,
+        sparkle_density = density * 0.28,
+        sparkle_duration = grain_duration * 0.55,
+        sparkle_amplitude = amplitude * 0.32,
+        sparkle_position = position + 0.51,
+        sparkle_width = (width * 0.72).min(1.0),
+        sparkle_drift_hz = drift_hz * 1.43,
+        sparkle_movement_hz = movement_hz * 1.61,
+    );
+    print!("{yaml}");
+    if std::io::stdout().is_terminal() {
+        eprintln!("\nTip: Redirect this preset to a patch file (for example, > dronoify.yaml).");
+    }
+    Ok(())
+}
+
+fn cmd_init(channels: usize) -> Result<()> {
+    let channel_defs = channel_defs(channels)?;
 
     let yaml = format!(
         r#"# Particelle patch — generated by `particelle init -n {channels}`

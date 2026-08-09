@@ -222,6 +222,27 @@ particelle run my_first_patch.yaml --duration 60 --telemetry-file telemetry.json
 
 See [`docs/REALTIME_OPERATIONS.md`](docs/REALTIME_OPERATIONS.md) for hardware soak budgets and diagnostics fields.
 
+### 🌫️ Dronoify Any Audio File
+
+`dronoify` turns a WAV file into a layered, atmospheric granular drone. It emits a normal YAML patch, so every generated parameter remains editable and deterministic:
+
+```sh
+particelle preset dronoify /path/to/field-recording.wav > dronoify.yaml
+particelle validate dronoify.yaml
+particelle render dronoify.yaml -o dronoify.wav --duration 60 --format pcm24
+```
+
+It supports every output layout from mono through 256 discrete channels:
+
+```sh
+particelle preset dronoify vocals.wav --channels 12 \
+  --density 42 --grain-duration 1.2 --amplitude 0.28 \
+  --position 4.0 --width 0.95 --movement-hz 0.009 --drift-hz 0.016 \
+  --window blackman_harris > surround-drone.yaml
+```
+
+Controls: `--density`, `--grain-duration`, `--amplitude`, `--position`, `--width`, `--movement-hz`, `--drift-hz`, and `--window`. The source path is written verbatim into the patch; relative paths are resolved from the patch file's directory.
+
 ### ⚡ Rapid Prototyping (No YAML Required)
 
 For fast experimentation, you can pipe `particelle init` directly into `particelle render` using `sed` or `yq` to override parameters on the fly without writing any files to disk.
