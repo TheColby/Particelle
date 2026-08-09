@@ -64,7 +64,7 @@ impl RuntimeTelemetry {
                 "sample_rate": sample_rate,
                 "block_size": block_size,
                 "callbacks": callbacks,
-                "callback_ns_avg": if callbacks == 0 { 0 } else { total_ns / callbacks },
+                "callback_ns_avg": total_ns.checked_div(callbacks).unwrap_or(0),
                 "callback_ns_max": self.callback_ns_max.load(Ordering::Relaxed),
                 "deadline_ns": deadline_ns,
                 "deadline_misses": self.deadline_misses.load(Ordering::Relaxed),
@@ -1569,6 +1569,9 @@ clouds:
         schema_version = particelle_schema::CURRENT_SCHEMA_VERSION,
     );
     print!("{}", yaml);
+    if std::io::stdout().is_terminal() {
+        eprintln!("\n💡 Tip: Redirect this output to a file (e.g., `> output.yaml`)");
+    }
     Ok(())
 }
 
@@ -1587,6 +1590,9 @@ fn cmd_curve(curve_path: &str, resolution: usize) -> Result<()> {
         let t = i as f64 / resolution as f64;
         let x = x_min + t * (x_max - x_min);
         println!("{:.6}\t{:.6}", x, curve.eval(x));
+    }
+    if std::io::stdout().is_terminal() {
+        eprintln!("\n💡 Tip: Redirect this output to a file (e.g., `> curve.tsv`)");
     }
     Ok(())
 }
@@ -1625,5 +1631,8 @@ fn cmd_set(patch_path: &str, param: &str, value: &str) -> Result<()> {
     }
 
     println!("{}", output_lines.join("\n"));
+    if std::io::stdout().is_terminal() {
+        eprintln!("\n💡 Tip: Redirect this output to a file (e.g., `> modified.yaml`)");
+    }
     Ok(())
 }
