@@ -72,7 +72,10 @@ summary_path="$metrics_dir/summary${metrics_suffix}.md"
 printf 'patch\tchannels\tsample_rate\tframes\tmax_amplitude\trms_amplitude\tcrest_factor\tactive_channels\tchannel_rms\tpcm16_sha256\n' >"$metrics_path"
 printf 'patch\tchannels\tsample_rate\tframes\tpcm16_sha256\n' >"$fingerprint_path"
 
-mapfile -t example_files < <(find examples -type f -name '*.yaml' | sort)
+example_files=()
+while IFS= read -r example_file; do
+  example_files+=("$example_file")
+done < <(find examples -type f -name '*.yaml' | sort)
 selected_count=0
 clip_suspects=0
 low_rms_count=0

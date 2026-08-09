@@ -197,7 +197,10 @@ collect_sample_refs() {
   fi
 }
 
-mapfile -t sample_names < <(
+sample_names=()
+while IFS= read -r sample_name; do
+  [[ -n "$sample_name" ]] && sample_names+=("$sample_name")
+done < <(
   collect_sample_refs |
     sed 's/^[^:]*://' |
     sed 's#^samples/##' |
