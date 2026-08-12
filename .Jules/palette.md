@@ -5,3 +5,6 @@
 ## 2023-10-24 - [Helpful Redirection Tips for Data-Producing Commands]
 **Learning:** When CLI commands output raw data (like YAML patches or TSV data) directly to `stdout`, new users can be confused by the wall of text if they don't redirect it.
 **Action:** Use `std::io::stdout().is_terminal()` to detect interactive usage and emit a helpful `eprintln!` tip suggesting file redirection (e.g., `> file.yaml`), establishing a reusable pattern for all data-producing commands.
+## 2024-05-23 - Animated CLI Progress Spinner
+**Learning:** Static characters for loading states in headless apps can feel unresponsive or stuck during long operations. Simple animated sequences (like Braille spinners) significantly improve perceived performance and give continuous feedback without needing external UI crates.
+**Action:** Use animated character arrays and modulo indexing for long-running CLI operations where full progress bars alone feel static between ticks.
