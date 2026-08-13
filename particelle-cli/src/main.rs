@@ -1140,6 +1140,9 @@ fn cmd_render(
     let update_interval = Duration::from_millis(100);
     let is_tty = std::io::stderr().is_terminal();
 
+    const BRAILLE_SPINNER: [char; 10] = ['⢋', '⢙', '⢹', '⢸', '⢼', '⢄', '⢆', '⢇', '⢃', '⢏'];
+    let mut spinner_idx = 0;
+
     while frames_rendered < total_frames {
         let remaining = (total_frames - frames_rendered) as usize;
         let frames_this_block = block_size.min(remaining);
@@ -1173,11 +1176,13 @@ fn cmd_render(
             let filled = filled.min(width);
             let empty = width.saturating_sub(filled);
             eprint!(
-                "\r\x1b[2K⧖ Rendering... [{}{}] {:.1}%",
+                "\r\x1b[2K{} Rendering... [{}{}] {:.1}%",
+                BRAILLE_SPINNER[spinner_idx % BRAILLE_SPINNER.len()],
                 "█".repeat(filled),
                 "░".repeat(empty),
                 percent
             );
+            spinner_idx += 1;
             let _ = std::io::stderr().flush();
             last_update = Instant::now();
         }
