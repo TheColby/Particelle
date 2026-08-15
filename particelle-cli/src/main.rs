@@ -1722,7 +1722,9 @@ clouds:
     );
     print!("{yaml}");
     if std::io::stdout().is_terminal() {
-        eprintln!("\nTip: Redirect this preset to a patch file (for example, > dronoify.yaml).");
+        eprintln!(
+            "\n💡 Tip: Redirect this preset to a patch file (for example, `> dronoify.yaml`)."
+        );
     }
     Ok(())
 }
