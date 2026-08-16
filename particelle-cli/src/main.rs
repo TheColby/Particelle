@@ -1137,6 +1137,8 @@ fn cmd_render(
     let mut block = particelle_core::audio_block::AudioBlock::new(n_channels, block_size);
 
     let mut last_update = Instant::now();
+    let mut spinner_idx = 0;
+    const SPINNER_CHARS: &[char] = &['⢋', '⢙', '⢹', '⢸', '⢼', '⢄', '⢆', '⢇', '⢃', '⢏'];
     let update_interval = Duration::from_millis(100);
     let is_tty = std::io::stderr().is_terminal();
 
@@ -1173,11 +1175,13 @@ fn cmd_render(
             let filled = filled.min(width);
             let empty = width.saturating_sub(filled);
             eprint!(
-                "\r\x1b[2K⧖ Rendering... [{}{}] {:.1}%",
+                "\r\x1b[2K{} Rendering... [{}{}] {:.1}%",
+                SPINNER_CHARS[spinner_idx % SPINNER_CHARS.len()],
                 "█".repeat(filled),
                 "░".repeat(empty),
                 percent
             );
+            spinner_idx += 1;
             let _ = std::io::stderr().flush();
             last_update = Instant::now();
         }
