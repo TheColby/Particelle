@@ -1172,8 +1172,14 @@ fn cmd_render(
             let filled: usize = ((percent / 100.0) * width as f64) as usize;
             let filled = filled.min(width);
             let empty = width.saturating_sub(filled);
+
+            let spinner = ['⢋', '⢙', '⢹', '⢸', '⢼', '⢄', '⢆', '⢇', '⢃', '⢏'];
+            let ticks = (frames_rendered as f64 / sample_rate as f64 * 10.0) as usize;
+            let frame = spinner[ticks % spinner.len()];
+
             eprint!(
-                "\r\x1b[2K⧖ Rendering... [{}{}] {:.1}%",
+                "\r\x1b[2K{} Rendering... [{}{}] {:.1}%",
+                frame,
                 "█".repeat(filled),
                 "░".repeat(empty),
                 percent
