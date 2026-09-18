@@ -1471,9 +1471,18 @@ Supported segment shapes in JSON curves:
 | Exponential | `exp(k)`, `log(k)`, `power(p)` |
 | Spline | `catmull_rom`, `cubic_hermite`, `monotone_cubic` |
 
+For exponential-family segments, `exp(k)` accepts any finite curvature,
+`log(k)` requires finite `k > -1`, and `power(p)` requires finite `p > 0`.
+Both `exp(0)` and `log(0)` reduce exactly to linear interpolation.
+
 Supported control-rate to audio-rate reconstruction:
 
 `zoh` · `linear` · `cubic` · `monotone_cubic` · `sinc(taps)` · `one_pole` · `two_pole` · `slew_limiter` · `minblep_step`
+
+The Rust API exposes `create_reconstructor_with_interval` for the actual
+control interval; `create_reconstructor` retains the original 64-sample
+default. Reconstruction allocates its kernels and state only at construction,
+not while processing samples.
 
 Signal expressions compose. Here is a visual representation of how a density parameter might be routed:
 

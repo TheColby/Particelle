@@ -9,5 +9,8 @@ pub mod reconstruction;
 pub mod schema;
 
 pub use evaluator::CompiledCurve;
-pub use reconstruction::ReconstructionMethod;
+pub use reconstruction::{
+    create_reconstructor, create_reconstructor_with_interval, ReconstructionMethod, Reconstructor,
+    DEFAULT_CONTROL_INTERVAL_SAMPLES,
+};
 pub use schema::{CurveSchema, EaseDir, Extrapolation, ExtrapolationMode, Segment, SegmentShape};

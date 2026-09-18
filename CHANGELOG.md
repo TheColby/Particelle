@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Formula Updater:** Added [`scripts/update_homebrew_formula.sh`](scripts/update_homebrew_formula.sh) to regenerate formula URLs/checksums from GitHub release metadata.
 - **Render Output Formats:** Added `particelle render --format {f32|pcm24|pcm16}` plus `--pcm24` shortcut for broader playback/tool compatibility.
 - **Curated Listening Demos:** Added a 5-demo listening catalog [`examples/listening_demos.tsv`](examples/listening_demos.tsv), one-command renderer [`scripts/render_listening_demos.sh`](scripts/render_listening_demos.sh), and listening guide [`docs/LISTENING_DEMOS.md`](docs/LISTENING_DEMOS.md).
+- **Interval-Aware Reconstruction:** Added `create_reconstructor_with_interval` so control-rate interpolation uses the caller's actual sample interval while preserving the 64-sample compatibility factory.
 
 ### Changed
 - **Validation Guardrail:** Validation now rejects unsupported future schema versions (`schema_version > CURRENT_SCHEMA_VERSION`).
@@ -26,6 +27,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Example Regression Gate:** `scripts/check_examples.sh` now computes/stores PCM16 SHA-256 fingerprints and fails on mismatch against the golden baseline.
 - **Performance Gate:** `scripts/check_performance.sh` now runs both block-latency and soak/XRUN stability benchmarks.
 - **Release Channel Docs:** Added Homebrew install/update documentation in [`docs/RELEASE_CHANNELS.md`](docs/RELEASE_CHANNELS.md) and installer docs in [`README.md`](README.md).
+
+### Fixed
+- **Exponential Curves:** Normalized exponential segments now remain finite for extreme positive curvature, logarithmic segments treat zero curvature as linear, and invalid logarithmic/power domains are rejected during compilation.
+- **Control Reconstruction:** Replaced cubic, monotone-cubic, sinc, two-pole, and MinBLEP linear fallbacks with dedicated processors; one-pole and slew modes now continue advancing between control ticks.
+- **Rust 1.98 CI:** Reworked the M0 live stereo copy loop to satisfy the latest strict clippy lint without raising the Rust 1.70 minimum version.
 
 ## [0.1.0] - 2026-03-03
 

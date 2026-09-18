@@ -93,12 +93,10 @@ fn main() -> Result<(), Box<dyn Error>> {
             }
             let block_events = if first_chunk { events.as_slice() } else { &[] };
             engine.process_block(block_events, &mut scratch[..frame_count]);
-            for (target, stereo) in output_chunk
-                .chunks_exact_mut(2)
-                .zip(&scratch[..frame_count])
-            {
-                target[0] = stereo[0];
-                target[1] = stereo[1];
+            for (frame_index, stereo) in scratch[..frame_count].iter().enumerate() {
+                let output_index = frame_index * 2;
+                output_chunk[output_index] = stereo[0];
+                output_chunk[output_index + 1] = stereo[1];
             }
             first_chunk = false;
         }

@@ -9,6 +9,14 @@ pub enum CurveError {
     InvalidSegmentRange { i: usize, x: f64, x_end: f64 },
     #[error("Segments are not sorted by x")]
     UnsortedSegments,
+    #[error("Segment [{i}] has invalid {shape} parameter {parameter}={value}: {constraint}")]
+    InvalidShapeParameter {
+        i: usize,
+        shape: &'static str,
+        parameter: &'static str,
+        value: f64,
+        constraint: &'static str,
+    },
     #[error("JSON parse error: {0}")]
     Json(#[from] serde_json::Error),
 }
@@ -53,6 +61,7 @@ impl CompiledCurve {
             if i > 0 && seg.x < schema.segments[i - 1].x_end {
                 return Err(CurveError::UnsortedSegments);
             }
+            validate_shape_parameter(i, &seg.shape)?;
             segments.push(CompiledSegment {
                 seg: seg.clone(),
                 m0: 0.0,
@@ -223,16 +232,16 @@ impl CompiledCurve {
                 if *k == 0.0 {
                     seg.y + t * (seg.y_end - seg.y)
                 } else {
-                    let _s = (k.exp() * t).exp() / k.exp(); // Placeholder, usually exp is (exp(kt)-1)/(exp(k)-1)
-                                                            // Let's use standard exp curve form:
-                    let _s = (k.powf(t) - 1.0) / (*k - 1.0); // If k is the base
-                                                             // Re-evaluating based on common audio exp:
-                    let s = ((*k * t).exp() - 1.0) / (k.exp() - 1.0);
+                    let s = normalized_exp(t, *k);
                     seg.y + s * (seg.y_end - seg.y)
                 }
             }
             SegmentShape::Log { k } => {
-                let s = ((*k * t + 1.0).ln()) / (k + 1.0).ln();
+                let s = if *k == 0.0 {
+                    t
+                } else {
+                    (*k * t).ln_1p() / k.ln_1p()
+                };
                 seg.y + s * (seg.y_end - seg.y)
             }
             SegmentShape::Power { p } => seg.y + t.powf(*p) * (seg.y_end - seg.y),
@@ -273,9 +282,50 @@ impl CompiledCurve {
     }
 }
 
+fn validate_shape_parameter(
+    i: usize,
+    shape: &crate::schema::SegmentShape,
+) -> Result<(), CurveError> {
+    use crate::schema::SegmentShape;
+
+    let invalid = match shape {
+        SegmentShape::Exp { k } if !k.is_finite() => Some(("exp", "k", *k, "must be finite")),
+        SegmentShape::Log { k } if !k.is_finite() || *k <= -1.0 => {
+            Some(("log", "k", *k, "must be finite and greater than -1"))
+        }
+        SegmentShape::Power { p } if !p.is_finite() || *p <= 0.0 => {
+            Some(("power", "p", *p, "must be finite and greater than 0"))
+        }
+        _ => None,
+    };
+
+    if let Some((shape, parameter, value, constraint)) = invalid {
+        return Err(CurveError::InvalidShapeParameter {
+            i,
+            shape,
+            parameter,
+            value,
+            constraint,
+        });
+    }
+
+    Ok(())
+}
+
+/// Evaluate `(exp(k * t) - 1) / (exp(k) - 1)` without overflow for large
+/// positive curvature or precision loss close to `k = 0`.
+fn normalized_exp(t: f64, k: f64) -> f64 {
+    if k > 0.0 {
+        ((k * (t - 1.0)).exp() - (-k).exp()) / (1.0 - (-k).exp())
+    } else {
+        (k * t).exp_m1() / k.exp_m1()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::schema::{CurveSchema, Extrapolation, Segment, SegmentShape};
 
     const LINEAR_JSON: &str = r#"
     {
@@ -332,5 +382,73 @@ mod tests {
         assert_eq!(curve.eval(1.0), 1.0);
         assert!(curve.eval(0.5) > 0.0);
         assert!(curve.eval(1.5) > 0.0);
+    }
+
+    fn curve_with_shape(shape: SegmentShape) -> Result<CompiledCurve, CurveError> {
+        CompiledCurve::compile(CurveSchema {
+            segments: vec![Segment {
+                x: 0.0,
+                y: 0.0,
+                x_end: 1.0,
+                y_end: 1.0,
+                shape,
+            }],
+            extrapolation: Extrapolation::default(),
+            events: Vec::new(),
+        })
+    }
+
+    #[test]
+    fn exponential_curve_matches_normalized_formula() {
+        let curve = curve_with_shape(SegmentShape::Exp { k: 3.0 }).unwrap();
+        let expected = 1.5_f64.exp_m1() / 3.0_f64.exp_m1();
+
+        assert_eq!(curve.eval(0.0), 0.0);
+        assert!((curve.eval(0.5) - expected).abs() < 1e-14);
+        assert_eq!(curve.eval(1.0), 1.0);
+    }
+
+    #[test]
+    fn exponential_curve_stays_finite_for_large_curvature() {
+        let curve = curve_with_shape(SegmentShape::Exp { k: 1_000.0 }).unwrap();
+
+        assert!(curve.eval(0.5).is_finite());
+        assert_eq!(curve.eval(0.0), 0.0);
+        assert_eq!(curve.eval(1.0), 1.0);
+    }
+
+    #[test]
+    fn zero_log_curvature_is_linear() {
+        let curve = curve_with_shape(SegmentShape::Log { k: 0.0 }).unwrap();
+
+        assert!((curve.eval(0.25) - 0.25).abs() < 1e-14);
+    }
+
+    #[test]
+    fn invalid_log_domain_is_rejected() {
+        let error = curve_with_shape(SegmentShape::Log { k: -1.0 }).unwrap_err();
+
+        assert!(matches!(
+            error,
+            CurveError::InvalidShapeParameter {
+                shape: "log",
+                parameter: "k",
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn non_positive_power_is_rejected() {
+        let error = curve_with_shape(SegmentShape::Power { p: 0.0 }).unwrap_err();
+
+        assert!(matches!(
+            error,
+            CurveError::InvalidShapeParameter {
+                shape: "power",
+                parameter: "p",
+                ..
+            }
+        ));
     }
 }
