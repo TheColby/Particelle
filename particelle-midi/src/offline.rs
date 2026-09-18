@@ -217,8 +217,9 @@ fn parse_track_kind(kind: &TrackEventKind<'_>) -> Option<MidiEventKind> {
             velocity: vel.as_int() as f64 / 127.0,
             is_on: false,
         })),
-        MidiMessage::Aftertouch { vel, .. } => Some(MidiEventKind::ChannelPressure {
+        MidiMessage::Aftertouch { key, vel } => Some(MidiEventKind::PolyPressure {
             channel,
+            note: key.as_int(),
             value: vel.as_int() as f64 / 127.0,
         }),
         MidiMessage::Controller { controller, value } => Some(MidiEventKind::ControlChange {

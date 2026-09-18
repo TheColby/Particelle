@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "id": "dronoify",
+  "version": "1.0.0",
+  "generator": "particelle preset dronoify <source.wav>",
+  "description": "Three-layer atmospheric granular drone for any WAV source and layouts from 1 to 256 channels.",
+  "controls": ["density", "grain_duration", "amplitude", "position", "width", "movement_hz", "drift_hz", "window"]
+}

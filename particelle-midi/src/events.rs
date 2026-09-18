@@ -17,6 +17,7 @@ pub enum MidiEventKind {
     Expression(ExpressionEvent),
     PitchBend { channel: u8, value: f64 },       // [-1, 1]
     ChannelPressure { channel: u8, value: f64 }, // [0, 1]
+    PolyPressure { channel: u8, note: u8, value: f64 }, // [0, 1]
     ProgramChange { channel: u8, program: u8 },
     ControlChange { channel: u8, cc: u8, value: f64 }, // [0, 1]
 }

@@ -1,0 +1,25 @@
+[package]
+name = "obelisk-m0"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["rlib", "cdylib", "staticlib"]
+
+[dependencies]
+particelle-midi = { workspace = true, features = ["realtime"] }
+particelle-io = { workspace = true, features = ["realtime"] }
+particelle-tuning.workspace = true
+hound.workspace = true
+sha2.workspace = true
+thiserror.workspace = true
+
+[[bin]]
+name = "obelisk-m0-render"
+path = "src/bin/render.rs"
+
+[[bin]]
+name = "obelisk-m0-live"
+path = "src/bin/live.rs"

@@ -9,6 +9,7 @@ members = [
     "particelle-io",
     "particelle-schema",
     "particelle-cli", "particelle-analysis",
+    "obelisk-m0",
 ]
 resolver = "2"
 

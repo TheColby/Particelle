@@ -38,17 +38,18 @@ pub struct KbmMapping {
     pub first_note: u8,
     /// Last MIDI note number to retune.
     pub last_note: u8,
+    /// MIDI note number where the first key-map entry is placed.
+    pub middle_note: u8,
     /// MIDI note number for which the reference frequency is given.
     pub reference_note: u8,
     /// Reference frequency tied to `reference_note`.
     pub reference_frequency: f64,
-    /// Scale degree corresponding to `reference_note`.
-    pub reference_degree: i32,
-    /// Formal octave interval index in the .scl intervals list (1-based).
-    pub formal_octave: usize,
+    /// Scale degree advanced when the keyboard mapping pattern repeats.
+    /// A value of zero means one full scale period.
+    pub formal_octave: i32,
     /// Key map: for each keyboard position, which scale degree it maps to.
     /// `None` means the key is unmapped (silent).
-    pub key_map: Vec<Option<u32>>,
+    pub key_map: Vec<Option<i32>>,
 }
 
 /// Parse a .scl string into an SclScale.
@@ -122,25 +123,36 @@ pub fn parse_kbm(input: &str) -> Result<KbmMapping, String> {
         s.parse().map_err(|_| format!("Invalid {}: '{}'", label, s))
     };
 
-    let map_size = parse_int(&mut lines, "map size")? as usize;
-    let first_note = parse_int(&mut lines, "first note")? as u8;
-    let last_note = parse_int(&mut lines, "last note")? as u8;
-    let _middle_note = parse_int(&mut lines, "middle note")?;
-    let reference_note = parse_int(&mut lines, "reference note")? as u8;
+    let map_size = parse_non_negative_usize(parse_int(&mut lines, "map size")?, "map size")?;
+    let first_note = parse_midi_note(parse_int(&mut lines, "first note")?, "first note")?;
+    let last_note = parse_midi_note(parse_int(&mut lines, "last note")?, "last note")?;
+    if first_note > last_note {
+        return Err("First note must not be greater than last note".to_string());
+    }
+    let middle_note = parse_midi_note(parse_int(&mut lines, "middle note")?, "middle note")?;
+    let reference_note =
+        parse_midi_note(parse_int(&mut lines, "reference note")?, "reference note")?;
     let reference_frequency: f64 = lines
         .next()
         .ok_or("Missing reference frequency")?
         .parse()
         .map_err(|_| "Invalid reference frequency".to_string())?;
-    let formal_octave = parse_int(&mut lines, "formal octave")? as usize;
+    if !reference_frequency.is_finite() || reference_frequency <= 0.0 {
+        return Err("Reference frequency must be finite and greater than zero".to_string());
+    }
+    let formal_octave = parse_int(&mut lines, "formal octave")? as i32;
 
     let mut key_map = Vec::with_capacity(map_size);
     for _ in 0..map_size {
-        let s = lines.next().ok_or("Not enough key map entries")?;
+        // Scala permits trailing unmapped entries to be omitted.
+        let Some(s) = lines.next() else {
+            key_map.push(None);
+            continue;
+        };
         if s == "x" || s == "X" {
             key_map.push(None);
         } else {
-            let d: u32 = s
+            let d: i32 = s
                 .parse()
                 .map_err(|_| format!("Invalid key map entry: '{}'", s))?;
             key_map.push(Some(d));
@@ -151,12 +163,23 @@ pub fn parse_kbm(input: &str) -> Result<KbmMapping, String> {
         map_size,
         first_note,
         last_note,
+        middle_note,
         reference_note,
         reference_frequency,
-        reference_degree: 0,
         formal_octave,
         key_map,
     })
+}
+
+fn parse_midi_note(value: i64, label: &str) -> Result<u8, String> {
+    u8::try_from(value)
+        .ok()
+        .filter(|note| *note <= 127)
+        .ok_or_else(|| format!("{} must be in the MIDI note range 0..=127", label))
+}
+
+fn parse_non_negative_usize(value: i64, label: &str) -> Result<usize, String> {
+    usize::try_from(value).map_err(|_| format!("{} must be non-negative", label))
 }
 
 /// Tuning using a Scala .scl scale and optional .kbm keyboard mapping.
@@ -168,6 +191,8 @@ pub struct ScalaTuning {
     equave_ratio: f64,
     /// Reference frequency for degree 0.
     base_frequency: f64,
+    /// Optional MIDI-key-to-scale-degree mapping.
+    keyboard_mapping: Option<KbmMapping>,
 }
 
 impl ScalaTuning {
@@ -186,39 +211,92 @@ impl ScalaTuning {
             ratios,
             equave_ratio,
             base_frequency,
+            keyboard_mapping: None,
         }
+    }
+
+    /// Construct a Scala tuning with a complete keyboard mapping.
+    pub fn from_scl_and_kbm(scl: &SclScale, kbm: KbmMapping) -> Result<Self, String> {
+        if scl.intervals.is_empty() {
+            return Err("A keyboard mapping requires a non-empty Scala scale".to_string());
+        }
+
+        let mut tuning = Self::from_scl(scl, kbm.reference_frequency);
+        let reference_degree = tuning
+            .mapped_degree_for_note(&kbm, kbm.reference_note)
+            .ok_or("The KBM reference note is outside the mapped range or unmapped")?;
+        let reference_ratio = tuning.ratio_for_degree(reference_degree);
+        tuning.base_frequency = kbm.reference_frequency / reference_ratio;
+        tuning.keyboard_mapping = Some(kbm);
+        Ok(tuning)
     }
 
     /// Construct from raw .scl text and optional .kbm text.
     pub fn from_text(
         scl_text: &str,
-        _kbm_text: Option<&str>,
+        kbm_text: Option<&str>,
         base_frequency: f64,
     ) -> Result<Self, String> {
         let scl = parse_scl(scl_text)?;
-        Ok(Self::from_scl(&scl, base_frequency))
+        match kbm_text {
+            Some(text) => Self::from_scl_and_kbm(&scl, parse_kbm(text)?),
+            None => Ok(Self::from_scl(&scl, base_frequency)),
+        }
+    }
+
+    /// Resolve a MIDI note through the optional KBM mapping.
+    ///
+    /// Returns `None` when the key is outside the KBM range or explicitly
+    /// unmapped. Without a KBM, MIDI note 69 is degree zero.
+    pub fn frequency_for_midi_note(&self, note: u8) -> Option<f64> {
+        let degree = match &self.keyboard_mapping {
+            Some(kbm) => self.mapped_degree_for_note(kbm, note)?,
+            None => i32::from(note) - 69,
+        };
+        Some(self.base_frequency * self.ratio_for_degree(degree))
+    }
+
+    /// Access the keyboard mapping, if this tuning was constructed with one.
+    pub fn keyboard_mapping(&self) -> Option<&KbmMapping> {
+        self.keyboard_mapping.as_ref()
+    }
+
+    fn mapped_degree_for_note(&self, kbm: &KbmMapping, note: u8) -> Option<i32> {
+        if note < kbm.first_note || note > kbm.last_note {
+            return None;
+        }
+
+        let offset = i32::from(note) - i32::from(kbm.middle_note);
+        if kbm.map_size == 0 {
+            return Some(offset);
+        }
+
+        let map_size = i32::try_from(kbm.map_size).ok()?;
+        let pattern = offset.div_euclid(map_size);
+        let index = offset.rem_euclid(map_size) as usize;
+        let mapped_degree = *kbm.key_map.get(index)?.as_ref()?;
+        let formal_octave = if kbm.formal_octave == 0 {
+            i32::try_from(self.ratios.len()).ok()?
+        } else {
+            kbm.formal_octave
+        };
+        Some(mapped_degree + pattern * formal_octave)
+    }
+
+    fn ratio_for_degree(&self, degree: i32) -> f64 {
+        if self.ratios.is_empty() {
+            return 1.0;
+        }
+        let size = self.ratios.len() as i32;
+        let scale_degree = degree.rem_euclid(size);
+        let period = degree.div_euclid(size);
+        self.ratios[scale_degree as usize] * self.equave_ratio.powi(period)
     }
 }
 
 impl Tuning for ScalaTuning {
     fn frequency_for_degree(&self, degree: i32) -> f64 {
-        if self.ratios.is_empty() {
-            return self.base_frequency;
-        }
-        let size = self.ratios.len() as i32;
-
-        // Euclidean division
-        let scale_degree = ((degree % size) + size) % size;
-        let period = if degree >= 0 {
-            degree / size
-        } else {
-            (degree - size + 1) / size
-        };
-
-        let ratio = self.ratios[scale_degree as usize];
-        let equave_factor = self.equave_ratio.powi(period);
-
-        self.base_frequency * ratio * equave_factor
+        self.base_frequency * self.ratio_for_degree(degree)
     }
 }
 
@@ -331,8 +409,63 @@ Pythagorean 7-note scale
     fn test_parse_kbm() {
         let kbm = parse_kbm(SIMPLE_KBM).unwrap();
         assert_eq!(kbm.map_size, 12);
+        assert_eq!(kbm.middle_note, 60);
         assert_eq!(kbm.reference_note, 69);
         assert!((kbm.reference_frequency - 440.0).abs() < 1e-6);
         assert_eq!(kbm.key_map.len(), 12);
+    }
+
+    #[test]
+    fn kbm_reference_note_receives_reference_frequency() {
+        let tuning = ScalaTuning::from_text(PYTHAGOREAN_SCL, Some(SIMPLE_KBM), 1.0).unwrap();
+        let hz = tuning.frequency_for_midi_note(69).unwrap();
+        assert!((hz - 440.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn kbm_mapping_repeats_below_middle_note_with_euclidean_division() {
+        let tuning = ScalaTuning::from_text(PYTHAGOREAN_SCL, Some(SIMPLE_KBM), 1.0).unwrap();
+        let middle = tuning.frequency_for_midi_note(60).unwrap();
+        let below = tuning.frequency_for_midi_note(48).unwrap();
+        // This KBM advances by formal degree 12 for every 12-key pattern.
+        // In a non-equal scale, the interval from degree -12 to zero is the
+        // reciprocal of degree -12, not necessarily the ratio at degree +12.
+        assert!((middle / below - 1.0 / tuning.ratio_for_degree(-12)).abs() < 1e-9);
+    }
+
+    #[test]
+    fn kbm_unmapped_and_out_of_range_notes_return_none() {
+        let kbm = "\
+2
+60
+61
+60
+60
+261.625565
+2
+0
+x
+";
+        let tuning = ScalaTuning::from_text(PYTHAGOREAN_SCL, Some(kbm), 1.0).unwrap();
+        assert!(tuning.frequency_for_midi_note(59).is_none());
+        assert!(tuning.frequency_for_midi_note(60).is_some());
+        assert!(tuning.frequency_for_midi_note(61).is_none());
+    }
+
+    #[test]
+    fn kbm_accepts_negative_degrees_and_omitted_trailing_entries() {
+        let kbm = "\
+3
+0
+127
+60
+60
+261.625565
+7
+-1
+0
+";
+        let parsed = parse_kbm(kbm).unwrap();
+        assert_eq!(parsed.key_map, vec![Some(-1), Some(0), None]);
     }
 }

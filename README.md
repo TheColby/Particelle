@@ -1635,10 +1635,25 @@ Anticipated launch objections and concrete mitigations are documented in [`docs/
 
 ### Completed Phases (Archive)
 
-7. **P0–P7 foundational roadmap items (implemented)**
+7. **P10 — Preset Library and Sound-Design Workflow (implemented)**
+   `dronoify` is a versioned, parameterized atmospheric-drone generator with a distributable preset catalog and layouts from 1 through 256 channels.
+
+8. **P10 — Realtime Control Reliability (implemented)**
+   The MIDI path supports polyphonic pressure, lock-free bounded realtime queues, overflow telemetry, emergency all-notes-off, and complete Scala KBM mappings.
+
+9. **P10 — Release Adoption Artifacts (implemented)**
+   Release and nightly builds publish the versioned preset catalog, auditable listening material, and Obelisk M0 host/API bundle.
+
+10. **P11 — DSP Quality (implemented)**
+   Obelisk M0 adds frequency-aware, band-limited wavetable excitation to prevent bright-source aliasing while retaining deterministic tuning and modal-body processing.
+
+11. **P11 — Native Host Integration (implemented)**
+   Obelisk M0 ships a stable opaque-handle C API for lock-free, allocation-free stereo processing. A VST3/AU wrapper remains the next host-specific integration milestone.
+
+12. **P0–P7 foundational roadmap items (implemented)**
    Reliability gates, compatibility parsing, deterministic assets/metrics, realtime + control-path harnesses, release channels, schema migration metadata, supply-chain checks, golden fingerprints, and soak benchmarks are complete.
 
-Operational and release policy details: [`docs/REALTIME_OPERATIONS.md`](docs/REALTIME_OPERATIONS.md) and [`docs/RELEASE_ASSURANCE.md`](docs/RELEASE_ASSURANCE.md).
+Operational and release policy details: [`docs/REALTIME_OPERATIONS.md`](docs/REALTIME_OPERATIONS.md), [`docs/RELEASE_ASSURANCE.md`](docs/RELEASE_ASSURANCE.md), [`docs/PRESETS.md`](docs/PRESETS.md), and [`docs/OBELISK_M0_API.md`](docs/OBELISK_M0_API.md).
 
 ### Compatibility Policy
 

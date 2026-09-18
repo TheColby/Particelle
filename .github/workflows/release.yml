@@ -59,7 +59,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libasound2-dev pkg-config sox
 
       - name: Build release binary
-        run: cargo build --release -p particelle-cli --target ${{ matrix.target }}
+        run: cargo build --release -p particelle-cli -p obelisk-m0 --target ${{ matrix.target }}
 
       - name: Package release artifact
         run: |
@@ -72,6 +72,13 @@ jobs:
       - name: Package curated listening demos
         if: runner.os == 'Linux'
         run: ./scripts/package_listening_demos.sh dist/listening-demos
+
+      - name: Package versioned preset catalog
+        if: runner.os == 'Linux'
+        run: ./scripts/package_presets.sh dist/presets
+
+      - name: Package Obelisk M0 host API
+        run: ./scripts/package_obelisk_m0.sh --target "${{ matrix.target }}" --version "${{ steps.version.outputs.value }}" --out-dir dist
 
       - name: Upload packaged artifacts
         uses: actions/upload-artifact@v4
@@ -149,3 +156,7 @@ jobs:
             dist/particelle.provenance.json
             dist/listening-demos/*.tar.gz
             dist/listening-demos/*.sha256
+            dist/presets/*.tar.gz
+            dist/presets/*.sha256
+            dist/obelisk-m0_*.tar.gz
+            dist/obelisk-m0_*.sha256

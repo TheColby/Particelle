@@ -82,6 +82,7 @@ fn event_to_source_key(kind: &MidiEventKind) -> String {
         MidiEventKind::ControlChange { cc, .. } => format!("midi.cc.{}", cc),
         MidiEventKind::PitchBend { .. } => "midi.pitchbend".to_string(),
         MidiEventKind::ChannelPressure { .. } => "midi.pressure".to_string(),
+        MidiEventKind::PolyPressure { .. } => "midi.poly_pressure".to_string(),
         MidiEventKind::Note(_) => "midi.note".to_string(),
         MidiEventKind::ProgramChange { .. } => "midi.program".to_string(),
         MidiEventKind::Expression(expr) => match expr.kind {
@@ -98,6 +99,7 @@ fn event_to_value(kind: &MidiEventKind) -> f64 {
         MidiEventKind::ControlChange { value, .. } => *value,
         MidiEventKind::PitchBend { value, .. } => *value,
         MidiEventKind::ChannelPressure { value, .. } => *value,
+        MidiEventKind::PolyPressure { value, .. } => *value,
         MidiEventKind::Note(n) => n.velocity,
         MidiEventKind::ProgramChange { program, .. } => *program as f64 / 127.0,
         MidiEventKind::Expression(expr) => expr.value,
@@ -158,6 +160,15 @@ pub fn parse_midi_bytes(bytes: &[u8], frame_offset: usize) -> Option<MidiEvent> 
             let val = bytes[1] & 0x7F;
             MidiEventKind::ChannelPressure {
                 channel,
+                value: val as f64 / 127.0,
+            }
+        }
+        0xA0 if bytes.len() >= 3 => {
+            let note = bytes[1] & 0x7F;
+            let val = bytes[2] & 0x7F;
+            MidiEventKind::PolyPressure {
+                channel,
+                note,
                 value: val as f64 / 127.0,
             }
         }
@@ -235,6 +246,20 @@ mod tests {
             }
             _ => panic!("Expected ChannelPressure"),
         }
+    }
+
+    #[test]
+    fn test_parse_poly_pressure() {
+        let event = parse_midi_bytes(&[0xA2, 60, 100], 7).unwrap();
+        assert_eq!(event.frame_offset, 7);
+        assert_eq!(
+            event.kind,
+            MidiEventKind::PolyPressure {
+                channel: 3,
+                note: 60,
+                value: 100.0 / 127.0,
+            }
+        );
     }
 
     #[test]
