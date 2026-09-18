@@ -1,3 +1,4 @@
 /target
+/Particelle/
 **/*.rs.bk
 Cargo.lock

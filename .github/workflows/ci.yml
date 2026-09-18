@@ -89,7 +89,7 @@ jobs:
         run: ./scripts/qualify_obelisk_m0.sh
 
       - name: Upload M0 qualification artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: obelisk-m0-qualification
           path: |
@@ -125,7 +125,7 @@ jobs:
         run: ./scripts/check_render_parity.sh
 
       - name: Upload parity report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: render-parity-${{ runner.os }}
           path: target/render-parity/report.json

@@ -6,8 +6,8 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_root"
 
-cargo test -p obelisk-m0
-cargo run --quiet -p obelisk-m0 --bin obelisk-m0-render -- \
+cargo test -p obelisk-m0 --no-default-features
+cargo run --quiet -p obelisk-m0 --no-default-features --bin obelisk-m0-render -- \
   --output target/obelisk-m0-qualification.wav --duration 1.0 --stress > target/obelisk-m0-qualification.log
 
 rg -q 'audio-thread allocations: 0' target/obelisk-m0-qualification.log

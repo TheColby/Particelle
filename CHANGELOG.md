@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Exponential Curves:** Normalized exponential segments now remain finite for extreme positive curvature, logarithmic segments treat zero curvature as linear, and invalid logarithmic/power domains are rejected during compilation.
 - **Control Reconstruction:** Replaced cubic, monotone-cubic, sinc, two-pole, and MinBLEP linear fallbacks with dedicated processors; one-pole and slew modes now continue advancing between control ticks.
 - **Rust 1.98 CI:** Reworked the M0 live stereo copy loop to satisfy the latest strict clippy lint without raising the Rust 1.70 minimum version.
+- **Portable M0 Qualification:** The hardware-free M0 release gate now disables realtime audio features, avoiding accidental ALSA dependencies on clean CI runners.
 
 ## [0.1.0] - 2026-03-03
 

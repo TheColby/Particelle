@@ -81,7 +81,7 @@ jobs:
         run: ./scripts/package_obelisk_m0.sh --target "${{ matrix.target }}" --version "${{ steps.version.outputs.value }}" --out-dir dist
 
       - name: Upload packaged artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-${{ matrix.target }}
           path: dist/*
