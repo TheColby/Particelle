@@ -23,7 +23,7 @@ build_dir="$repo_root/target/$target/release"
 asset_base="obelisk-m0_${version}_${target}"
 stage_dir="$(mktemp -d "${TMPDIR:-/tmp}/obelisk-m0.XXXXXX")"
 trap 'rm -rf "$stage_dir"' EXIT
-mkdir -p "$stage_dir/$asset_base/bin" "$stage_dir/$asset_base/include"
+mkdir -p "$stage_dir/$asset_base/bin" "$stage_dir/$asset_base/include" "$stage_dir/$asset_base/presets"
 
 for binary in obelisk-m0-render obelisk-m0-live; do
   [[ -f "$build_dir/$binary" ]] || { echo "Missing binary: $build_dir/$binary" >&2; exit 1; }
@@ -34,6 +34,9 @@ for library in "$build_dir"/libobelisk_m0.{a,dylib,so}; do
 done
 cp "$repo_root/obelisk-m0/include/obelisk_m0.h" "$stage_dir/$asset_base/include/"
 cp "$repo_root/obelisk-m0/README.md" "$stage_dir/$asset_base/README.md"
+cp "$repo_root/docs/OBELISK_M0_API.md" "$stage_dir/$asset_base/OBELISK_M0_API.md"
+cp "$repo_root/docs/OBELISK_M0_QUALIFICATION.md" "$stage_dir/$asset_base/OBELISK_M0_QUALIFICATION.md"
+cp "$repo_root"/presets/obelisk-m0/*.json "$stage_dir/$asset_base/presets/"
 mkdir -p "$out_dir"
 tar -C "$stage_dir" -czf "$out_dir/$asset_base.tar.gz" "$asset_base"
 if command -v sha256sum >/dev/null 2>&1; then

@@ -60,9 +60,11 @@ bounded 8192-event lock-free queue. Overflowed expression events are counted;
 if a note-off is lost, the audio side receives an emergency all-notes-off so a
 queue overflow cannot leave a permanently stuck note.
 
-## Deliberately absent
+## Current Boundaries
 
-M0 does not contain a graph compiler, preset schema, GUI, MTS-ESP, effects
-suite, plug-in wrapper, or WASM host. Those remain behind the exit gate: the
-morph must first sound compelling to MPE players, sustain the voice budget,
-and preserve correct controller behavior.
+M0 includes a control-thread graph descriptor, versioned JSON preset schema,
+host-supplied 128-note tuning-table bridge, fixed delay/diffuse-reverb
+controls, arbitrary-channel diffuse output, and a hardware-free offline render
+API suitable for a WASM wrapper. It is deliberately not yet a general graph
+compiler, MTS-ESP discovery client, GUI, VST3/AU wrapper, or browser product;
+those require separate host and product validation.

@@ -7,12 +7,18 @@
 pub mod dsp;
 pub mod engine;
 pub mod ffi;
+pub mod graph;
 pub mod mpe;
+pub mod offline;
+pub mod preset;
 pub mod rt_audit;
 pub mod telemetry;
 
-pub use engine::{default_twelve_tet_tuning, M0Config, M0Engine};
+pub use engine::{default_twelve_tet_tuning, M0Config, M0Engine, M0EngineError};
+pub use graph::{CompiledGraph, GraphNode, M0GraphSpec};
 pub use mpe::{MpeVoiceManager, VoicePhase, VoiceState, ZoneConfig};
+pub use offline::render_interleaved_stereo;
+pub use preset::{M0Preset, M0PresetParameters};
 
 #[cfg(test)]
 #[global_allocator]

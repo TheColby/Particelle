@@ -90,6 +90,46 @@ pub unsafe extern "C" fn obelisk_m0_process_stereo(
     true
 }
 
+/// Submit a complete 128-note host tuning table at a block boundary.
+///
+/// This function is the ABI bridge for an MTS-ESP-aware VST3/AU wrapper. The
+/// core does not discover or link to MTS-ESP itself, keeping the engine usable
+/// in standalone and sandboxed hosts.
+///
+/// # Safety
+/// `handle` must be live and externally synchronized. `frequencies_hz` must
+/// point to 128 readable `double` values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn obelisk_m0_set_tuning_table(
+    handle: *mut ObeliskM0Handle,
+    frequencies_hz: *const f64,
+) -> bool {
+    if handle.is_null() || frequencies_hz.is_null() {
+        return false;
+    }
+    // SAFETY: the caller contract guarantees 128 readable contiguous values.
+    let values = unsafe { std::slice::from_raw_parts(frequencies_hz, 128) };
+    let mut table = [0.0; 128];
+    table.copy_from_slice(values);
+    // SAFETY: the caller contract guarantees exclusive access to the handle.
+    unsafe { &mut *handle }
+        .engine
+        .set_external_tuning_table(table)
+        .is_ok()
+}
+
+/// Clear a tuning table previously supplied with `obelisk_m0_set_tuning_table`.
+///
+/// # Safety
+/// `handle` must be live and externally synchronized with rendering.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn obelisk_m0_clear_tuning_table(handle: *mut ObeliskM0Handle) {
+    if !handle.is_null() {
+        // SAFETY: the caller contract guarantees exclusive access to the handle.
+        unsafe { &mut *handle }.engine.clear_external_tuning();
+    }
+}
+
 /// Release every active note without deallocating the engine.
 ///
 /// # Safety
@@ -116,6 +156,19 @@ mod tests {
             let mut output = vec![0.0_f32; 256 * 2];
             assert!(obelisk_m0_process_stereo(handle, output.as_mut_ptr(), 256));
             assert!(output.iter().any(|sample| *sample != 0.0));
+            obelisk_m0_destroy(handle);
+        }
+    }
+
+    #[test]
+    fn c_abi_accepts_complete_external_tuning_table() {
+        let handle = obelisk_m0_create(48_000.0, 16);
+        let table: [f64; 128] =
+            core::array::from_fn(|note| 440.0 * 2.0_f64.powf((note as f64 - 69.0) / 12.0));
+        // SAFETY: the test owns the handle and table has exactly 128 values.
+        unsafe {
+            assert!(obelisk_m0_set_tuning_table(handle, table.as_ptr()));
+            obelisk_m0_clear_tuning_table(handle);
             obelisk_m0_destroy(handle);
         }
     }

@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "id": "obelisk-m0.glass-pressure",
+  "name": "Glass Pressure",
+  "tags": ["mpe", "bright", "expressive"],
+  "parameters": {
+    "base_morph": 0.82,
+    "modulation_hz": 0.17,
+    "delay_mix": 0.18,
+    "reverb_mix": 0.31
+  }
+}

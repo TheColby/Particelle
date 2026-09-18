@@ -70,7 +70,10 @@ impl HardwareHost {
         F: FnMut(&mut [f32]) + Send + 'static,
     {
         #[cfg(not(feature = "realtime"))]
-        return Err(HardwareError::RealtimeNotEnabled);
+        {
+            let _ = duration;
+            return Err(HardwareError::RealtimeNotEnabled);
+        }
 
         #[cfg(feature = "realtime")]
         {

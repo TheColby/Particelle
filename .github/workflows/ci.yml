@@ -71,6 +71,31 @@ jobs:
           EXAMPLE_SHARD_INDEX: ${{ matrix.shard_index }}
         run: ./scripts/check_examples.sh
 
+  obelisk-m0:
+    needs: workspace
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo artifacts
+        uses: Swatinem/rust-cache@v2
+
+      - name: M0 portable qualification
+        run: ./scripts/qualify_obelisk_m0.sh
+
+      - name: Upload M0 qualification artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: obelisk-m0-qualification
+          path: |
+            target/obelisk-m0-qualification.wav
+            target/obelisk-m0-qualification.log
+
   render-parity:
     runs-on: ${{ matrix.os }}
     strategy:

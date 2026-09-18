@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "id": "obelisk-m0.low-embers",
+  "name": "Low Embers",
+  "tags": ["mpe", "modal", "slow"],
+  "parameters": {
+    "base_morph": 0.28,
+    "modulation_hz": 0.06,
+    "delay_mix": 0.24,
+    "reverb_mix": 0.48
+  }
+}

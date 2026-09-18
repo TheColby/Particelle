@@ -1613,47 +1613,41 @@ Anticipated launch objections and concrete mitigations are documented in [`docs/
 
 ## 🛣️ Prioritized Roadmap
 
-### Active Plan (Next)
+### Active Plan (Evidence-Gated)
 
-1. **P8 — Hardware Realtime Soak Gate (implemented)**
-   `scripts/realtime_soak.sh` performs bounded device runs with explicit deadline/drop budgets and writes `target/realtime-soak.json`.
+1. **P12 — MPE hardware and DAW qualification (in progress)**
+   The portable M0 gate now renders an audible stress WAV, checks zero audio-thread allocations, and uploads evidence in GitHub Actions. Physical-controller testing and named VST3/AU host validation remain required before any compatibility claim; use [`docs/OBELISK_M0_QUALIFICATION.md`](docs/OBELISK_M0_QUALIFICATION.md).
 
-2. **P8 — Realtime Telemetry and Diagnostics Surface (implemented)**
-   `particelle run --duration <seconds> --telemetry-file <path>` emits structured callback and MIDI/OSC control metrics.
+2. **P12 — VST3/AU adapter delivery (planned)**
+   The stable C ABI now accepts MPE MIDI and external 128-note tuning tables, providing a narrow adapter boundary. Ship signed VST3/AU wrappers only after completing the host matrix.
 
-3. **P8 — Public Listening Artifact Pipeline (implemented)**
-   Release and nightly workflows package the deterministic PCM24 listening bundle, playlist, and metrics manifest.
+3. **P13 — Instrument output and atmosphere controls (implemented)**
+   M0 now has versioned JSON presets, slow morph modulation, fixed delay/diffuse-reverb controls, and a power-normalized diffuse output API for every channel count. The explicit graph descriptor protects the realtime-qualified topology.
 
-4. **P9 — Provenance and SBOM for Release Artifacts (implemented)**
-   Release workflows publish Cargo metadata SBOM and artifact-digest provenance alongside Sigstore signatures.
-
-5. **P9 — Cross-Platform Render Parity Policy (implemented)**
-   CI runs native PCM16 parity checks on Linux and macOS and uploads scenario reports for release review.
-
-6. **P9 — Newcomer UX Compression Pass (implemented)**
-   CI validates the shell-safe first-run flow, including stdin validation and a non-empty PCM24 render.
+4. **P14 — Offline/browser delivery (implemented foundation)**
+   The hardware-free `render_interleaved_stereo` API and `--no-default-features` build provide a WASM-ready core. A browser UI and a general-purpose graph compiler remain future product work.
 
 ### Completed Phases (Archive)
 
-7. **P10 — Preset Library and Sound-Design Workflow (implemented)**
+5. **P10 — Preset Library and Sound-Design Workflow (implemented)**
    `dronoify` is a versioned, parameterized atmospheric-drone generator with a distributable preset catalog and layouts from 1 through 256 channels.
 
-8. **P10 — Realtime Control Reliability (implemented)**
+6. **P10 — Realtime Control Reliability (implemented)**
    The MIDI path supports polyphonic pressure, lock-free bounded realtime queues, overflow telemetry, emergency all-notes-off, and complete Scala KBM mappings.
 
-9. **P10 — Release Adoption Artifacts (implemented)**
+7. **P10 — Release Adoption Artifacts (implemented)**
    Release and nightly builds publish the versioned preset catalog, auditable listening material, and Obelisk M0 host/API bundle.
 
-10. **P11 — DSP Quality (implemented)**
+8. **P11 — DSP Quality (implemented)**
    Obelisk M0 adds frequency-aware, band-limited wavetable excitation to prevent bright-source aliasing while retaining deterministic tuning and modal-body processing.
 
-11. **P11 — Native Host Integration (implemented)**
-   Obelisk M0 ships a stable opaque-handle C API for lock-free, allocation-free stereo processing. A VST3/AU wrapper remains the next host-specific integration milestone.
+9. **P11 — Native Host Integration (implemented)**
+   Obelisk M0 ships a stable opaque-handle C API for lock-free, allocation-free stereo processing and host-driven external tuning tables.
 
-12. **P0–P7 foundational roadmap items (implemented)**
+10. **P0–P7 foundational roadmap items (implemented)**
    Reliability gates, compatibility parsing, deterministic assets/metrics, realtime + control-path harnesses, release channels, schema migration metadata, supply-chain checks, golden fingerprints, and soak benchmarks are complete.
 
-Operational and release policy details: [`docs/REALTIME_OPERATIONS.md`](docs/REALTIME_OPERATIONS.md), [`docs/RELEASE_ASSURANCE.md`](docs/RELEASE_ASSURANCE.md), [`docs/PRESETS.md`](docs/PRESETS.md), and [`docs/OBELISK_M0_API.md`](docs/OBELISK_M0_API.md).
+Operational and release policy details: [`docs/REALTIME_OPERATIONS.md`](docs/REALTIME_OPERATIONS.md), [`docs/RELEASE_ASSURANCE.md`](docs/RELEASE_ASSURANCE.md), [`docs/PRESETS.md`](docs/PRESETS.md), [`docs/OBELISK_M0_API.md`](docs/OBELISK_M0_API.md), and [`docs/OBELISK_M0_QUALIFICATION.md`](docs/OBELISK_M0_QUALIFICATION.md).
 
 ### Compatibility Policy
 
