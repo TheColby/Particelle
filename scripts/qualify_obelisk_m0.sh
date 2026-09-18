@@ -10,7 +10,7 @@ cargo test -p obelisk-m0 --no-default-features
 cargo run --quiet -p obelisk-m0 --no-default-features --bin obelisk-m0-render -- \
   --output target/obelisk-m0-qualification.wav --duration 1.0 --stress > target/obelisk-m0-qualification.log
 
-rg -q 'audio-thread allocations: 0' target/obelisk-m0-qualification.log
-rg -q '^rendered:' target/obelisk-m0-qualification.log
+grep -Eq 'audio-thread allocations: 0' target/obelisk-m0-qualification.log
+grep -Eq '^rendered:' target/obelisk-m0-qualification.log
 [[ -s target/obelisk-m0-qualification.wav ]]
 echo "Obelisk M0 portable qualification passed."
