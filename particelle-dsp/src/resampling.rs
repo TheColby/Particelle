@@ -38,15 +38,40 @@ impl Resampler for RubatoResampler {
         input_rate: f64,
         output_rate: f64,
     ) -> Result<Vec<Vec<f64>>, String> {
+        if self.channels == 0 {
+            return Err("resampler must have at least one channel".to_string());
+        }
+        if !input_rate.is_finite()
+            || !output_rate.is_finite()
+            || input_rate <= 0.0
+            || output_rate <= 0.0
+        {
+            return Err("sample rates must be finite and greater than zero".to_string());
+        }
+        if input_rate.fract() != 0.0 || output_rate.fract() != 0.0 {
+            return Err("sample rates must be whole numbers of hertz".to_string());
+        }
+        if input.len() != self.channels {
+            return Err(format!(
+                "expected {} input channels, got {}",
+                self.channels,
+                input.len()
+            ));
+        }
         if input.is_empty() || input[0].is_empty() {
             return Ok(vec![vec![]; self.channels]);
+        }
+
+        let frames = input[0].len();
+        if input.iter().any(|channel| channel.len() != frames) {
+            return Err("all input channels must have the same frame count".to_string());
         }
 
         if (input_rate - output_rate).abs() < 1e-6 {
             return Ok(input.to_vec()); // Fast path for no-op
         }
 
-        let chunk_size = input[0].len();
+        let chunk_size = frames;
 
         let need_new = self.resampler.is_none() || self.last_rates != (input_rate, output_rate);
 
@@ -90,5 +115,42 @@ impl Resampler for RubatoResampler {
         }
 
         Ok(final_out)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Resampler, RubatoResampler};
+
+    #[test]
+    fn rejects_invalid_rates() {
+        let mut resampler = RubatoResampler::new(1);
+        let input = vec![vec![0.0; 8]];
+
+        for rate in [0.0, -1.0, f64::NAN, f64::INFINITY, 44_100.5] {
+            assert!(resampler.resample(&input, rate, 48_000.0).is_err());
+            assert!(resampler.resample(&input, 44_100.0, rate).is_err());
+        }
+    }
+
+    #[test]
+    fn rejects_malformed_channel_layouts() {
+        let mut resampler = RubatoResampler::new(2);
+        assert!(resampler
+            .resample(&[vec![0.0; 8]], 44_100.0, 48_000.0)
+            .is_err());
+        assert!(resampler
+            .resample(&[vec![0.0; 8], vec![0.0; 7]], 44_100.0, 48_000.0)
+            .is_err());
+    }
+
+    #[test]
+    fn no_op_resample_preserves_planar_data() {
+        let mut resampler = RubatoResampler::new(2);
+        let input = vec![vec![0.25, -0.5], vec![0.75, -1.0]];
+        assert_eq!(
+            resampler.resample(&input, 48_000.0, 48_000.0).unwrap(),
+            input
+        );
     }
 }
