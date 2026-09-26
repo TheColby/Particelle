@@ -18,6 +18,7 @@ pub trait Resampler: Send {
 pub struct RubatoResampler {
     resampler: Option<Fft<f64>>,
     last_rates: (f64, f64),
+    last_chunk_size: usize,
     channels: usize,
 }
 
@@ -26,6 +27,7 @@ impl RubatoResampler {
         Self {
             resampler: None,
             last_rates: (0.0, 0.0),
+            last_chunk_size: 0,
             channels,
         }
     }
@@ -73,7 +75,9 @@ impl Resampler for RubatoResampler {
 
         let chunk_size = frames;
 
-        let need_new = self.resampler.is_none() || self.last_rates != (input_rate, output_rate);
+        let need_new = self.resampler.is_none()
+            || self.last_rates != (input_rate, output_rate)
+            || self.last_chunk_size != chunk_size;
 
         if need_new {
             self.resampler = Some(
@@ -88,6 +92,7 @@ impl Resampler for RubatoResampler {
                 .map_err(|e| e.to_string())?,
             );
             self.last_rates = (input_rate, output_rate);
+            self.last_chunk_size = chunk_size;
         }
 
         let resampler = self.resampler.as_mut().unwrap();
@@ -152,5 +157,20 @@ mod tests {
             resampler.resample(&input, 48_000.0, 48_000.0).unwrap(),
             input
         );
+    }
+
+    #[test]
+    fn rebuilds_state_when_block_size_changes() {
+        let mut resampler = RubatoResampler::new(1);
+        let first = resampler
+            .resample(&[vec![0.0; 128]], 44_100.0, 48_000.0)
+            .unwrap();
+        let second = resampler
+            .resample(&[vec![0.0; 256]], 44_100.0, 48_000.0)
+            .unwrap();
+        assert!(!first.is_empty());
+        assert!(!second.is_empty());
+        assert!(first[0].iter().all(|sample| *sample == 0.0));
+        assert!(second[0].iter().all(|sample| *sample == 0.0));
     }
 }
