@@ -1,0 +1,18 @@
+schema_version: 2
+engine:
+  sample_rate: 48000
+  block_size: 256
+layout:
+  channels:
+    - { name: L, azimuth_deg: -30.0 }
+    - { name: R, azimuth_deg: 30.0 }
+clouds:
+  - id: study
+    source: audio/music_example.wav
+    density: 12.0
+    duration: 0.08
+    position: 0.5
+    amplitude: 0.12
+    width: 0.5
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }
+    window: { type: hann }

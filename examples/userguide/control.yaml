@@ -1,0 +1,22 @@
+schema_version: 2
+engine: { sample_rate: 48000, block_size: 256 }
+layout:
+  channels:
+    - { name: L, azimuth_deg: -30.0 }
+    - { name: R, azimuth_deg: 30.0 }
+routing:
+  midi_bindings:
+    - { source: midi.cc.1, target: energy }
+clouds:
+  - id: control
+    source: audio/music_example.wav
+    density:
+      op: sum
+      args: [8.0, { op: mul, args: [32.0,
+        { op: clamp, args: ["$energy", 0.0, 1.0] }] }]
+    duration: 0.12
+    position: 0.5
+    amplitude: 0.06
+    width: 0.6
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }
+    window: { type: hann }

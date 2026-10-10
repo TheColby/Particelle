@@ -1,0 +1,27 @@
+schema_version: 2
+engine: { sample_rate: 48000, block_size: 256 }
+layout:
+  channels:
+    - { name: L, azimuth_deg: -30.0 }
+    - { name: R, azimuth_deg: 30.0 }
+analysis:
+  - id: level
+    source: audio/music_example.wav
+    extractor: rms
+clouds:
+  - id: follower
+    source: audio/music_example.wav
+    density:
+      op: clamp
+      args:
+        - op: sum
+          args: [8.0, { op: mul,
+            args: [80.0, "$analysis.level"] }]
+        - 8.0
+        - 48.0
+    duration: 0.1
+    position: { op: osc, args: [phasor, 0.1] }
+    amplitude: 0.05
+    width: 0.6
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }
+    window: { type: hann }

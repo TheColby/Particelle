@@ -1,0 +1,27 @@
+schema_version: 2
+engine: { sample_rate: 48000, block_size: 256 }
+layout:
+  channels:
+    - { name: FL, azimuth_deg: -45.0 }
+    - { name: FR, azimuth_deg: 45.0 }
+    - { name: RL, azimuth_deg: -135.0 }
+    - { name: RR, azimuth_deg: 135.0 }
+clouds:
+  - id: front
+    source: audio/music_example.wav
+    density: 16.0
+    duration: 0.15
+    position: 0.5
+    amplitude: 0.06
+    width: 0.8
+    listener_pos: { x: 0.0, y: 1.0, z: 0.0 }
+    window: { type: hann }
+  - id: rear
+    source: audio/music_example.wav
+    density: 11.0
+    duration: 0.22
+    position: 1.0
+    amplitude: 0.04
+    width: 0.8
+    listener_pos: { x: 0.0, y: -1.0, z: 0.0 }
+    window: { type: hann }
