@@ -33,6 +33,12 @@ The M0 wavetable source selects a harmonic band below 45% of Nyquist before inte
 cargo build -p obelisk-m0 --no-default-features
 ```
 
+## Native Wrapper Contract
+
+`M0HostAdapter` is the framework-neutral layer for VST3/AU wrappers. Create one adapter per plug-in instance with its negotiated channel count. Before each callback, submit automation with `set_parameter`, MTS-derived frequencies with `set_tuning_table`, and timestamped MPE events. Call `process_planar` with the host's planar output slices.
+
+The adapter validates all parameters before accepting them, applies controls at the block boundary, rejects a bus whose channel count differs from the negotiated layout, and delegates rendering to the allocation-free engine path. It deliberately does not provide host lifecycle, UI, state serialization, code signing, or MTS-ESP discovery; those belong to the VST3/AU wrapper and its host-specific qualification.
+
 ## Qualification
 
 Run the portable gate locally:

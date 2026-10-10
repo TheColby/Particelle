@@ -1628,7 +1628,7 @@ Anticipated launch objections and concrete mitigations are documented in [`docs/
    The portable M0 gate now renders an audible stress WAV, checks zero audio-thread allocations, and uploads evidence in GitHub Actions. Physical-controller testing and named VST3/AU host validation remain required before any compatibility claim; use [`docs/OBELISK_M0_QUALIFICATION.md`](docs/OBELISK_M0_QUALIFICATION.md).
 
 2. **P12 — VST3/AU adapter delivery (planned)**
-   The stable C ABI now accepts MPE MIDI and external 128-note tuning tables, providing a narrow adapter boundary. Ship signed VST3/AU wrappers only after completing the host matrix.
+   The framework-neutral `M0HostAdapter` now provides block-boundary parameter automation, MPE forwarding, host tuning-table updates, and planar buses for any negotiated channel count. Ship signed VST3/AU wrappers only after completing the host matrix.
 
 3. **P13 — Instrument output and atmosphere controls (implemented)**
    M0 now has versioned JSON presets, slow morph modulation, fixed delay/diffuse-reverb controls, and a power-normalized diffuse output API for every channel count. The explicit graph descriptor protects the realtime-qualified topology.

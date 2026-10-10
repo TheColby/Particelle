@@ -22,6 +22,29 @@ pub struct M0Config {
     pub zone: ZoneConfig,
 }
 
+/// The automatable controls of the fixed M0 graph.
+///
+/// Hosts must update these only at a block boundary. The engine copies this
+/// small value without allocating or synchronizing on the audio thread.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct M0Controls {
+    pub base_morph: f32,
+    pub modulation_hz: f32,
+    pub delay_mix: f32,
+    pub reverb_mix: f32,
+}
+
+impl Default for M0Controls {
+    fn default() -> Self {
+        Self {
+            base_morph: 0.5,
+            modulation_hz: 0.0,
+            delay_mix: 0.0,
+            reverb_mix: 0.0,
+        }
+    }
+}
+
 impl Default for M0Config {
     fn default() -> Self {
         Self {
@@ -32,6 +55,17 @@ impl Default for M0Config {
             delay_mix: 0.0,
             reverb_mix: 0.0,
             zone: ZoneConfig::lower(15),
+        }
+    }
+}
+
+impl M0Config {
+    pub const fn controls(&self) -> M0Controls {
+        M0Controls {
+            base_morph: self.base_morph,
+            modulation_hz: self.modulation_hz,
+            delay_mix: self.delay_mix,
+            reverb_mix: self.reverb_mix,
         }
     }
 }
@@ -77,6 +111,20 @@ impl M0Engine {
 
     pub fn active_voice_count(&self) -> usize {
         self.voices.active_voice_count()
+    }
+
+    pub const fn controls(&self) -> M0Controls {
+        self.config.controls()
+    }
+
+    /// Apply automatable controls at a host block boundary.
+    pub fn set_controls(&mut self, controls: M0Controls) -> Result<(), M0EngineError> {
+        controls.validate()?;
+        self.config.base_morph = controls.base_morph;
+        self.config.modulation_hz = controls.modulation_hz;
+        self.config.delay_mix = controls.delay_mix;
+        self.config.reverb_mix = controls.reverb_mix;
+        Ok(())
     }
 
     pub fn voices(&self) -> &[crate::mpe::VoiceState] {
@@ -255,6 +303,12 @@ impl M0Config {
         if self.max_voices == 0 {
             return Err(M0EngineError::InvalidVoiceCount);
         }
+        self.controls().validate()
+    }
+}
+
+impl M0Controls {
+    pub fn validate(&self) -> Result<(), M0EngineError> {
         for value in [
             self.base_morph,
             self.modulation_hz,
@@ -475,5 +529,24 @@ x
             engine.set_external_tuning_table(table),
             Err(M0EngineError::InvalidExternalTuningFrequency(0.0))
         ));
+    }
+
+    #[test]
+    fn block_boundary_controls_validate_and_apply() {
+        let mut engine = M0Engine::new(M0Config::default(), default_twelve_tet_tuning()).unwrap();
+        let controls = M0Controls {
+            base_morph: 0.9,
+            modulation_hz: 0.2,
+            delay_mix: 0.3,
+            reverb_mix: 0.4,
+        };
+        engine.set_controls(controls).unwrap();
+        assert_eq!(engine.controls(), controls);
+        assert!(engine
+            .set_controls(M0Controls {
+                delay_mix: 1.1,
+                ..controls
+            })
+            .is_err());
     }
 }

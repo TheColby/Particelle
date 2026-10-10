@@ -8,14 +8,16 @@ pub mod dsp;
 pub mod engine;
 pub mod ffi;
 pub mod graph;
+pub mod host;
 pub mod mpe;
 pub mod offline;
 pub mod preset;
 pub mod rt_audit;
 pub mod telemetry;
 
-pub use engine::{default_twelve_tet_tuning, M0Config, M0Engine, M0EngineError};
+pub use engine::{default_twelve_tet_tuning, M0Config, M0Controls, M0Engine, M0EngineError};
 pub use graph::{CompiledGraph, GraphNode, M0GraphSpec};
+pub use host::{HostAdapterError, HostParameter, M0HostAdapter};
 pub use mpe::{MpeVoiceManager, VoicePhase, VoiceState, ZoneConfig};
 pub use offline::render_interleaved_stereo;
 pub use preset::{M0Preset, M0PresetParameters};
