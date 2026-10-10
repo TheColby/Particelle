@@ -72,7 +72,7 @@ impl HardwareHost {
         #[cfg(not(feature = "realtime"))]
         {
             let _ = duration;
-            return Err(HardwareError::RealtimeNotEnabled);
+            Err(HardwareError::RealtimeNotEnabled)
         }
 
         #[cfg(feature = "realtime")]

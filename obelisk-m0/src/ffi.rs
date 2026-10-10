@@ -4,17 +4,25 @@
 //! block boundary before calling `obelisk_m0_process_stereo`; this keeps the
 //! realtime path allocation-free and avoids hidden cross-thread locks.
 
-use crate::{default_twelve_tet_tuning, M0Config, M0Engine};
+use crate::{default_twelve_tet_tuning, M0Config, M0Controls, M0Engine};
 
 /// Opaque C handle. Create and destroy it only with the functions below.
 pub struct ObeliskM0Handle {
     engine: M0Engine,
 }
 
-/// Create a stereo M0 engine. Returns null for invalid arguments or allocation
-/// failure. `sample_rate` must be finite and positive; `max_voices` is at least one.
+/// Create a stereo M0 engine. Returns null for invalid arguments.
+/// Construction allocates; call only during host preparation. Supported sample
+/// rates are 8--384 kHz and voice counts are 1--256. Allocation failure follows
+/// Rust's allocator policy rather than returning a recoverable error.
 #[unsafe(no_mangle)]
 pub extern "C" fn obelisk_m0_create(sample_rate: f64, max_voices: usize) -> *mut ObeliskM0Handle {
+    if !sample_rate.is_finite()
+        || !(8_000.0..=384_000.0).contains(&sample_rate)
+        || !(1..=256).contains(&max_voices)
+    {
+        return std::ptr::null_mut();
+    }
     let config = M0Config {
         sample_rate,
         max_voices,
@@ -52,7 +60,7 @@ pub unsafe extern "C" fn obelisk_m0_send_midi3(
     data1: u8,
     data2: u8,
 ) -> bool {
-    if handle.is_null() || status < 0x80 {
+    if handle.is_null() || !(0x80..0xf0).contains(&status) || data1 > 127 || data2 > 127 {
         return false;
     }
     // SAFETY: the caller contract guarantees a live, exclusively accessed handle.
@@ -75,7 +83,10 @@ pub unsafe extern "C" fn obelisk_m0_process_stereo(
     output: *mut f32,
     frames: usize,
 ) -> bool {
-    if handle.is_null() || (output.is_null() && frames != 0) {
+    if handle.is_null()
+        || (output.is_null() && frames != 0)
+        || frames > isize::MAX as usize / std::mem::size_of::<[f32; 2]>()
+    {
         return false;
     }
     if frames == 0 {
@@ -87,6 +98,48 @@ pub unsafe extern "C" fn obelisk_m0_process_stereo(
     // guarantees exactly this many samples are writable.
     let output = unsafe { std::slice::from_raw_parts_mut(output.cast::<[f32; 2]>(), frames) };
     handle.engine.process_block(&[], output);
+    true
+}
+
+/// Atomically validate and apply the four automatable controls.
+///
+/// # Safety
+/// `handle` must be live and exclusively accessed at a processing boundary.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn obelisk_m0_set_controls(
+    handle: *mut ObeliskM0Handle,
+    base_morph: f32,
+    modulation_hz: f32,
+    delay_mix: f32,
+    reverb_mix: f32,
+) -> bool {
+    if handle.is_null() {
+        return false;
+    }
+    // SAFETY: caller guarantees exclusive access to a live instance.
+    unsafe { &mut *handle }
+        .engine
+        .set_controls(M0Controls {
+            base_morph,
+            modulation_hz,
+            delay_mix,
+            reverb_mix,
+        })
+        .is_ok()
+}
+
+/// Silence voices and tails and rewind the engine without reallocating.
+/// Controls, tuning and output layout are preserved.
+///
+/// # Safety
+/// `handle` must be live and exclusively accessed at a processing boundary.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn obelisk_m0_reset(handle: *mut ObeliskM0Handle) -> bool {
+    if handle.is_null() {
+        return false;
+    }
+    // SAFETY: caller guarantees exclusive access to a live instance.
+    unsafe { &mut *handle }.engine.reset();
     true
 }
 
@@ -169,6 +222,36 @@ mod tests {
         unsafe {
             assert!(obelisk_m0_set_tuning_table(handle, table.as_ptr()));
             obelisk_m0_clear_tuning_table(handle);
+            obelisk_m0_destroy(handle);
+        }
+    }
+
+    #[test]
+    fn host_controls_reset_and_invalid_midi() {
+        assert!(obelisk_m0_create(f64::NAN, 16).is_null());
+        assert!(obelisk_m0_create(48_000.0, usize::MAX).is_null());
+        let handle = obelisk_m0_create(48_000.0, 16);
+        assert!(!handle.is_null());
+        // SAFETY: the test owns all supplied buffers and the handle.
+        unsafe {
+            assert!(obelisk_m0_set_controls(handle, 0.8, 0.2, 0.3, 0.4));
+            assert!(!obelisk_m0_set_controls(handle, 0.8, f32::NAN, 0.0, 0.0));
+            assert_eq!((*handle).engine.controls().reverb_mix, 0.4);
+            assert!(!obelisk_m0_send_midi3(handle, 0x91, 255, 100));
+            assert!(!obelisk_m0_send_midi3(handle, 0xf0, 0, 0));
+            assert!(obelisk_m0_send_midi3(handle, 0x91, 60, 100));
+            let mut samples = [0.0; 1024];
+            assert!(obelisk_m0_process_stereo(handle, samples.as_mut_ptr(), 512));
+            assert!(samples.iter().any(|x| *x != 0.0));
+            assert!(obelisk_m0_reset(handle));
+            assert!(obelisk_m0_process_stereo(handle, samples.as_mut_ptr(), 512));
+            assert!(samples.iter().all(|x| *x == 0.0));
+            assert_eq!((*handle).engine.controls().reverb_mix, 0.4);
+            assert!(!obelisk_m0_process_stereo(
+                handle,
+                samples.as_mut_ptr(),
+                usize::MAX
+            ));
             obelisk_m0_destroy(handle);
         }
     }

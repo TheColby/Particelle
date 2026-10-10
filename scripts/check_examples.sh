@@ -87,13 +87,21 @@ for idx in "${!example_files[@]}"; do
   fi
   selected_count=$((selected_count + 1))
 
-  "$bin" validate "$patch" >/dev/null 2>&1
+  if ! "$bin" validate "$patch" >"$render_dir/validate.log" 2>&1; then
+    echo "Validation failed for $patch:" >&2
+    cat "$render_dir/validate.log" >&2
+    exit 1
+  fi
 
   out_name="${patch#examples/}"
   out_path="$render_dir/${out_name//\//__}"
   out_path="${out_path%.yaml}.wav"
 
-  "$bin" render "$patch" -o "$out_path" --duration 1.0 >/dev/null 2>&1
+  if ! "$bin" render "$patch" -o "$out_path" --duration 1.0 >"$render_dir/render.log" 2>&1; then
+    echo "Render failed for $patch:" >&2
+    cat "$render_dir/render.log" >&2
+    exit 1
+  fi
 
   stats_output="$(sox "$out_path" -n stat 2>&1)"
   max_amp="$(printf '%s\n' "$stats_output" | awk -F': *' '/Maximum amplitude/ { print $2; exit }')"

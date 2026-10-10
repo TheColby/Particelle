@@ -39,6 +39,9 @@ pub enum ValidationError {
     #[error("Scala: scl_path is empty")]
     EmptyScalaPath,
 
+    #[error("Cloud '{id}': {field} must be positive and finite")]
+    InvalidPitchFrequency { id: String, field: &'static str },
+
     #[error("Binding #{index}: target '{target}' is not a registered parameter")]
     UnknownRoutingTarget { index: usize, target: String },
 
@@ -154,6 +157,19 @@ pub fn validate(config: &ParticelleConfig) -> Vec<ValidationError> {
                 id: cloud.id.clone(),
                 kind: cloud.window.kind.clone(),
             });
+        }
+        if let Some(pitch) = &cloud.pitch {
+            for (field, hz) in [
+                ("pitch.reference_hz", pitch.reference_hz),
+                ("pitch.source_hz", pitch.source_hz),
+            ] {
+                if !hz.is_finite() || hz <= 0.0 {
+                    errors.push(ValidationError::InvalidPitchFrequency {
+                        id: cloud.id.clone(),
+                        field,
+                    });
+                }
+            }
         }
     }
 

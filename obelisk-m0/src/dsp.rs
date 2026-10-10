@@ -174,10 +174,14 @@ pub struct M0VoiceDsp {
     body_energy: f32,
     rng: u64,
     pan: f32,
+    mono_sample: f32,
     active: bool,
 }
 
 impl M0VoiceDsp {
+    pub fn reset(&mut self) {
+        *self = Self::new();
+    }
     pub const fn new() -> Self {
         Self {
             voice_id: 0,
@@ -193,6 +197,7 @@ impl M0VoiceDsp {
             body_energy: 1.0e-6,
             rng: 1,
             pan: 0.0,
+            mono_sample: 0.0,
             active: false,
         }
     }
@@ -209,6 +214,7 @@ impl M0VoiceDsp {
         self.body_energy = 1.0e-6;
         self.rng = voice.id ^ (u64::from(voice.note) << 32) ^ 0x9e37_79b9_7f4a_7c15;
         self.pan = ((f32::from(voice.note) - 60.0) / 36.0).clamp(-0.8, 0.8);
+        self.mono_sample = 0.0;
         self.active = true;
         self.filter.reset();
         for mode in &mut self.modes {
@@ -226,6 +232,11 @@ impl M0VoiceDsp {
         !self.active || self.envelope < 1.0e-5
     }
 
+    /// Most recent pre-pan sample, for independent speaker-geometry routing.
+    pub fn mono_sample(&self) -> f32 {
+        self.mono_sample
+    }
+
     pub fn process(
         &mut self,
         voice: &VoiceState,
@@ -236,6 +247,7 @@ impl M0VoiceDsp {
         update_control: bool,
     ) -> [f32; 2] {
         if !self.active || voice.phase == VoicePhase::Free {
+            self.mono_sample = 0.0;
             return [0.0, 0.0];
         }
 
@@ -313,6 +325,7 @@ impl M0VoiceDsp {
         let amplitude =
             self.envelope * voice.velocity as f32 * (0.62 + 0.38 * self.smoothed_pressure);
         let sample = (filtered * amplitude * 0.38).tanh();
+        self.mono_sample = sample;
         let left_gain = ((1.0 - self.pan) * 0.5).sqrt();
         let right_gain = ((1.0 + self.pan) * 0.5).sqrt();
         [sample * left_gain, sample * right_gain]

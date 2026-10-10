@@ -1,5 +1,5 @@
 use obelisk_m0::rt_audit::AuditAllocator;
-use obelisk_m0::{default_twelve_tet_tuning, M0Config, M0Engine};
+use obelisk_m0::{default_twelve_tet_tuning, M0Config, M0Engine, M0Preset};
 use particelle_io::hardware::{HardwareConfig, HardwareHost};
 use particelle_midi::realtime::RealtimeMidiHost;
 use particelle_midi::MidiEvent;
@@ -18,6 +18,7 @@ struct Options {
     audio_device: Option<String>,
     scl: Option<PathBuf>,
     kbm: Option<PathBuf>,
+    preset: Option<PathBuf>,
     sample_rate: u32,
     block_size: usize,
     list_devices: bool,
@@ -30,6 +31,7 @@ impl Default for Options {
             audio_device: None,
             scl: None,
             kbm: None,
+            preset: None,
             sample_rate: 48_000,
             block_size: 128,
             list_devices: false,
@@ -45,10 +47,13 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     let tuning = load_tuning(&options)?;
-    let config = M0Config {
+    let mut config = M0Config {
         sample_rate: f64::from(options.sample_rate),
         ..M0Config::default()
     };
+    if let Some(path) = &options.preset {
+        M0Preset::load_file(path)?.apply_to(&mut config);
+    }
     let mut engine = M0Engine::new(config, tuning)?;
     let mut midi_host = RealtimeMidiHost::new();
     let (midi_name, mut midi_queue) =
@@ -113,6 +118,7 @@ fn parse_options() -> Result<Options, Box<dyn Error>> {
             "--audio" => options.audio_device = Some(next_value(&mut args, &argument)?),
             "--scl" => options.scl = Some(PathBuf::from(next_value(&mut args, &argument)?)),
             "--kbm" => options.kbm = Some(PathBuf::from(next_value(&mut args, &argument)?)),
+            "--preset" => options.preset = Some(PathBuf::from(next_value(&mut args, &argument)?)),
             "--sample-rate" => options.sample_rate = next_value(&mut args, &argument)?.parse()?,
             "--block-size" => options.block_size = next_value(&mut args, &argument)?.parse()?,
             "--list" => options.list_devices = true,
@@ -151,6 +157,7 @@ fn print_help() {
                --audio NAME        Audio output; system default by default\n\
                --scl PATH          Optional Scala scale\n\
                --kbm PATH          Optional Scala keyboard mapping\n\
+               --preset PATH       M0 JSON preset\n\
                --sample-rate HZ    Sample rate (default: 48000)\n\
                --block-size FRAMES Callback size (default: 128)"
     );

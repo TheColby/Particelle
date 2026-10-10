@@ -31,6 +31,10 @@ The compatibility layer emits migration notes with stable IDs so migrations are 
 | `window.defaults.tukey_alpha` | Added `alpha=0.5` when legacy `tukey` nodes omit it. |
 | `window.defaults.planck_epsilon` | Added `epsilon=0.1` when legacy `planck_taper` nodes omit it. |
 | `window.defaults.dpss_half_bandwidth` | Added `half_bandwidth=4.0` when legacy `dpss` nodes omit it. |
+| `layout.channel.legacy_type` | Accepted a matching legacy `type: spherical` or `type: cartesian` channel tag. Conflicting tags remain errors. |
+| `cloud.pitch_ratio_to_playback_rate` | Renamed a numeric legacy `pitch_ratio` to `playback_rate` when the latter is absent. |
+
+Unknown keys are rejected after these narrowly defined normalizations. This prevents a misspelled control from silently producing the wrong sound.
 
 ## CLI Audit Path
 

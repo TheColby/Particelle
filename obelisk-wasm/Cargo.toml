@@ -1,0 +1,21 @@
+[package]
+name = "obelisk-wasm"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+# Independent delivery: no changes to the parent workspace are required.
+[workspace]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+obelisk-m0 = { path = "../obelisk-m0", default-features = false }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

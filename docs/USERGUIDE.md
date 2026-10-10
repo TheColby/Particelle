@@ -12,7 +12,7 @@ Particelle describes that process in a text file. A patch is a recipe that can b
 
 The book follows the teaching approach of the VerbX user guide: practical chapters first, illustrated explanations alongside the work, listening exercises, and a reference section for returning users. Read Chapters 1 through 4 in sequence. After that, choose a route: Chapter 5 for drones, Chapters 6 and 7 for automation, Chapters 8 and 9 for spatial work and tuning, or Chapters 10 and 11 for performance and Obelisk M0.
 
-This edition was checked against the repository source, rather than treating every historical example or CLI help sentence as a guarantee. Particelle is alpha software. Several schema fields describe planned or library-level capabilities that the granular command-line path does not yet apply. The capability table in Chapter 1 and the notes beside the affected workflows explain those boundaries.
+This edition was checked against the repository source, rather than treating every historical example or CLI help sentence as a guarantee. Particelle is alpha software. The capability table in Chapter 1 and the notes beside affected workflows distinguish implemented behavior from host and hardware qualification.
 
 All listening tasks assume modest monitoring levels. Begin with short previews, examine the rendered level, and only then commit to a long render. A dense cloud can sum to a much larger level than its individual grains suggest.
 
@@ -59,12 +59,12 @@ Obelisk M0 belongs to the repository but is a separate instrument. It synthesize
 | Output format | 32-bit float by default; PCM24 and PCM16 available |
 | Patch generation | 1 through 256 channels; counts above two generate a horizontal ring |
 | Spatial rendering | Default CLI uses amplitude panning; channel names do not create an Atmos deliverable |
-| Granular tuning | Tuning declarations validate, but CLI cloud playback rate is not connected to them |
+| Granular tuning | Cloud `pitch` and `playback_rate` control source read speed; source-rate conversion is applied |
 | M0 tuning | Scala/KBM and host-supplied frequency tables reach the synthesizer |
 | Realtime | Device-dependent; qualify the actual interface and patch |
-| Native plug-ins | M0 adapter and C API exist; this tree does not ship a completed VST3/AU wrapper |
+| Native plug-ins | M0 adapter, C API, and VST3/AU wrapper source; named-host qualification and signing remain separate |
 
-These distinctions matter musically. An eight-channel ring is a useful compositional space, but it is not automatically a cinema bed. A tuning declaration can be valid YAML without changing granular pitch. A successful offline render does not demonstrate that a laptop can sustain the same patch in realtime.
+These distinctions matter musically. An eight-channel ring is a useful compositional space, but it is not automatically a cinema bed. A tuning declaration only changes granular pitch when a cloud selects a degree and source reference frequency. A successful offline render does not demonstrate that a laptop can sustain the same patch in realtime.
 
 ## Listening exercise
 
@@ -113,11 +113,11 @@ That script requires SoX. The checked-in source tree may already contain the req
 
 ## Paths that remain understandable
 
-This CLI resolves source WAVs, analysis WAVs, and curve files relative to the process working directory. It does not consistently rebase them on the location of the patch. A patch stored under `examples/userguide/` can therefore refer to `audio/music_example.wav` when launched from the repository root.
+The CLI first resolves source WAVs, analysis WAVs, and curve files relative to the patch file. For older repository examples it also accepts an existing path relative to the current working directory, with a warning. Stdin patches have no file location, so their assets resolve from the working directory.
 
 For a personal project, keep one project root containing `patches/`, `audio/`, `curves/`, and `renders/`. Launch commands from that root. Use absolute paths only when you deliberately want to refer outside the project. Quote shell paths containing spaces.
 
-Do not change `engine.sample_rate` casually when importing a source recorded at another rate. The current granular CLI loads source samples directly without inserting sample-rate conversion. Matching the patch rate to the source avoids unintended changes in playback speed and position interpretation.
+The granular read-head step compensates for the source and engine sample-rate ratio, so importing a WAV at another rate need not change its pitch. `engine.sample_rate` still changes output resolution, timing budgets, and the rendered file format; record it alongside a reproducible patch.
 
 ## Exercise: make a portable project
 
@@ -210,7 +210,7 @@ Increasing density and duration simultaneously changes the texture, level, and p
 
 A cloud's `position` selects where each new grain begins reading. A constant position revisits the same region. A slowly moving position scans the source and preserves more of its long-term development. A fast scan can pass across attacks and silences before enough grains have sampled them.
 
-The current source read heads wrap around the source buffer. Although `loop_source` appears in the schema, the granular CLI does not currently apply it to stop wrapping. To make a deliberate finite gesture, render to a chosen length and apply the final fade in an editor or use an amplitude curve.
+Source read heads wrap by default. Set `loop_source: false` on a cloud to stop grains at the source boundary rather than wrap through it. For a deliberate final gesture, also shape the cloud amplitude or apply a final fade in an editor.
 
 Use nonnegative positions in the working range of your file. The current implementation is designed around a simple source-index mapping, not a full transport with documented reverse and boundary modes.
 
@@ -226,7 +226,7 @@ Each cloud uses a particle pool. The current CLI uses `cloud.max_particles` when
 
 If every particle is active, a new grain cannot be acquired. The result can sound thinner or less predictable than a calculation based only on density suggests. Leave headroom above density multiplied by duration, then test the actual patch.
 
-The current granular engine schedules updates over a block and then processes the pool. Do not assume sample-exact onset placement or identical output when changing block size. Keep block size fixed during comparisons and performance qualification.
+The granular engine places grain onsets at their scheduled sample within a block. Block-size changes should preserve onset timing, but always compare the actual rendered audio when qualifying a performance or revising a deterministic baseline.
 
 ## Exercise: separate three causes of roughness
 
@@ -514,7 +514,7 @@ Use the channel count generated by `init -n` as a starting layout only. Above tw
 
 Particelle produces channel-based WAVs. It does not author Dolby Atmos objects, ADM metadata, or a finished immersive distribution package. Prepare such delivery in an appropriate downstream authoring workflow, using a verified channel map.
 
-The M0 adapter's multichannel method is different again: stereo is preserved at two channels; larger buses receive copies of a normalized mono field. This ensures a usable bus but does not supply independently moving spatial voices. Do not interchange those two spatial behaviors in a production specification.
+The M0 adapter's multichannel method is different again: stereo is preserved at two channels, while larger buses carry a power-normalized spatial voice field. It is an instrument output, not an Atmos authoring or speaker-calibration system. Do not interchange those two spatial behaviors in a production specification.
 
 ## Exercise: verify the room before composing it
 
@@ -526,9 +526,9 @@ Render the front cloud alone and confirm that it reaches FL and FR. Render the r
 
 Pitch can mean a source recording's original note, a grain's playback speed, or the note assigned to a synthesizer voice. These are related but distinct. Slowing sample playback changes duration and spectrum together. Moving a grain's start position changes which source material is selected, but does not itself transpose that material.
 
-The repository contains tuning libraries for twelve-tone equal temperament, arbitrary equal divisions of the octave, just-intonation ratios, and Scala scales. The YAML schema accepts tuning selections. However, the current granular `build_engine` path does not apply that tuning selection to cloud playback rate. It also does not compile a `playback_rate` field from the cloud YAML schema.
+The repository contains tuning libraries for twelve-tone equal temperament, arbitrary equal divisions of the octave, just-intonation ratios, and Scala scales. In a granular cloud, `pitch` selects a tuning degree and a source reference frequency. Its frequency ratio multiplies `playback_rate`; source and output sample rates are accounted for in the final read-head step.
 
-Consequently, adding `tuning: { mode: edo, steps: 31 }` to a granular patch is not enough to hear 31-EDO transposition. Some older examples contain pitch-oriented fields that the current parser can ignore. Use a short audible test before attributing a pitch change to such a field.
+Adding `tuning: { mode: edo, steps: 31 }` alone does not transpose every cloud: set each intended cloud's `pitch` degree and `source_hz`. Use a short audible test to check the selected interval and distinguish pitch movement from source-position movement.
 
 ## What an interval calculation tells you
 
@@ -569,7 +569,7 @@ The audio device must support the configured sample rate and output-channel coun
 
 A 256-frame block at 48 kHz lasts about 5.33 milliseconds. That is a processing deadline, not a complete round-trip latency measurement. Device buffers, operating-system scheduling, and the rest of a performance rig add latency of their own.
 
-The granular realtime path includes control-thread synchronization and per-grain work that is not covered by M0's zero-allocation audit. Use the actual interface and workload when judging readiness. M0 audit results do not qualify the separate granular CLI.
+The granular DSP engine has sample-accurate onset and allocation regression coverage. The hardware callback also performs control-thread synchronization and device conversion; the M0 zero-allocation audit does not qualify that separate path. Use the actual interface and workload when judging readiness.
 
 ## Route a control field into a sound
 
@@ -660,7 +660,7 @@ Start with a small voice count or a modest playing pattern while establishing de
 
 ## Preset state and host state
 
-Factory presets live in `presets/obelisk-m0/`. They use a versioned JSON schema with `base_morph`, `modulation_hz`, `delay_mix`, and `reverb_mix`. They are library-facing state in this edition; the standalone render/live parsers do not expose a preset-loading command.
+Factory presets live in `presets/obelisk-m0/`. They use a versioned JSON schema with `base_morph`, `modulation_hz`, `delay_mix`, and `reverb_mix`. The standalone render/live binaries accept a preset file; inspect each binary's `--help` for the exact flag and combine it with a short listening test.
 
 The host adapter also has versioned session JSON for the four controls. A factory preset and a host session are separate formats. The host uses `save_state` and `restore_state` with exclusive access on the control thread. Parsing or validation failures leave controls unchanged. State operations allocate and must not run in an audio callback.
 
@@ -670,9 +670,13 @@ Session state intentionally excludes active voices, effect tails, bus configurat
 
 `M0HostAdapter` accepts block-boundary control changes, sample-offset MIDI events, planar output, and host frequency tables. The C API provides opaque handles and stereo processing. The wrapper remains responsible for host lifecycle, UI, parameter identification, format-specific state exchange, and external tuning discovery.
 
+The JUCE wrapper source in `native/obelisk-plugin/` builds VST3 and, on macOS, AU from the M0 C ABI. It exposes four automatable controls and saves their state. Its in-process smoke check is not a named-DAW test; do not describe a host as supported until its timing, automation, stop/reset, and restore paths have been exercised there. The wrapper is stereo and does not yet discover MTS-ESP tuning tables.
+
+For a browser-only listening study, build the M0 WASM target with `./scripts/build_wasm.sh`, then serve `web/` over HTTP. The browser renders a short preset-like phrase locally, previews it, and exports PCM WAV. It is an offline playground, not a live MIDI instrument or a general Particelle YAML renderer.
+
 The external tuning bridge accepts 128 positive frequencies. The current engine applies its cached base frequencies when voices start; do not assume that replacing the table retunes already sounding voices. Test that distinction if continuous retuning is central to a piece.
 
-For more than two adapter output channels, the current M0 diffuse output distributes a normalized mono field. It is useful for compatibility but is not a spatial decorrelator. The simple feedback-based ambience controls are also a foundation, not a measured-room model.
+For more than two adapter output channels, M0 distributes voice energy across the bus rather than duplicating a mono field. The delay and diffusion controls make an atmospheric instrument texture, not a measured-room model or an encoded immersive master.
 
 ## Exercise: qualify one expressive phrase
 
@@ -805,9 +809,9 @@ A message such as `zsh: parse error near '}'` usually means YAML was pasted into
 
 ## The source cannot be opened
 
-Check the current directory, then the path in the patch. `audio/music_example.wav` is relative to where the CLI is launched. Moving only the YAML file does not move its source. A valid schema does not establish that the WAV exists, that it can be decoded, or that it contains sound.
+Check the patch location and the source path first. The CLI prefers assets relative to the patch, then uses an existing working-directory path as a compatibility fallback. Moving only the YAML file may therefore break its source reference. A valid schema does not establish that the WAV can be decoded or that it contains sound.
 
-If the source is MP3, AAC, or another unsupported format, convert it to WAV with a tool you trust. Match its sample rate to the patch's engine rate. Keep the converted file as an explicit project asset.
+If the source is MP3, AAC, or another unsupported format, convert it to WAV with a tool you trust. Keep the converted file and its original sample rate as explicit project assets.
 
 ## The render exists but is silent
 
@@ -819,13 +823,11 @@ Check spatial geometry next. A source facing away from all speakers can produce 
 
 Confirm that the field name written by MIDI or OSC exactly matches the `$field` used in the cloud. The target is a field name, not an automatic path into the YAML tree. Sending a message to a cloud-like path does not alter density unless the density expression reads that field.
 
-If the control concerns tuning, playback rate, loop behavior, or a binding transform, consult the capability notes. The current parser can accept or ignore fields without producing the implied audio behavior. Avoid diagnosing an unconnected feature by repeatedly increasing its value.
+If the control concerns tuning, playback rate, loop behavior, or a binding transform, check the required companion fields and use a short audible render. Avoid diagnosing a missing source asset or malformed signal by repeatedly increasing a parameter value.
 
 ## A patch becomes invalid after using set
 
-The current `set` command is a text replacement based on the last segment of the supplied path. It can replace every line with the same key, and it does not understand nested signal expressions. For example, a density replacement can affect several clouds or leave a stale indented expression body.
-
-Use `set` only for an unambiguous scalar line, such as a single `engine.block_size`. Write the result to a new filename, inspect it, and validate it. Edit structured or repeated fields with a YAML-aware editor. Never redirect `set patch.yaml ...` back onto `patch.yaml`; shell redirection can truncate the input before it is read.
+`set` traverses the YAML structure, so `clouds[1].density` selects one cloud even when the same key appears elsewhere. Write the result to a new filename, inspect it, and validate it. Never redirect `set patch.yaml ...` back onto `patch.yaml`; shell redirection can truncate the input before it is read.
 
 ## Playback reports a WAV header warning
 
@@ -835,7 +837,7 @@ Render PCM24 for a compatibility copy. The message `wave header missing extended
 
 Render offline to determine whether the click is in the patch or the device path. If it is present offline, inspect windows, discontinuous curves, source boundaries, and clipping. If it appears only live, inspect telemetry and test a lower processing load on the same device.
 
-A larger block changes the callback budget and may change the current granular scheduling result. Treat it as a new render/performance configuration, and record it in the project notes. A device soak with the real patch is more useful than a generic statement that the engine is realtime capable.
+A larger block changes the callback budget even though the core scheduler uses sample-position onsets. Treat it as a new performance configuration, and record it in the project notes. A device soak with the real patch is more useful than a generic statement that the engine is realtime capable.
 
 # 16. Command and patch reference
 
@@ -864,7 +866,7 @@ Use `particelle --help` and `particelle COMMAND --help` to inspect the installed
 | `analysis` | Offline feature vectors | Named by `id` and referenced with `$analysis.` |
 | `routing` | MIDI field assignments | Scaling belongs in the signal expression |
 | `hardware` | Device and MIDI selection | Realtime path only |
-| `tuning` | Tuning declaration | Granular CLI connection is incomplete |
+| `tuning` | Tuning declaration | Used by clouds that declare `pitch` |
 
 ## Cloud controls to reach for first
 
@@ -883,9 +885,9 @@ Use `particelle --help` and `particelle COMMAND --help` to inspect the installed
 
 ## What validation does and does not establish
 
-The schema validator checks selected properties, including positive sample rate, nonzero block size, nonempty layout, known window names, and basic tuning constraints. It is not a complete static analyzer for every expression or asset.
+The schema validator checks selected properties, including positive sample rate, nonzero block size, nonempty layout, known window names, and basic tuning constraints. Unknown fields are rejected; the validator is not a complete static analyzer for every expression.
 
-Expression arity and curve decoding are checked later while building the engine. Asset loading can fail after validation. Some unsupported fields may be ignored by deserialization. A complete acceptance sequence therefore includes schema validation, a short render, format/level inspection, and listening.
+Expression arity and curve decoding are checked later while building the engine. Asset loading can fail after validation. A complete acceptance sequence therefore includes schema validation, a short render, format/level inspection, and listening.
 
 For programmatic patch generation, use canonical schema version 2, emit only documented fields, and validate your output. AI-generated patches are proposals to inspect, not an alternate implementation of the engine. Preserve the prompt only as supplementary context; the actual YAML and assets determine the render.
 

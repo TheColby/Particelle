@@ -11,6 +11,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 mod osc_control;
+mod patch;
 
 /// Lock-free counters sampled by the realtime callback and serialized on exit.
 struct RuntimeTelemetry {
@@ -489,7 +490,78 @@ fn read_patch_yaml(patch_path: &str) -> Result<String> {
 
 fn load_patch_config(patch_path: &str) -> Result<ParticelleConfig> {
     let yaml = read_patch_yaml(patch_path)?;
-    parse_patch_config(&yaml)
+    let mut config = parse_patch_config(&yaml)?;
+    patch::resolve(&mut config, patch_path)?;
+    Ok(config)
+}
+
+fn tuning_ratio(
+    config: &ParticelleConfig,
+    pitch: &particelle_schema::config::PitchConfig,
+) -> Result<f64> {
+    use particelle_schema::TuningConfig;
+    use particelle_tuning::{EdoTuning, Tuning};
+
+    let hz = match &config.tuning {
+        TuningConfig::TwelveTet => {
+            EdoTuning::twelve_tet(pitch.reference_hz).frequency_for_degree(pitch.degree)
+        }
+        TuningConfig::Edo { steps } => {
+            anyhow::ensure!(*steps > 0, "EDO steps must be positive");
+            EdoTuning::new(*steps, pitch.reference_hz).frequency_for_degree(pitch.degree)
+        }
+        TuningConfig::Ji { ratios } => {
+            let entries = ratios
+                .iter()
+                .map(|r| particelle_tuning::ji::JiRatio {
+                    degree: r.degree,
+                    num: r.num,
+                    den: r.den,
+                })
+                .collect();
+            particelle_tuning::JiTuning::new(entries, pitch.reference_hz)
+                .frequency_for_degree(pitch.degree)
+        }
+        TuningConfig::Scala { scl_path, kbm_path } => {
+            let scl = std::fs::read_to_string(scl_path)
+                .with_context(|| format!("Cannot read Scala scale '{scl_path}'"))?;
+            let kbm = kbm_path
+                .as_ref()
+                .map(|path| {
+                    std::fs::read_to_string(path)
+                        .with_context(|| format!("Cannot read Scala mapping '{path}'"))
+                })
+                .transpose()?;
+            particelle_tuning::ScalaTuning::from_text(&scl, kbm.as_deref(), pitch.reference_hz)
+                .map_err(|e| anyhow::anyhow!("Invalid Scala tuning: {e}"))?
+                .frequency_for_degree(pitch.degree)
+        }
+    };
+    let ratio = hz / pitch.source_hz;
+    anyhow::ensure!(
+        ratio.is_finite() && ratio > 0.0,
+        "Pitch resolves to invalid playback ratio"
+    );
+    Ok(ratio)
+}
+
+fn playback_scale(
+    config: &ParticelleConfig,
+    source_sample_rate: f64,
+    pitch: Option<&particelle_schema::config::PitchConfig>,
+) -> Result<f64> {
+    let ratio = source_sample_rate / config.engine.sample_rate;
+    anyhow::ensure!(
+        ratio.is_finite() && ratio > 0.0,
+        "Invalid source/engine sample-rate ratio"
+    );
+    let scale = ratio
+        * pitch
+            .map(|p| tuning_ratio(config, p))
+            .transpose()?
+            .unwrap_or(1.0);
+    anyhow::ensure!(scale.is_finite() && scale > 0.0, "Invalid playback scale");
+    Ok(scale)
 }
 
 fn compile_signal(
@@ -785,6 +857,69 @@ pub struct MapProvider {
     pub fields: std::collections::HashMap<String, f64>,
 }
 
+fn seed_signal_controls(
+    expr: &particelle_schema::SignalExprConfig,
+    fields: &mut std::collections::HashMap<String, f64>,
+) {
+    use particelle_schema::SignalExprConfig;
+    match expr {
+        SignalExprConfig::Ref(name) if name.starts_with('$') && !name.starts_with("$analysis.") => {
+            fields.entry(name[1..].to_string()).or_insert(0.0);
+        }
+        SignalExprConfig::Expr(op) => {
+            for arg in &op.args {
+                seed_signal_controls(arg, fields);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn route_midi_event(
+    event: &particelle_midi::MidiEvent,
+    router: &particelle_midi::routing::MidiRouter,
+    fields: &mut std::collections::HashMap<String, f64>,
+) {
+    use particelle_midi::{ExpressionKind, MidiEventKind};
+    let (source, value) = match &event.kind {
+        MidiEventKind::ControlChange { cc, value, .. } => {
+            for rule in &router.rules {
+                if rule
+                    .source
+                    .strip_prefix("midi.cc.")
+                    .and_then(|s| s.parse::<u8>().ok())
+                    == Some(*cc)
+                {
+                    if let Some(slot) = fields.get_mut(rule.target.trim_start_matches('$')) {
+                        *slot = *value * rule.scale + rule.offset;
+                    }
+                }
+            }
+            return;
+        }
+        MidiEventKind::PitchBend { value, .. } => ("midi.pitchbend", *value),
+        MidiEventKind::ChannelPressure { value, .. } => ("midi.pressure", *value),
+        MidiEventKind::PolyPressure { value, .. } => ("midi.poly_pressure", *value),
+        MidiEventKind::Note(note) => ("midi.note", note.velocity),
+        MidiEventKind::ProgramChange { program, .. } => ("midi.program", *program as f64 / 127.0),
+        MidiEventKind::Expression(expr) => (
+            match expr.kind {
+                ExpressionKind::PitchBend => "mpe.pitchbend",
+                ExpressionKind::Pressure => "mpe.pressure",
+                ExpressionKind::Timbre => "mpe.timbre",
+            },
+            expr.value,
+        ),
+    };
+    for rule in &router.rules {
+        if rule.source == source {
+            if let Some(slot) = fields.get_mut(rule.target.trim_start_matches('$')) {
+                *slot = value * rule.scale + rule.offset;
+            }
+        }
+    }
+}
+
 impl particelle_params::context::FieldProvider for MapProvider {
     fn get(&self, path: &str) -> Option<f64> {
         self.fields.get(path).copied()
@@ -989,7 +1124,28 @@ fn build_engine(config: &ParticelleConfig) -> Result<GranularEngine> {
     let n_channels = layout.channels.len();
 
     let panner = Box::new(AmplitudePanner::new(layout.clone()));
-    let fields = Box::new(particelle_params::context::NullFields);
+    let mut control_fields = std::collections::HashMap::new();
+    for binding in &config.routing.midi_bindings {
+        control_fields.insert(binding.target.trim_start_matches('$').to_string(), 0.0);
+    }
+    for cloud in &config.clouds {
+        for expr in [
+            &cloud.density,
+            &cloud.duration,
+            &cloud.position,
+            &cloud.amplitude,
+            &cloud.width,
+            &cloud.directivity,
+            &cloud.orientation_azimuth,
+            &cloud.orientation_elevation,
+            &cloud.playback_rate,
+        ] {
+            seed_signal_controls(expr, &mut control_fields);
+        }
+    }
+    let fields = Box::new(MapProvider {
+        fields: control_fields,
+    });
     let mut engine = GranularEngine::new(engine_config, layout, panner, fields)
         .with_context(|| "Failed to create engine")?;
 
@@ -1029,6 +1185,7 @@ fn build_engine(config: &ParticelleConfig) -> Result<GranularEngine> {
         let capacity = c.max_particles.unwrap_or(1024);
         let pool = GrainPool::new(capacity, source_arc, window_buf, n_channels);
         let mut cloud = Cloud::new(c.id.clone(), pool);
+        cloud.source_sample_rate = Some(reader.sample_rate);
 
         // Compile Signal Expressions
         let base_dir = std::path::Path::new(".").canonicalize().ok();
@@ -1048,6 +1205,13 @@ fn build_engine(config: &ParticelleConfig) -> Result<GranularEngine> {
             base_dir.as_deref(),
             &analysis_buffers,
         )?;
+        let rate = compile_signal(&c.playback_rate, base_dir.as_deref(), &analysis_buffers)?;
+        let scale = playback_scale(config, reader.sample_rate, c.pitch.as_ref())?;
+        cloud.playback_rate = particelle_params::signal::ParamSignal::Mul(
+            Box::new(rate),
+            Box::new(particelle_params::signal::ParamSignal::Const(scale)),
+        );
+        cloud.loop_source = c.loop_source;
 
         let pos = &c.listener_pos;
         cloud.listener_pos = particelle_core::spatializer::Vec3::new(pos.x, pos.y, pos.z);
@@ -1062,7 +1226,8 @@ fn cmd_validate(patch_path: &str) -> Result<()> {
     let yaml = read_patch_yaml(patch_path)?;
     let parsed = particelle_schema::parse_yaml_compat_with_report(&yaml)
         .with_context(|| "YAML parse error")?;
-    let config = parsed.config;
+    let mut config = parsed.config;
+    patch::resolve(&mut config, patch_path)?;
 
     if !parsed.report.notes.is_empty() {
         println!(
@@ -1231,6 +1396,9 @@ fn cmd_run(
     let n_channels = config.layout.channels.len();
     let sample_rate = config.engine.sample_rate;
     let block_size = config.engine.block_size;
+    #[cfg(not(feature = "realtime"))]
+    let _ = &midi_port;
+    #[cfg(feature = "realtime")]
     let selected_midi_port = midi_port.or_else(|| {
         config
             .hardware
@@ -1323,7 +1491,15 @@ fn cmd_run(
                             Err(_) => continue,
                         };
 
-                        let new_config = match parse_patch_config(&yaml_str) {
+                        let new_config = match parse_patch_config(&yaml_str).and_then(|mut c| {
+                            patch::resolve(
+                                &mut c,
+                                patch_path
+                                    .to_str()
+                                    .ok_or_else(|| anyhow::anyhow!("Non-UTF8 patch path"))?,
+                            )?;
+                            Ok(c)
+                        }) {
                             Ok(c) => c,
                             Err(e) => {
                                 eprintln!("  [Config Error] {}", e);
@@ -1419,19 +1595,9 @@ fn cmd_run(
         });
     }
 
-    let simulated_mpe = if simulate_mpe {
+    if simulate_mpe {
         eprintln!("→ Synthetic MPE pressure modulation is enabled.");
-        Some(
-            particelle_midi::DeterministicMidiHarness::mpe_pressure_cycle(
-                2,
-                60,
-                block_size as u64,
-                &[0.0, 0.15, 0.35, 0.55, 0.75, 0.9, 0.75, 0.55, 0.35, 0.15],
-            ),
-        )
-    } else {
-        None
-    };
+    }
 
     let audio_engine = Arc::clone(&safe_engine);
     let audio_router = Arc::clone(&safe_router);
@@ -1467,6 +1633,7 @@ fn cmd_run(
             let router_guard = match audio_router.try_lock() {
                 Ok(g) => g,
                 Err(_) => {
+                    buffer.fill(0.0);
                     callback_telemetry
                         .dropped_callbacks
                         .fetch_add(1, Ordering::Relaxed);
@@ -1477,6 +1644,7 @@ fn cmd_run(
             let mut engine_guard = match audio_engine.try_lock() {
                 Ok(g) => g,
                 Err(_) => {
+                    buffer.fill(0.0);
                     callback_telemetry
                         .dropped_callbacks
                         .fetch_add(1, Ordering::Relaxed);
@@ -1484,39 +1652,53 @@ fn cmd_run(
                 }
             };
 
-            let mut control_events: Vec<particelle_midi::MidiEvent> = midi_rx.try_iter().collect();
-            if let Some(harness) = simulated_mpe.as_ref() {
-                control_events
-                    .extend(harness.events_for_block(engine_guard.state.frame, block_size));
-            }
-            callback_telemetry
-                .midi_events
-                .fetch_add(control_events.len() as u64, Ordering::Relaxed);
-            let new_fields = router_guard.process(&control_events);
+            let mut event_count = 0usize;
             let mut osc_updates = 0usize;
+            let current_frame = engine_guard.state.frame;
 
             if let Some(map_provider) = engine_guard
                 .fields
                 .as_any_mut()
                 .and_then(|a| a.downcast_mut::<MapProvider>())
             {
-                for (k, v) in new_fields {
-                    map_provider.fields.insert(k, v);
+                for event in midi_rx.try_iter() {
+                    route_midi_event(&event, &router_guard, &mut map_provider.fields);
+                    event_count += 1;
                 }
-
-                // Drain OSC channel queue every block without blocking
+                if simulate_mpe {
+                    const PRESSURE: [f64; 10] =
+                        [0.0, 0.15, 0.35, 0.55, 0.75, 0.9, 0.75, 0.55, 0.35, 0.15];
+                    let index = (current_frame / block_size as u64) as usize % PRESSURE.len();
+                    let event = particelle_midi::MidiEvent {
+                        frame_offset: 0,
+                        kind: particelle_midi::MidiEventKind::Expression(
+                            particelle_midi::ExpressionEvent {
+                                channel: 2,
+                                note: 60,
+                                kind: particelle_midi::ExpressionKind::Pressure,
+                                value: PRESSURE[index],
+                            },
+                        ),
+                    };
+                    route_midi_event(&event, &router_guard, &mut map_provider.fields);
+                    event_count += 1;
+                }
                 osc_updates = osc_control::drain_field_updates(&osc_rx, &mut map_provider.fields);
-                callback_telemetry
-                    .osc_updates
-                    .fetch_add(osc_updates as u64, Ordering::Relaxed);
             }
-            callback_telemetry.control_queue_depth_max.fetch_max(
-                (control_events.len() + osc_updates) as u64,
-                Ordering::Relaxed,
-            );
+            callback_telemetry
+                .midi_events
+                .fetch_add(event_count as u64, Ordering::Relaxed);
+            callback_telemetry
+                .osc_updates
+                .fetch_add(osc_updates as u64, Ordering::Relaxed);
+            callback_telemetry
+                .control_queue_depth_max
+                .fetch_max((event_count + osc_updates) as u64, Ordering::Relaxed);
 
-            if let Err(e) = engine_guard.process(&mut block) {
-                eprintln!("Engine error: {}", e);
+            if engine_guard.process(&mut block).is_err() {
+                callback_telemetry
+                    .dropped_callbacks
+                    .fetch_add(1, Ordering::Relaxed);
                 block.silence();
             }
 
@@ -1528,6 +1710,7 @@ fn cmd_run(
                     buffer[f * n_channels + ch] = block.channels[ch][f] as f32;
                 }
             }
+            buffer[frames_to_copy * n_channels..].fill(0.0);
             callback_telemetry.record_callback(callback_started.elapsed(), callback_deadline);
         },
         duration_s.map(Duration::from_secs_f64),
@@ -1842,40 +2025,84 @@ fn cmd_curve(curve_path: &str, resolution: usize) -> Result<()> {
 
 fn cmd_set(patch_path: &str, param: &str, value: &str) -> Result<()> {
     let yaml = read_patch_yaml(patch_path)?;
-
-    // Simple key-value replacement in YAML text
-    // Find the line containing the param's last segment and replace its value
-    let parts: Vec<&str> = param.split('.').collect();
-    let key = parts
-        .last()
-        .ok_or_else(|| anyhow::anyhow!("Empty parameter path"))?;
-
-    let mut found = false;
-    let mut output_lines: Vec<String> = Vec::new();
-
-    for line in yaml.lines() {
-        let trimmed = line.trim();
-        if trimmed.starts_with(&format!("{}:", key)) || trimmed.starts_with(&format!("{} :", key)) {
-            // Replace the value part
-            if let Some(colon_pos) = line.find(':') {
-                let prefix = &line[..=colon_pos];
-                output_lines.push(format!("{} {}", prefix, value));
-                found = true;
-            } else {
-                output_lines.push(line.to_string());
-            }
-        } else {
-            output_lines.push(line.to_string());
-        }
-    }
-
-    if !found {
-        anyhow::bail!("Parameter '{}' not found in '{}'", param, patch_path);
-    }
-
-    println!("{}", output_lines.join("\n"));
+    let output = patch::set(&yaml, param, value)?;
+    let config = parse_patch_config(&output)?;
+    let errors = particelle_schema::validate(&config);
+    anyhow::ensure!(
+        errors.is_empty(),
+        "Invalid patch after set: {}",
+        errors
+            .iter()
+            .map(ToString::to_string)
+            .collect::<Vec<_>>()
+            .join("; ")
+    );
+    print!("{output}");
     if std::io::stdout().is_terminal() {
         eprintln!("\n💡 Tip: Redirect this output to a file (e.g., `> modified.yaml`)");
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod cli_patch_tests {
+    use super::*;
+    use particelle_params::context::{NullFields, SignalContext};
+
+    #[test]
+    fn edo_pitch_scales_playback_rate() {
+        let yaml = "engine: {sample_rate: 48000, block_size: 64}\nlayout: {channels: [{name: L, azimuth_deg: 0}]}\ntuning: {mode: edo, steps: 19}\n";
+        let config = parse_patch_config(yaml).unwrap();
+        let pitch = particelle_schema::config::PitchConfig {
+            degree: 19,
+            reference_hz: 440.0,
+            source_hz: 440.0,
+        };
+        assert!((tuning_ratio(&config, &pitch).unwrap() - 2.0).abs() < 1e-12);
+        assert!((playback_scale(&config, 24000.0, Some(&pitch)).unwrap() - 1.0).abs() < 1e-12);
+        assert!((playback_scale(&config, 24000.0, None).unwrap() - 0.5).abs() < 1e-12);
+    }
+
+    #[test]
+    fn engine_wires_source_rate_tuning_reverse_and_loop() {
+        let path = std::env::temp_dir().join(format!("particelle-rate-{}.wav", std::process::id()));
+        let spec = hound::WavSpec {
+            channels: 1,
+            sample_rate: 24_000,
+            bits_per_sample: 16,
+            sample_format: hound::SampleFormat::Int,
+        };
+        let mut writer = hound::WavWriter::create(&path, spec).unwrap();
+        for _ in 0..1024 {
+            writer.write_sample(10000_i16).unwrap();
+        }
+        writer.finalize().unwrap();
+
+        let yaml = format!("engine: {{sample_rate: 48000, block_size: 64}}\nlayout: {{channels: [{{name: L, azimuth_deg: 0}}]}}\ntuning: {{mode: edo, steps: 12}}\nclouds:\n  - id: c\n    source: '{}'\n    density: 1\n    duration: 0.1\n    position: 0\n    amplitude: 1\n    window: {{type: hann}}\n    width: 1\n    playback_rate: -1\n    loop_source: false\n    pitch: {{degree: 12, source_hz: 440}}\n", path.display());
+        let config = parse_patch_config(&yaml).unwrap();
+        let engine = build_engine(&config).unwrap();
+        let ctx = SignalContext {
+            frame: 0,
+            sample_rate: 48_000.0,
+            fields: &NullFields,
+            custom_resolver: None,
+        };
+        assert!((engine.clouds[0].playback_rate.eval(&ctx) + 1.0).abs() < 1e-12);
+        assert!(!engine.clouds[0].loop_source);
+
+        let mut untuned = config;
+        untuned.clouds[0].pitch = None;
+        let engine = build_engine(&untuned).unwrap();
+        assert!((engine.clouds[0].playback_rate.eval(&ctx) + 0.5).abs() < 1e-12);
+        assert_eq!(engine.clouds[0].source_sample_rate, Some(24_000.0));
+
+        untuned.clouds[0].position = particelle_schema::SignalExprConfig::Const(0.01);
+        untuned.clouds[0].playback_rate = particelle_schema::SignalExprConfig::Const(1.0);
+        untuned.clouds[0].loop_source = true;
+        let mut engine = build_engine(&untuned).unwrap();
+        let mut block = particelle_core::audio_block::AudioBlock::new(1, 64);
+        engine.process(&mut block).unwrap();
+        assert!(block.channels[0].iter().any(|sample| sample.abs() > 0.0));
+        std::fs::remove_file(path).unwrap();
+    }
 }

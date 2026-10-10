@@ -2,6 +2,7 @@
 
 use crate::{M0Config, ZoneConfig};
 use serde::{Deserialize, Serialize};
+use std::path::Path;
 
 pub const M0_PRESET_SCHEMA_VERSION: u32 = 1;
 
@@ -38,6 +39,12 @@ impl Default for M0PresetParameters {
 }
 
 impl M0Preset {
+    /// Parse and validate a standalone preset before an engine is created.
+    pub fn load_file(path: impl AsRef<Path>) -> Result<Self, PresetError> {
+        let preset: Self = serde_json::from_slice(&std::fs::read(path)?)?;
+        preset.validate()?;
+        Ok(preset)
+    }
     pub fn new(
         id: impl Into<String>,
         name: impl Into<String>,
@@ -74,6 +81,10 @@ impl M0Preset {
 
 #[derive(Debug, thiserror::Error)]
 pub enum PresetError {
+    #[error("could not read preset: {0}")]
+    Io(#[from] std::io::Error),
+    #[error("could not parse preset: {0}")]
+    Json(#[from] serde_json::Error),
     #[error("unsupported M0 preset schema version {0}")]
     UnsupportedSchema(u32),
     #[error("invalid preset parameters: {0}")]
@@ -102,5 +113,24 @@ mod tests {
         let mut config = M0Config::default();
         parsed.apply_to(&mut config);
         assert_eq!(config.reverb_mix, 0.4);
+    }
+
+    #[test]
+    fn file_loader_validates_before_applying() {
+        let path =
+            std::env::temp_dir().join(format!("obelisk-m0-preset-{}.json", std::process::id()));
+        let valid = M0Preset::new("test", "Test", M0PresetParameters::default());
+        std::fs::write(&path, serde_json::to_vec(&valid).unwrap()).unwrap();
+        assert_eq!(M0Preset::load_file(&path).unwrap(), valid);
+        std::fs::write(
+            &path,
+            br#"{"schema_version":9,"id":"x","name":"X","parameters":{"base_morph":0.5}}"#,
+        )
+        .unwrap();
+        assert!(matches!(
+            M0Preset::load_file(&path),
+            Err(PresetError::UnsupportedSchema(9))
+        ));
+        std::fs::remove_file(path).unwrap();
     }
 }

@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Granular pitch controls:** Connected cloud `playback_rate` and tuning-selected `pitch` to source playback, including mixed source/output sample rates and `loop_source: false`.
+- **M0 delivery:** Added JUCE VST3/AU wrapper source with in-process smoke coverage, standalone preset loading, a multichannel spatial voice bus, improved diffusion, and an offline WASM browser study.
+- **Example scales:** Added the 24-EDO and Bohlen-Pierce Scala files referenced by shipped examples.
 - **Schema Versioning:** Added explicit `schema_version` to the root patch schema with current-version defaulting and starter-patch emission via `particelle init`.
 - **Migration Metadata:** Added compatibility migration reporting with stable note IDs and source/target schema-version metadata (`parse_yaml_compat_with_report`).
 - **Schema Migration Docs:** Added [`docs/SCHEMA_MIGRATIONS.md`](docs/SCHEMA_MIGRATIONS.md) with migration IDs and policy.
@@ -21,6 +24,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Interval-Aware Reconstruction:** Added `create_reconstructor_with_interval` so control-rate interpolation uses the caller's actual sample interval while preserving the 64-sample compatibility factory.
 
 ### Changed
+- **Granular timing:** Grain onsets now render at their scheduled sample inside a block. The core audio processing path has allocation regression coverage.
+- **Patch diagnostics:** Asset lookup prefers the patch directory with an explicit working-directory fallback, and unknown fields report errors. Legacy channel tags and numeric `pitch_ratio` retain narrow compatibility migrations.
+- **YAML set:** `particelle set` now updates one structural path instead of replacing every textual key match.
 - **Validation Guardrail:** Validation now rejects unsupported future schema versions (`schema_version > CURRENT_SCHEMA_VERSION`).
 - **CLI Validation Output:** `particelle validate` now prints applied migration notes and the normalized schema version used for validation.
 - **Release Channel Docs:** Documented checksum + signature verification behavior and workflow identity expectations in [`docs/RELEASE_CHANNELS.md`](docs/RELEASE_CHANNELS.md).

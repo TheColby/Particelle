@@ -85,7 +85,7 @@ fn osc_bundle_order_is_deterministic() {
     });
 
     osc_control::handle_osc_packet(bundle, &tx, &mut replies);
-    let mut fields = HashMap::new();
+    let mut fields = HashMap::from([("density".to_string(), 0.0)]);
     let applied = osc_control::drain_field_updates(&rx, &mut fields);
 
     assert_eq!(applied, 2);
@@ -126,14 +126,14 @@ fn osc_overrides_midi_when_targeting_same_field_in_same_block() {
 fn osc_updates_become_visible_on_next_drain_step() {
     let (tx, rx) = std::sync::mpsc::channel();
     let mut replies = Vec::new();
-    let mut fields = HashMap::new();
+    let mut fields = HashMap::from([("position_mod".to_string(), 0.0)]);
 
     osc_control::handle_osc_packet(
         osc_message("/field/position_mod", vec![OscType::Double(0.1)]),
         &tx,
         &mut replies,
     );
-    assert!(!fields.contains_key("position_mod"));
+    assert_eq!(fields.get("position_mod").copied(), Some(0.0));
 
     let applied_block_1 = osc_control::drain_field_updates(&rx, &mut fields);
     assert_eq!(applied_block_1, 1);

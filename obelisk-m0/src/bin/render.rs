@@ -1,7 +1,7 @@
 use hound::{SampleFormat, WavSpec, WavWriter};
 use obelisk_m0::rt_audit::{audio_allocation_count, reset_audio_allocation_count, AuditAllocator};
 use obelisk_m0::telemetry::CallbackHistogram;
-use obelisk_m0::{default_twelve_tet_tuning, M0Config, M0Engine};
+use obelisk_m0::{default_twelve_tet_tuning, M0Config, M0Engine, M0Preset};
 use particelle_midi::{MidiEvent, MidiEventKind, NoteEvent, OfflineMidiReader, TimedMidiEvent};
 use particelle_tuning::ScalaTuning;
 use sha2::{Digest, Sha256};
@@ -18,6 +18,7 @@ struct Options {
     midi: Option<PathBuf>,
     scl: Option<PathBuf>,
     kbm: Option<PathBuf>,
+    preset: Option<PathBuf>,
     duration_seconds: f64,
     sample_rate: u32,
     block_size: usize,
@@ -31,6 +32,7 @@ impl Default for Options {
             midi: None,
             scl: None,
             kbm: None,
+            preset: None,
             duration_seconds: 5.0,
             sample_rate: 48_000,
             block_size: 128,
@@ -49,10 +51,13 @@ fn main() -> Result<(), Box<dyn Error>> {
         None => demo_timeline(sample_rate),
     };
 
-    let config = M0Config {
+    let mut config = M0Config {
         sample_rate,
         ..M0Config::default()
     };
+    if let Some(path) = &options.preset {
+        M0Preset::load_file(path)?.apply_to(&mut config);
+    }
     let mut engine = M0Engine::new(config, tuning)?;
     let mut block = vec![[0.0_f32; 2]; options.block_size];
     let callback_budget = Duration::from_secs_f64(options.block_size as f64 / sample_rate);
@@ -113,6 +118,7 @@ fn parse_options() -> Result<Options, Box<dyn Error>> {
             "--midi" => options.midi = Some(PathBuf::from(next_value(&mut args, &argument)?)),
             "--scl" => options.scl = Some(PathBuf::from(next_value(&mut args, &argument)?)),
             "--kbm" => options.kbm = Some(PathBuf::from(next_value(&mut args, &argument)?)),
+            "--preset" => options.preset = Some(PathBuf::from(next_value(&mut args, &argument)?)),
             "--duration" => options.duration_seconds = next_value(&mut args, &argument)?.parse()?,
             "--sample-rate" => options.sample_rate = next_value(&mut args, &argument)?.parse()?,
             "--block-size" => options.block_size = next_value(&mut args, &argument)?.parse()?,
@@ -154,6 +160,7 @@ fn print_help() {
                --midi PATH         Optional Standard MIDI File\n\
                --scl PATH          Optional Scala scale\n\
                --kbm PATH          Optional Scala keyboard mapping\n\
+               --preset PATH       M0 JSON preset\n\
                --duration SECONDS  Render duration (default: 5)\n\
                --sample-rate HZ    Sample rate (default: 48000)\n\
                --block-size FRAMES Callback size (default: 128)\n\

@@ -1,6 +1,6 @@
 # Obelisk M0 Host API
 
-`obelisk-m0` is a fixed-topology MPE instrument. It ships a C ABI and a portable Rust API; DAW-specific VST3/AU wrappers remain separate deliverables because they require host validation and signing.
+`obelisk-m0` is a fixed-topology MPE instrument. It ships a C ABI and a portable Rust API. Native VST3/AU wrapper source is built separately from the Rust engine; building a wrapper is not named-host qualification or code signing.
 
 Build a dynamic or static library:
 
@@ -15,6 +15,8 @@ The C header is [`obelisk-m0/include/obelisk_m0.h`](../obelisk-m0/include/obelis
 - Create one handle with `obelisk_m0_create(sample_rate, max_voices)`.
 - Send complete short MIDI messages with `obelisk_m0_send_midi3` at a block boundary.
 - Call `obelisk_m0_process_stereo` with an interleaved `float` buffer of exactly `frames * 2` samples.
+- Apply validated morph, modulation, delay, and reverb controls with `obelisk_m0_set_controls` at a processing boundary. Invalid values leave controls unchanged.
+- Call `obelisk_m0_reset` when the host requires an immediate, allocation-free voice/tail clear. It preserves controls and tuning; unlike `all_notes_off`, it does not let releases ring out.
 - For MTS-ESP-aware wrappers, fetch the host's 128-note table at a block boundary and call `obelisk_m0_set_tuning_table`. Call `obelisk_m0_clear_tuning_table` to resume the configured Scala/KBM tuning. The core intentionally does not discover MTS-ESP or link its SDK.
 - Serialize MIDI dispatch and rendering externally. The API does not take locks or allocate while processing audio.
 - Call `obelisk_m0_all_notes_off` during transport stop, then `obelisk_m0_destroy` once no audio callback can access the handle.
@@ -25,13 +27,15 @@ The M0 wavetable source selects a harmonic band below 45% of Nyquist before inte
 
 `presets/obelisk-m0/*.json` uses the versioned schema in `obelisk_m0::M0Preset`. Parameters cover wavetable/body morph, slow macro modulation, feedback delay, and diffuse reverb. Preset parsing and graph compilation run on the control thread; the audio thread is allocation-free.
 
-`M0Engine::process_block_diffuse` supports one or more equally-sized output channels. Mono is downmixed power-normalized, stereo preserves the normal render, and layouts above two channels receive a power-normalized diffuse field. It is an arbitrary-bus compatibility output, not a claim of speaker-aware spatial rendering.
+`M0Engine::process_block_diffuse` supports one or more equally-sized output channels. Mono is downmixed, stereo preserves the normal render, and layouts above two channels receive independently routed voices plus decorrelated effects on a circular channel ring. It does not encode Atmos objects, ADM metadata, or a host-specific speaker map.
 
 `render_interleaved_stereo` has no filesystem, device, or thread dependency and is suitable for a WASM wrapper. Build the core without realtime hardware dependencies with:
 
 ```sh
 cargo build -p obelisk-m0 --no-default-features
 ```
+
+Standalone `obelisk-m0-render` and `obelisk-m0-live` accept `--preset <file>` using the versioned factory preset schema. Preset parsing is outside the audio callback.
 
 ## Native Wrapper Contract
 

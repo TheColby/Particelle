@@ -10,6 +10,8 @@ particelle run patch.yaml --duration 60 --telemetry-file telemetry.json
 
 The JSON report includes callback count, average and maximum callback time, callback deadline, deadline misses, lock-contention drops, MIDI/OSC control event counts, and maximum pending control batch depth. Deadline misses are the portable underrun-risk signal exposed by the CPAL callback contract. The report is emitted only after a bounded run exits normally.
 
+The core granular engine schedules grain onsets at sample positions and its post-setup `GranularEngine::process` allocation test is part of the portable suite. That test does not cover the full hardware callback, device conversion, mutex contention, or the operating-system audio stack. Continue to use the bounded soak below for the actual device and patch.
+
 ## Hardware Soak Gate
 
 Hardware output cannot be meaningfully exercised by hosted CI. Run the gate on the target interface:

@@ -93,16 +93,19 @@ pub fn handle_osc_packet(
     }
 }
 
-/// Drain all queued OSC field updates into the field map.
+/// Drain OSC updates into controls registered when the patch was built.
 ///
-/// If multiple updates target the same field in one drain call, last write wins.
+/// Unknown fields are ignored. Existing keys are updated without growing the
+/// map on the audio thread; if several updates target a key, last write wins.
 pub fn drain_field_updates(
     rx: &Receiver<(String, f64)>,
     fields: &mut HashMap<String, f64>,
 ) -> usize {
     let mut applied = 0usize;
     for (field_name, val) in rx.try_iter() {
-        fields.insert(field_name, val);
+        if let Some(slot) = fields.get_mut(field_name.as_str()) {
+            *slot = val;
+        }
         applied += 1;
     }
     applied

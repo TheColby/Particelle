@@ -45,6 +45,8 @@ chapter starts, diagrams, tables, and code blocks. Check page margins, missing
 glyphs, orphan headings, table splits, and code clipping. The PDF includes
 physical page numbers used by the contents links.
 
-This edition documents the source behavior at commit `471ff6b`. Later source
-changes should trigger a review of the capability table, troubleshooting notes,
-and runnable examples. Hardware exercises remain manual qualification work.
+This edition documents the current source behavior, including sample-position
+granular scheduling, patch-relative assets, tuned cloud playback, M0 native
+wrapper source, and the browser study. Rebuild after source behavior changes,
+then rerun the audio and PDF checks. Hardware and named-host exercises remain
+manual qualification work.

@@ -179,17 +179,26 @@ mod tests {
                 is_on: true,
             }),
         };
+        let second = MidiEvent {
+            frame_offset: 0,
+            kind: MidiEventKind::Note(NoteEvent {
+                channel: 10,
+                note: 67,
+                velocity: 0.8,
+                is_on: true,
+            }),
+        };
         let mut a = [0.0; 64];
         let mut b = [0.0; 64];
         let mut c = [0.0; 64];
         let mut d = [0.0; 64];
         adapter
-            .process_planar(&[event], &mut [&mut a, &mut b, &mut c, &mut d])
+            .process_planar(&[event, second], &mut [&mut a, &mut b, &mut c, &mut d])
             .unwrap();
         assert!(a.iter().any(|sample| *sample != 0.0));
-        assert_eq!(a, b);
-        assert_eq!(b, c);
-        assert_eq!(c, d);
+        assert_ne!(a, b);
+        assert!(c.iter().any(|sample| *sample != 0.0));
+        assert!(d.iter().any(|sample| *sample != 0.0));
     }
 
     #[test]

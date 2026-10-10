@@ -181,6 +181,41 @@ fn normalize_window(window: &mut serde_yaml::Value, report: &mut MigrationReport
     }
 }
 
+fn normalize_layout(root: &mut serde_yaml::Mapping, report: &mut MigrationReport) {
+    let Some(serde_yaml::Value::Mapping(layout)) = mapping_get_mut(root, "layout") else {
+        return;
+    };
+    let Some(serde_yaml::Value::Sequence(channels)) = mapping_get_mut(layout, "channels") else {
+        return;
+    };
+    for channel in channels {
+        let serde_yaml::Value::Mapping(map) = channel else {
+            continue;
+        };
+        let kind = map.get(value_key("type")).and_then(string_value);
+        let spherical = kind == Some("spherical")
+            && map.contains_key(value_key("azimuth_deg"))
+            && !["x", "y", "z"]
+                .iter()
+                .any(|key| map.contains_key(value_key(key)));
+        let cartesian = kind == Some("cartesian")
+            && ["x", "y", "z"]
+                .iter()
+                .all(|key| map.contains_key(value_key(key)))
+            && !["azimuth_deg", "elevation_deg"]
+                .iter()
+                .any(|key| map.contains_key(value_key(key)));
+        if spherical || cartesian {
+            mapping_remove(map, "type");
+            push_note(
+                report,
+                "layout.channel.legacy_type",
+                "Accepted a matching legacy channel type tag.",
+            );
+        }
+    }
+}
+
 fn normalize_clouds(root: &mut serde_yaml::Mapping, report: &mut MigrationReport) {
     let Some(serde_yaml::Value::Sequence(clouds)) = mapping_get_mut(root, "clouds") else {
         return;
@@ -191,6 +226,21 @@ fn normalize_clouds(root: &mut serde_yaml::Mapping, report: &mut MigrationReport
             continue;
         };
 
+        if !cloud_map.contains_key(value_key("playback_rate"))
+            && matches!(
+                cloud_map.get(value_key("pitch_ratio")),
+                Some(serde_yaml::Value::Number(_))
+            )
+        {
+            let ratio = mapping_remove(cloud_map, "pitch_ratio").unwrap();
+            cloud_map.insert(value_key("playback_rate"), ratio);
+            push_note(
+                report,
+                "cloud.pitch_ratio_to_playback_rate",
+                "Renamed numeric pitch_ratio to playback_rate.",
+            );
+        }
+
         for field in [
             "density",
             "duration",
@@ -200,6 +250,7 @@ fn normalize_clouds(root: &mut serde_yaml::Mapping, report: &mut MigrationReport
             "directivity",
             "orientation_azimuth",
             "orientation_elevation",
+            "playback_rate",
         ] {
             if let Some(expr) = mapping_get_mut(cloud_map, field) {
                 normalize_signal_expr(expr, report);
@@ -318,6 +369,7 @@ fn normalize_yaml_value_with_report(value: &mut serde_yaml::Value, report: &mut 
     };
 
     normalize_schema_version(root, report);
+    normalize_layout(root, report);
     normalize_tuning(root, report);
     normalize_clouds(root, report);
 }
@@ -355,6 +407,50 @@ pub fn parse_yaml_compat(yaml: &str) -> Result<ParticelleConfig, serde_yaml::Err
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn accepts_matching_legacy_channel_tags_and_numeric_pitch_ratio() {
+        let yaml = r#"
+engine: {sample_rate: 48000, block_size: 64}
+layout:
+  channels:
+    - {type: spherical, name: L, azimuth_deg: -30}
+    - {type: cartesian, name: R, x: 1, y: 0, z: 0}
+clouds:
+  - {id: c, source: sample.wav, density: 1, duration: 0.1, position: 0,
+     amplitude: 1, width: 1, window: {type: hann}, pitch_ratio: 0.8409}
+"#;
+        let output = parse_yaml_compat_with_report(yaml).unwrap();
+        assert_eq!(output.config.layout.channels.len(), 2);
+        assert!(
+            matches!(output.config.clouds[0].playback_rate, crate::config::SignalExprConfig::Const(v) if (v - 0.8409).abs() < 1e-12)
+        );
+        assert!(output
+            .report
+            .notes
+            .iter()
+            .any(|note| note.id == "layout.channel.legacy_type"));
+        assert!(output
+            .report
+            .notes
+            .iter()
+            .any(|note| note.id == "cloud.pitch_ratio_to_playback_rate"));
+    }
+
+    #[test]
+    fn rejects_unknown_or_conflicting_legacy_fields() {
+        let base = "engine: {sample_rate: 48000, block_size: 64}\nlayout: {channels: [{name: L, azimuth_deg: 0}]}\n";
+        for channel in [
+            "{type: typo, name: L, azimuth_deg: 0}",
+            "{type: cartesian, name: L, azimuth_deg: 0}",
+            "{type: spherical, name: L, azimuth_deg: 0, surprise: 1}",
+        ] {
+            let yaml = format!("engine: {{sample_rate: 48000, block_size: 64}}\nlayout: {{channels: [{channel}]}}\n");
+            assert!(parse_yaml_compat(&yaml).is_err(), "accepted {channel}");
+        }
+        let yaml = format!("{base}clouds: [{{id: c, source: sample.wav, density: 1, duration: 1, position: 0, amplitude: 1, width: 1, window: {{type: hann}}, pitch_ratio: 2, playback_rate: 1}}]\n");
+        assert!(parse_yaml_compat(&yaml).is_err());
+    }
 
     #[test]
     fn parses_legacy_edo_divisions() {

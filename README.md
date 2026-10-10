@@ -1627,38 +1627,40 @@ Anticipated launch objections and concrete mitigations are documented in [`docs/
 
 ## 🛣️ Prioritized Roadmap
 
-### Active Plan (Evidence-Gated)
+### Delivered in this source tree
 
-1. **P12 — MPE hardware and DAW qualification (in progress)**
-   The portable M0 gate now renders an audible stress WAV, checks zero audio-thread allocations, and uploads evidence in GitHub Actions. Physical-controller testing and named VST3/AU host validation remain required before any compatibility claim; use [`docs/OBELISK_M0_QUALIFICATION.md`](docs/OBELISK_M0_QUALIFICATION.md).
+1. **Patch reliability:** `set` targets one YAML node; patch-relative asset lookup has an explicit working-directory compatibility fallback; unknown fields fail with errors. Known legacy channel tags and `pitch_ratio` migrate narrowly.
+2. **Granular pitch and looping:** Clouds can combine `playback_rate`, a tuning-selected `pitch` degree, source/engine rate conversion, and `loop_source: false`. `position` remains seconds into the source.
+3. **Granular realtime core:** Grain onsets are placed at sample positions, grain slots and gains are reused, and the post-setup core process has timing and allocation regression tests. This is not a zero-allocation claim for the entire hardware callback.
+4. **Native M0 plug-in source:** `native/obelisk-plugin/` builds JUCE VST3 and macOS AU wrappers with MIDI sample offsets, four automatable controls, programs, and session state. The local in-process smoke test passes; signed distribution and named DAW compatibility remain unqualified.
+5. **M0 atmosphere and space:** Standalone `--preset` loading, decorrelated diffusion, and independently routed voices on larger M0 output buses are implemented. The shipped JUCE wrapper is stereo.
+6. **Browser study:** `obelisk-wasm/` and `web/` provide a local offline M0 phrase renderer, playback, and PCM WAV export. It is not a granular YAML editor, live MIDI host, or general graph compiler. Build and serve it with `./scripts/build_wasm.sh` and `python3 -m http.server 8000 --directory web`. A Rust toolchain with a WASM linker is required; see [`web/README.md`](web/README.md).
 
-2. **P12 — VST3/AU adapter delivery (planned)**
-   The framework-neutral `M0HostAdapter` now provides block-boundary parameter automation, MPE forwarding, host tuning-table updates, planar buses for any negotiated channel count, versioned session save/restore, and transport-stop note release. Ship signed VST3/AU wrappers only after completing the host matrix.
+### Next evidence gates
 
-3. **P13 — Instrument output and atmosphere controls (implemented)**
-   M0 now has versioned JSON presets, slow morph modulation, fixed delay/diffuse-reverb controls, and a power-normalized diffuse output API for every channel count. The explicit graph descriptor protects the realtime-qualified topology.
-
-4. **P14 — Offline/browser delivery (implemented foundation)**
-   The hardware-free `render_interleaved_stereo` API and `--no-default-features` build provide a WASM-ready core. A browser UI and a general-purpose graph compiler remain future product work.
+1. **P0: named-host and hardware qualification.** Run the physical MPE controller matrix and VST3/AU tests in named hosts/versions; record timing, automation, transport, restore, and block-size evidence in [`docs/OBELISK_M0_QUALIFICATION.md`](docs/OBELISK_M0_QUALIFICATION.md). Do not claim DAW compatibility from a build or smoke test alone.
+2. **P1: native release readiness.** Wire MTS-ESP discovery into the wrapper, establish supported bus layouts, then sign/notarize distributable binaries after host qualification.
+3. **P1: browser delivery.** Confirm the new WASM CI build, run real-browser audio/export checks, publish a versioned static build, and define browser support and accessibility criteria.
+4. **P2: device-specific granular callback qualification.** Measure allocations, contention, deadline misses, and control latency on target audio interfaces; the portable core audit does not replace a hardware soak.
 
 ### Completed Phases (Archive)
 
-5. **P10 — Preset Library and Sound-Design Workflow (implemented)**
+1. **P10 — Preset Library and Sound-Design Workflow (implemented)**
    `dronoify` is a versioned, parameterized atmospheric-drone generator with a distributable preset catalog and layouts from 1 through 256 channels.
 
-6. **P10 — Realtime Control Reliability (implemented)**
+2. **P10 — Realtime Control Reliability (implemented)**
    The MIDI path supports polyphonic pressure, lock-free bounded realtime queues, overflow telemetry, emergency all-notes-off, and complete Scala KBM mappings.
 
-7. **P10 — Release Adoption Artifacts (implemented)**
+3. **P10 — Release Adoption Artifacts (implemented)**
    Release and nightly builds publish the versioned preset catalog, auditable listening material, and Obelisk M0 host/API bundle.
 
-8. **P11 — DSP Quality (implemented)**
+4. **P11 — DSP Quality (implemented)**
    Obelisk M0 adds frequency-aware, band-limited wavetable excitation to prevent bright-source aliasing while retaining deterministic tuning and modal-body processing.
 
-9. **P11 — Native Host Integration (implemented)**
+5. **P11 — Native Host Integration (implemented)**
    Obelisk M0 ships a stable opaque-handle C API for lock-free, allocation-free stereo processing and host-driven external tuning tables.
 
-10. **P0–P7 foundational roadmap items (implemented)**
+6. **P0–P7 foundational roadmap items (implemented)**
    Reliability gates, compatibility parsing, deterministic assets/metrics, realtime + control-path harnesses, release channels, schema migration metadata, supply-chain checks, golden fingerprints, and soak benchmarks are complete.
 
 Operational and release policy details: [`docs/REALTIME_OPERATIONS.md`](docs/REALTIME_OPERATIONS.md), [`docs/RELEASE_ASSURANCE.md`](docs/RELEASE_ASSURANCE.md), [`docs/PRESETS.md`](docs/PRESETS.md), [`docs/OBELISK_M0_API.md`](docs/OBELISK_M0_API.md), and [`docs/OBELISK_M0_QUALIFICATION.md`](docs/OBELISK_M0_QUALIFICATION.md).

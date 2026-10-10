@@ -6,6 +6,12 @@ use crate::rt_audit::AudioThreadGuard;
 use particelle_midi::{MidiEvent, MidiEventKind};
 use particelle_tuning::ScalaTuning;
 
+#[path = "effects.rs"]
+mod effects;
+#[path = "spatial.rs"]
+mod spatial;
+use effects::GlobalEffects;
+
 const CONTROL_INTERVAL_FRAMES: u64 = 16;
 
 #[derive(Debug, Clone, Copy)]
@@ -169,12 +175,8 @@ impl M0Engine {
         self.frame += output.len() as u64;
     }
 
-    /// Render a diffuse, power-normalized bus to any channel count.
-    ///
-    /// One channel receives mono, two channels preserve the stereo render, and
-    /// larger layouts receive the normalized mono field in every channel. This
-    /// makes the output useful for arbitrary buses without claiming speaker
-    /// position semantics that an M0 host adapter has not negotiated.
+    /// Render mono/stereo or independently positioned voices on larger buses.
+    /// Speaker positions are equally spaced on a circular ring.
     pub fn process_block_diffuse(
         &mut self,
         events: &[MidiEvent],
@@ -190,9 +192,16 @@ impl M0Engine {
         }
         let _audio_thread = AudioThreadGuard::enter();
         let mut event_index = 0_usize;
-        let scale = 1.0 / (channels as f32).sqrt();
         for frame_offset in 0..frames {
-            let stereo = self.process_frame(events, &mut event_index, frame_offset);
+            for channel in output.iter_mut() {
+                channel[frame_offset] = 0.0;
+            }
+            let stereo = self.process_frame_with_bus(
+                events,
+                &mut event_index,
+                frame_offset,
+                (channels > 2).then_some(&mut *output),
+            );
             match channels {
                 1 => {
                     output[0][frame_offset] =
@@ -202,13 +211,7 @@ impl M0Engine {
                     output[0][frame_offset] = stereo[0];
                     output[1][frame_offset] = stereo[1];
                 }
-                _ => {
-                    let diffuse =
-                        (stereo[0] + stereo[1]) * core::f32::consts::FRAC_1_SQRT_2 * scale;
-                    for channel in output.iter_mut() {
-                        channel[frame_offset] = diffuse;
-                    }
-                }
+                _ => {}
             }
         }
         self.frame += frames as u64;
@@ -217,6 +220,17 @@ impl M0Engine {
 
     pub fn all_notes_off(&mut self) {
         self.voices.all_notes_off(self.frame);
+    }
+
+    /// Rewind voices and tails without reallocating; controls and tuning persist.
+    pub fn reset(&mut self) {
+        self.frame = 0;
+        self.voices.reset();
+        for dsp in &mut self.voice_dsp {
+            dsp.reset();
+        }
+        self.base_frequencies.fill(440.0);
+        self.effects.reset();
     }
 
     /// Dispatch a complete short MIDI message at the next process boundary.
@@ -258,6 +272,16 @@ impl M0Engine {
         event_index: &mut usize,
         frame_offset: usize,
     ) -> [f32; 2] {
+        self.process_frame_with_bus(events, event_index, frame_offset, None)
+    }
+
+    fn process_frame_with_bus(
+        &mut self,
+        events: &[MidiEvent],
+        event_index: &mut usize,
+        frame_offset: usize,
+        mut bus: Option<&mut [&mut [f32]]>,
+    ) -> [f32; 2] {
         while *event_index < events.len() && events[*event_index].frame_offset == frame_offset {
             self.handle_event(&events[*event_index], self.frame + frame_offset as u64);
             *event_index += 1;
@@ -286,12 +310,36 @@ impl M0Engine {
             );
             output[0] += stereo[0];
             output[1] += stereo[1];
+            if let Some(channels) = bus.as_deref_mut() {
+                let position = spatial::voice_position(
+                    voice.channel,
+                    self.config.zone.member_first,
+                    self.config.zone.member_last,
+                    voice.expression.timbre,
+                );
+                spatial::route(
+                    self.voice_dsp[slot].mono_sample() * 0.72,
+                    position,
+                    channels,
+                    frame_offset,
+                );
+            }
             if self.voice_dsp[slot].is_finished() {
                 self.voices.free_slot(slot);
             }
         }
-        self.effects
-            .process(output, self.config.delay_mix, self.config.reverb_mix)
+        let processed = self
+            .effects
+            .process(output, self.config.delay_mix, self.config.reverb_mix);
+        if let Some(channels) = bus {
+            let wet = [
+                processed[0] - (output[0] * 0.72).tanh(),
+                processed[1] - (output[1] * 0.72).tanh(),
+            ];
+            spatial::route(wet[0], 0.125, channels, frame_offset);
+            spatial::route(wet[1], 0.625, channels, frame_offset);
+        }
+        processed
     }
 }
 
@@ -327,40 +375,6 @@ impl M0Controls {
             return Err(M0EngineError::ParameterOutOfRange);
         }
         Ok(())
-    }
-}
-
-/// Fixed-size global effects. Allocation happens only at engine construction.
-struct GlobalEffects {
-    delay: Vec<[f32; 2]>,
-    reverb: Vec<[f32; 2]>,
-    cursor: usize,
-}
-
-impl GlobalEffects {
-    fn new(sample_rate: f64) -> Self {
-        let delay_len = (sample_rate * 0.29).round().max(1.0) as usize;
-        let reverb_len = (sample_rate * 0.071).round().max(1.0) as usize;
-        Self {
-            delay: vec![[0.0; 2]; delay_len],
-            reverb: vec![[0.0; 2]; reverb_len],
-            cursor: 0,
-        }
-    }
-
-    fn process(&mut self, input: [f32; 2], delay_mix: f32, reverb_mix: f32) -> [f32; 2] {
-        let delay_index = self.cursor % self.delay.len();
-        let reverb_index = self.cursor % self.reverb.len();
-        let delayed = self.delay[delay_index];
-        let verb = self.reverb[reverb_index];
-        self.delay[delay_index] = [input[0] + delayed[0] * 0.46, input[1] + delayed[1] * 0.46];
-        let mono = (input[0] + input[1]) * core::f32::consts::FRAC_1_SQRT_2;
-        self.reverb[reverb_index] = [mono + verb[0] * 0.67, mono + verb[1] * 0.61];
-        self.cursor = self.cursor.wrapping_add(1);
-        [
-            ((input[0] + delayed[0] * delay_mix + verb[0] * reverb_mix) * 0.72).tanh(),
-            ((input[1] + delayed[1] * delay_mix + verb[1] * reverb_mix) * 0.72).tanh(),
-        ]
     }
 }
 
@@ -503,21 +517,44 @@ x
     }
 
     #[test]
-    fn diffuse_renderer_writes_every_channel_without_allocations() {
+    fn spatial_renderer_separates_voices_without_allocations() {
         let mut engine = M0Engine::new(M0Config::default(), default_twelve_tet_tuning()).unwrap();
-        let events = [note(0, 2, 60, 0.8, true)];
+        let events = [note(0, 2, 60, 0.8, true), note(0, 10, 67, 0.8, true)];
         let mut a = [0.0; 128];
         let mut b = [0.0; 128];
         let mut c = [0.0; 128];
         let mut d = [0.0; 128];
         let mut channels: [&mut [f32]; 4] = [&mut a, &mut b, &mut c, &mut d];
+        reset_audio_allocation_count();
         engine
             .process_block_diffuse(&events, &mut channels)
             .unwrap();
+        assert_eq!(audio_allocation_count(), 0);
         assert!(a.iter().any(|sample| *sample != 0.0));
-        assert_eq!(a, b);
-        assert_eq!(b, c);
-        assert_eq!(c, d);
+        assert_ne!(a, b);
+        assert!(b.iter().all(|sample| *sample == 0.0));
+        assert!(c.iter().any(|sample| *sample != 0.0));
+        assert!(d.iter().any(|sample| *sample != 0.0));
+    }
+
+    #[test]
+    fn reset_clears_voices_and_tails_without_allocating() {
+        let config = M0Config {
+            delay_mix: 0.6,
+            reverb_mix: 0.7,
+            ..M0Config::default()
+        };
+        let mut engine = M0Engine::new(config, default_twelve_tet_tuning()).unwrap();
+        let mut output = [[0.0; 2]; 512];
+        engine.process_block(&[note(0, 2, 60, 1.0, true)], &mut output);
+        reset_audio_allocation_count();
+        engine.reset();
+        assert_eq!(audio_allocation_count(), 0);
+        assert_eq!(engine.frame(), 0);
+        assert_eq!(engine.active_voice_count(), 0);
+        assert_eq!(engine.controls(), config.controls());
+        engine.process_block(&[], &mut output);
+        assert!(output.iter().all(|sample| *sample == [0.0; 2]));
     }
 
     #[test]

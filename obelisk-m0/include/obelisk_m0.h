@@ -16,6 +16,9 @@ bool obelisk_m0_send_midi3(ObeliskM0Handle *handle, unsigned char status,
                            unsigned char data1, unsigned char data2);
 bool obelisk_m0_process_stereo(ObeliskM0Handle *handle, float *output,
                                size_t frames);
+bool obelisk_m0_set_controls(ObeliskM0Handle *handle, float base_morph,
+                             float modulation_hz, float delay_mix, float reverb_mix);
+bool obelisk_m0_reset(ObeliskM0Handle *handle);
 /* Applies 128 positive frequency values at the next block boundary. */
 bool obelisk_m0_set_tuning_table(ObeliskM0Handle *handle,
                                  const double *frequencies_hz);

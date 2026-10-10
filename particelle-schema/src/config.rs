@@ -12,6 +12,7 @@ pub fn default_schema_version() -> u32 {
 /// Deserialized from YAML. All engine behavior is declared here.
 /// No parameter is hidden or configurable any other way.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ParticelleConfig {
     #[serde(default = "default_schema_version")]
     pub schema_version: u32,
@@ -31,6 +32,7 @@ pub struct ParticelleConfig {
 
 /// Core engine configuration. Fixed at initialization.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct EngineConfig {
     pub sample_rate: f64,
     pub block_size: usize,
@@ -44,6 +46,7 @@ fn default_max_particles() -> usize {
 
 /// Hardware audio device configuration (realtime mode only).
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct HardwareConfig {
     pub device_name: Option<String>,
     #[serde(default)]
@@ -60,13 +63,14 @@ fn default_latency_ms() -> f64 {
 
 /// Declarative multichannel output layout.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct LayoutConfig {
     pub channels: Vec<ChannelConfig>,
 }
 
 /// A single output channel with spatial metadata.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(untagged)]
+#[serde(untagged, deny_unknown_fields)]
 pub enum ChannelConfig {
     Spherical {
         name: String,
@@ -84,7 +88,7 @@ pub enum ChannelConfig {
 
 /// Tuning system selection and configuration.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
-#[serde(tag = "mode", rename_all = "snake_case")]
+#[serde(tag = "mode", rename_all = "snake_case", deny_unknown_fields)]
 pub enum TuningConfig {
     /// 12-tone equal temperament (default).
     #[default]
@@ -102,6 +106,7 @@ pub enum TuningConfig {
 
 /// A single JI ratio entry for TuningConfig::Ji.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct JiRatioConfig {
     pub degree: u32,
     pub num: u64,
@@ -110,6 +115,7 @@ pub struct JiRatioConfig {
 
 /// A cloud configuration block.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct CloudConfig {
     pub id: String,
     /// Source audio: a file path or `"input"` for duplex.
@@ -134,6 +140,12 @@ pub struct CloudConfig {
     /// of the source buffer so the cloud plays continuously regardless of render duration.
     #[serde(default = "default_loop_source")]
     pub loop_source: bool,
+    /// Rate multiplier, sampled at grain creation. Negative values reverse playback.
+    #[serde(default = "default_playback_rate")]
+    pub playback_rate: SignalExprConfig,
+    /// Optional absolute tuning: rate *= frequency(degree, reference_hz) / source_hz.
+    #[serde(default)]
+    pub pitch: Option<PitchConfig>,
 }
 
 fn default_loop_source() -> bool {
@@ -164,6 +176,7 @@ pub enum SignalExprConfig {
 
 /// An expression node with an operator and arguments.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct SignalOpConfig {
     pub op: String,
     pub args: Vec<SignalExprConfig>,
@@ -181,6 +194,7 @@ pub struct WindowSpecConfig {
 
 /// 3D listener-space position.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Vec3Config {
     pub x: f64,
     pub y: f64,
@@ -189,6 +203,7 @@ pub struct Vec3Config {
 
 /// An offline audio feature analysis block.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct AnalysisConfig {
     pub id: String,
     pub source: String,
@@ -197,6 +212,7 @@ pub struct AnalysisConfig {
 
 /// MIDI/control routing configuration.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(deny_unknown_fields)]
 pub struct RoutingConfig {
     #[serde(default)]
     pub midi_bindings: Vec<MidiBindingConfig>,
@@ -204,6 +220,7 @@ pub struct RoutingConfig {
 
 /// A single MIDI-to-parameter binding.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct MidiBindingConfig {
     /// Source, e.g. `"midi.cc.1"`, `"mpe.pressure"`.
     pub source: String,
@@ -211,4 +228,22 @@ pub struct MidiBindingConfig {
     pub target: String,
     #[serde(default)]
     pub transform: Option<SignalExprConfig>,
+}
+
+/// Degree zero is reference_hz (440 by default); source_hz is the recorded
+/// source's fundamental, not its sample rate. Scala KBM sets the absolute base
+/// from its reference key; degree still denotes a scale degree, not a MIDI key.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PitchConfig {
+    pub degree: i32,
+    #[serde(default = "default_reference_hz")]
+    pub reference_hz: f64,
+    pub source_hz: f64,
+}
+fn default_reference_hz() -> f64 {
+    440.0
+}
+fn default_playback_rate() -> SignalExprConfig {
+    SignalExprConfig::Const(1.0)
 }

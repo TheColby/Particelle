@@ -96,6 +96,31 @@ jobs:
             target/obelisk-m0-qualification.wav
             target/obelisk-m0-qualification.log
 
+  obelisk-browser:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install Rust with WASM target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Cache cargo artifacts
+        uses: Swatinem/rust-cache@v2
+
+      - name: Test browser renderer and WAV encoder
+        run: |
+          cargo test --manifest-path obelisk-wasm/Cargo.toml
+          node --test web/audio.test.mjs
+
+      - name: Build browser synth
+        run: |
+          ./scripts/build_wasm.sh
+          test -s web/pkg/obelisk_wasm.wasm
+
   render-parity:
     runs-on: ${{ matrix.os }}
     strategy:

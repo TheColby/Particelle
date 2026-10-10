@@ -159,6 +159,18 @@ pub struct MpeVoiceManager {
 }
 
 impl MpeVoiceManager {
+    pub fn reset(&mut self) {
+        let zone = self.zone;
+        self.channels = [ChannelState::new(48.0, 0.5); 16];
+        self.channels[usize::from(zone.master_channel - 1)] =
+            ChannelState::new(zone.default_master_pitch_range, 0.0);
+        for channel in zone.member_first..=zone.member_last {
+            self.channels[usize::from(channel - 1)] =
+                ChannelState::new(zone.default_member_pitch_range, 0.5);
+        }
+        self.voices.fill(VoiceState::free());
+        self.next_voice_id = 1;
+    }
     pub fn new(zone: ZoneConfig, max_voices: usize) -> Self {
         let mut channels = [ChannelState::new(48.0, 0.5); 16];
         channels[usize::from(zone.master_channel - 1)] =

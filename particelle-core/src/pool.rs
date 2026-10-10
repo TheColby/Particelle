@@ -32,9 +32,17 @@ impl GrainPool {
 
     /// Update all active grains in the pool.
     pub fn process_all(&mut self, output: &mut crate::audio_block::AudioBlock) {
+        self.process_range(output, 0..output.frames);
+    }
+
+    pub(crate) fn process_range(
+        &mut self,
+        output: &mut crate::audio_block::AudioBlock,
+        frames: std::ops::Range<usize>,
+    ) {
         for grain in &mut self.grains {
             if grain.active {
-                grain.process(output);
+                grain.process_range(output, frames.clone());
             }
         }
     }

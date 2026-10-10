@@ -99,8 +99,7 @@ impl Engine for GranularEngine {
         let start_frame = self.state.frame;
 
         for cloud in &mut self.clouds {
-            // For now, we update onset delay by the block size.
-            // Better: loop sample-by-sample for accurate onsets.
+            let mut span_start = 0;
             for i in 0..output.frames {
                 let ctx = particelle_params::context::SignalContext {
                     frame: start_frame + i as crate::FrameCount,
@@ -108,10 +107,18 @@ impl Engine for GranularEngine {
                     fields: self.fields.as_ref(),
                     custom_resolver: None,
                 };
-                cloud.update(sample_rate, self.spatializer.as_ref(), &ctx);
+                let density = cloud.density.eval(&ctx);
+                if density.is_finite() && density > 0.0 && cloud.onset_delay <= 0.0 {
+                    // Finish earlier audio before acquiring a slot for this exact onset.
+                    if span_start < i {
+                        cloud.pool.process_range(output, span_start..i);
+                    }
+                    span_start = i;
+                }
+                cloud.update_with_density(sample_rate, self.spatializer.as_ref(), &ctx, density);
             }
 
-            cloud.pool.process_all(output);
+            cloud.pool.process_range(output, span_start..output.frames);
         }
 
         self.state.advance(output.frames);
