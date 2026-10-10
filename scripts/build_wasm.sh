@@ -6,7 +6,7 @@ args=()
 if [[ "${WASM_BUILD_STD:-0}" == 1 ]]; then
   export RUSTC_BOOTSTRAP=1
   args+=(-Z build-std=std,panic_abort)
-elif [[ ! -f "$(rustc --print target-libdir --target wasm32-unknown-unknown)/libstd.rlib" ]]; then
+elif ! compgen -G "$(rustc --print target-libdir --target wasm32-unknown-unknown)/libstd-*.rlib" >/dev/null; then
   printf 'wasm32-unknown-unknown standard library is missing. Install the target, or run WASM_BUILD_STD=1 with matching rust-src.\n' >&2
   exit 1
 fi
