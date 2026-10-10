@@ -7,6 +7,19 @@
 use crate::{M0Config, M0Controls, M0Engine, M0EngineError};
 use particelle_midi::MidiEvent;
 use particelle_tuning::ScalaTuning;
+use serde::{Deserialize, Serialize};
+
+const HOST_STATE_VERSION: u32 = 1;
+
+#[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct HostState {
+    schema_version: u32,
+    base_morph: f32,
+    modulation_hz: f32,
+    delay_mix: f32,
+    reverb_mix: f32,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum HostParameter {
@@ -46,6 +59,44 @@ impl M0HostAdapter {
 
     pub const fn controls(&self) -> M0Controls {
         self.controls
+    }
+
+    /// Serialize session controls on the control thread. Voices, effect tails,
+    /// host bus configuration, and externally supplied tuning are transient.
+    pub fn save_state(&self) -> Result<Vec<u8>, HostAdapterError> {
+        Ok(serde_json::to_vec(&HostState {
+            schema_version: HOST_STATE_VERSION,
+            base_morph: self.controls.base_morph,
+            modulation_hz: self.controls.modulation_hz,
+            delay_mix: self.controls.delay_mix,
+            reverb_mix: self.controls.reverb_mix,
+        })?)
+    }
+
+    /// Restore controls on the control thread with exclusive instance access.
+    /// Parsing or validation failures leave all active controls unchanged.
+    pub fn restore_state(&mut self, bytes: &[u8]) -> Result<(), HostAdapterError> {
+        let state: HostState = serde_json::from_slice(bytes)?;
+        if state.schema_version != HOST_STATE_VERSION {
+            return Err(HostAdapterError::UnsupportedStateVersion(
+                state.schema_version,
+            ));
+        }
+        let controls = M0Controls {
+            base_morph: state.base_morph,
+            modulation_hz: state.modulation_hz,
+            delay_mix: state.delay_mix,
+            reverb_mix: state.reverb_mix,
+        };
+        self.engine.set_controls(controls)?;
+        self.controls = controls;
+        Ok(())
+    }
+
+    /// Release held notes at a transport-stop block boundary. Release envelopes
+    /// and effect tails continue rendering; this does not reset the instance.
+    pub fn all_notes_off(&mut self) {
+        self.engine.all_notes_off();
     }
 
     /// Set an automatable parameter. Call before `process_planar` for the
@@ -96,6 +147,10 @@ impl M0HostAdapter {
 
 #[derive(Debug, thiserror::Error)]
 pub enum HostAdapterError {
+    #[error("unsupported host state schema version {0}")]
+    UnsupportedStateVersion(u32),
+    #[error("invalid host state: {0}")]
+    State(#[from] serde_json::Error),
     #[error("host output must have at least one channel")]
     InvalidOutputChannels,
     #[error("host supplied {actual} output channels; adapter was configured for {expected}")]
@@ -144,5 +199,67 @@ mod tests {
         let original = adapter.controls();
         assert!(adapter.set_parameter(HostParameter::DelayMix, 2.0).is_err());
         assert_eq!(adapter.controls(), original);
+    }
+
+    #[test]
+    fn saved_session_restores_controls_and_audio() {
+        let mut original =
+            M0HostAdapter::new(M0Config::default(), default_twelve_tet_tuning(), 1).unwrap();
+        original
+            .set_parameter(HostParameter::BaseMorph, 0.9)
+            .unwrap();
+        original
+            .set_parameter(HostParameter::DelayMix, 0.4)
+            .unwrap();
+        let state = original.save_state().unwrap();
+        let mut restored =
+            M0HostAdapter::new(M0Config::default(), default_twelve_tet_tuning(), 1).unwrap();
+        restored.restore_state(&state).unwrap();
+        assert_eq!(restored.controls(), original.controls());
+        let event = particelle_midi::parse_midi_bytes(&[0x91, 60, 100], 0).unwrap();
+        let mut a = [0.0; 512];
+        let mut b = [0.0; 512];
+        original
+            .process_planar(std::slice::from_ref(&event), &mut [&mut a])
+            .unwrap();
+        restored.process_planar(&[event], &mut [&mut b]).unwrap();
+        assert_eq!(a, b);
+        assert!(b.iter().any(|sample| *sample != 0.0));
+    }
+
+    #[test]
+    fn invalid_state_preserves_controls() {
+        let mut adapter =
+            M0HostAdapter::new(M0Config::default(), default_twelve_tet_tuning(), 2).unwrap();
+        adapter
+            .set_parameter(HostParameter::ReverbMix, 0.7)
+            .unwrap();
+        let original = adapter.controls();
+        for state in [
+            br#"{"schema_version":2,"base_morph":0.5,"modulation_hz":0.0,"delay_mix":0.0,"reverb_mix":0.0}"#.as_slice(),
+            br#"{"schema_version":1,"base_morph":0.5,"modulation_hz":0.0,"delay_mix":2.0,"reverb_mix":0.0}"#.as_slice(),
+            b"{}".as_slice(),
+            b"invalid JSON".as_slice(),
+        ] {
+            assert!(adapter.restore_state(state).is_err());
+            assert_eq!(adapter.controls(), original);
+        }
+    }
+
+    #[test]
+    fn transport_stop_releases_held_notes() {
+        let mut adapter =
+            M0HostAdapter::new(M0Config::default(), default_twelve_tet_tuning(), 1).unwrap();
+        let event = particelle_midi::parse_midi_bytes(&[0x91, 60, 100], 0).unwrap();
+        let mut output = [0.0; 512];
+        adapter
+            .process_planar(&[event], &mut [&mut output])
+            .unwrap();
+        adapter.all_notes_off();
+        for _ in 0..1000 {
+            adapter.process_planar(&[], &mut [&mut output]).unwrap();
+        }
+        assert_eq!(adapter.engine.active_voice_count(), 0);
+        assert!(output.iter().all(|sample| sample.abs() < 1e-5));
     }
 }

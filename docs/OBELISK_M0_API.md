@@ -37,7 +37,11 @@ cargo build -p obelisk-m0 --no-default-features
 
 `M0HostAdapter` is the framework-neutral layer for VST3/AU wrappers. Create one adapter per plug-in instance with its negotiated channel count. Before each callback, submit automation with `set_parameter`, MTS-derived frequencies with `set_tuning_table`, and timestamped MPE events. Call `process_planar` with the host's planar output slices.
 
-The adapter validates all parameters before accepting them, applies controls at the block boundary, rejects a bus whose channel count differs from the negotiated layout, and delegates rendering to the allocation-free engine path. It deliberately does not provide host lifecycle, UI, state serialization, code signing, or MTS-ESP discovery; those belong to the VST3/AU wrapper and its host-specific qualification.
+The adapter validates all parameters before accepting them, applies controls at the block boundary, rejects a bus whose channel count differs from the negotiated layout, and delegates rendering to the allocation-free engine path. Host lifecycle integration, UI, code signing, and MTS-ESP discovery belong to the VST3/AU wrapper and its host-specific qualification.
+
+Use `save_state` and `restore_state` on the control thread with exclusive access to the instance. The version 1 JSON state stores all four automatable controls. Unsupported schema versions, missing or unknown fields, malformed JSON, and invalid parameter values are rejected without changing controls. Saving and restoring allocate memory and must never run in the audio callback. MIDI voices, effect tails, output bus configuration, and externally supplied tuning are transient; hosts must configure the bus and resubmit tuning separately.
+
+Call `all_notes_off` at a block boundary when transport stops. Continue rendering to let release envelopes and effect tails decay. This releases held notes without resetting or recreating the instance.
 
 ## Qualification
 
