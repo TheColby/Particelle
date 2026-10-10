@@ -120,6 +120,7 @@ jobs:
         run: |
           ./scripts/build_wasm.sh
           test -s web/pkg/obelisk_wasm.wasm
+          node web/wasm-smoke.mjs
 
   render-parity:
     runs-on: ${{ matrix.os }}

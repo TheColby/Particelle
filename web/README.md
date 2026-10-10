@@ -13,4 +13,4 @@ Then open `http://localhost:8000`. Serve over HTTP rather than opening `index.ht
 
 On a Homebrew Rust toolchain without a prebuilt `wasm32-unknown-unknown` standard library, install matching `rust-src` and a WASM linker (`rust-lld` or an appropriate `wasm-ld` configured for Rust), then run `WASM_BUILD_STD=1 ./scripts/build_wasm.sh`. With rustup, install the target using `rustup target add wasm32-unknown-unknown`.
 
-Run `node --test web/audio.test.mjs` for the WAV encoder tests. The generated `web/pkg/` directory is intentionally ignored; rebuild it when the M0 core or wrapper changes.
+Run `node --test web/audio.test.mjs` for the WAV encoder tests. After a WASM build, run `node web/wasm-smoke.mjs` to instantiate the actual module and check for finite, nonzero stereo output. CI runs both checks. The generated `web/pkg/` directory is intentionally ignored; rebuild it when the M0 core or wrapper changes.
