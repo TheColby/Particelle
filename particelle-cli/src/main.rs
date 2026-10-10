@@ -1139,6 +1139,8 @@ fn cmd_render(
     let mut last_update = Instant::now();
     let update_interval = Duration::from_millis(100);
     let is_tty = std::io::stderr().is_terminal();
+    let spinner = ['⢋', '⢙', '⢹', '⢸', '⢼', '⢄', '⢆', '⢇', '⢃', '⢏'];
+    let mut spin_idx = 0;
 
     while frames_rendered < total_frames {
         let remaining = (total_frames - frames_rendered) as usize;
@@ -1173,11 +1175,13 @@ fn cmd_render(
             let filled = filled.min(width);
             let empty = width.saturating_sub(filled);
             eprint!(
-                "\r\x1b[2K⧖ Rendering... [{}{}] {:.1}%",
+                "\r\x1b[2K{} Rendering... [{}{}] {:.1}%",
+                spinner[spin_idx],
                 "█".repeat(filled),
                 "░".repeat(empty),
                 percent
             );
+            spin_idx = (spin_idx + 1) % spinner.len();
             let _ = std::io::stderr().flush();
             last_update = Instant::now();
         }

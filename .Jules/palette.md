@@ -5,3 +5,7 @@
 ## 2023-10-24 - [Helpful Redirection Tips for Data-Producing Commands]
 **Learning:** When CLI commands output raw data (like YAML patches or TSV data) directly to `stdout`, new users can be confused by the wall of text if they don't redirect it.
 **Action:** Use `std::io::stdout().is_terminal()` to detect interactive usage and emit a helpful `eprintln!` tip suggesting file redirection (e.g., `> file.yaml`), establishing a reusable pattern for all data-producing commands.
+
+## 2024-08-10 - Animated Spinner for Long Operations
+**Learning:** A static symbol during long-running tasks can leave users wondering if the process has hung, especially if the progress bar moves slowly. An animated spinner (using Braille characters) provides immediate visual feedback that the application is still actively processing.
+**Action:** Use a simple character array (`['⢋', '⢙', '⢹', '⢸', '⢼', '⢄', '⢆', '⢇', '⢃', '⢏']`) and modulo index for an animated spinner alongside progress bars to reassure users of active processing.
