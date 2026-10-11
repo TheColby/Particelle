@@ -5,3 +5,7 @@
 ## 2023-10-24 - [Helpful Redirection Tips for Data-Producing Commands]
 **Learning:** When CLI commands output raw data (like YAML patches or TSV data) directly to `stdout`, new users can be confused by the wall of text if they don't redirect it.
 **Action:** Use `std::io::stdout().is_terminal()` to detect interactive usage and emit a helpful `eprintln!` tip suggesting file redirection (e.g., `> file.yaml`), establishing a reusable pattern for all data-producing commands.
+
+## 2024-11-20 - Ensure lightbulb consistency in terminal tips
+**Learning:** Several terminal tips outputted by the CLI (e.g. for stdout redirection) were missing the consistent `💡` prefix found elsewhere in the output, slightly impacting the perceived polish and consistency of the CLI UX. Standardizing emoji prefixes across related informational messages improves scanning speed and the "feel" of terminal applications.
+**Action:** Always ensure consistent informational prefixes (like `💡 Tip:`) are used uniformly across all CLI output streams.
