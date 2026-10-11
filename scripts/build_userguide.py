@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Typeset docs/USERGUIDE.md and materialize its named teaching examples.
 
-Requires reportlab. Fonts use Georgia when available, otherwise PDF core fonts.
+Requires reportlab. Prefer New Century Schoolbook, then TeX Gyre Schola.
 Run from any directory: python3 scripts/build_userguide.py
 """
 from __future__ import annotations
@@ -11,7 +11,10 @@ import html
 import math
 from pathlib import Path
 import re
+import shutil
+import subprocess
 import textwrap
+import xml.etree.ElementTree as ET
 
 from reportlab.lib import colors
 from reportlab.lib.styles import ParagraphStyle
@@ -34,6 +37,40 @@ BODY_WIDTH = WIDTH - 2 * MARGIN
 
 
 def register_fonts():
+    exact = ROOT / 'assets/fonts'
+    exact_names = [('Book', 'NewCenturySchoolbook-Roman.ttf'),
+                   ('Book-Bold', 'NewCenturySchoolbook-Bold.ttf'),
+                   ('Book-Italic', 'NewCenturySchoolbook-Italic.ttf'),
+                   ('Book-BoldItalic', 'NewCenturySchoolbook-BoldItalic.ttf')]
+    if all((exact / filename).exists() for _, filename in exact_names):
+        for name, filename in exact_names:
+            pdfmetrics.registerFont(TTFont(name, str(exact / filename)))
+        pdfmetrics.registerFontFamily('Book', normal='Book', bold='Book-Bold',
+                                      italic='Book-Italic', boldItalic='Book-BoldItalic')
+        return 'Book', 'Book-Bold', 'Book-Italic'
+
+    schola_names = [('Book', 'qcsr'), ('Book-Bold', 'qcsb'),
+                    ('Book-Italic', 'qcsri'), ('Book-BoldItalic', 'qcsbi')]
+    schola_paths = []
+    if shutil.which('kpsewhich'):
+        for name, stem in schola_names:
+            paths = []
+            for suffix in ('afm', 'pfb'):
+                found = subprocess.run(['kpsewhich', f'{stem}.{suffix}'],
+                                       capture_output=True, text=True, check=False)
+                paths.append(Path(found.stdout.strip()))
+            schola_paths.append((name, *paths))
+    if len(schola_paths) == len(schola_names) and all(
+        afm.is_file() and pfb.is_file() for _, afm, pfb in schola_paths
+    ):
+        for name, afm, pfb in schola_paths:
+            face = pdfmetrics.EmbeddedType1Face(str(afm), str(pfb))
+            pdfmetrics.registerTypeFace(face)
+            pdfmetrics.registerFont(pdfmetrics.Font(name, face.name, 'WinAnsiEncoding'))
+        pdfmetrics.registerFontFamily('Book', normal='Book', bold='Book-Bold',
+                                      italic='Book-Italic', boldItalic='Book-BoldItalic')
+        return 'Book', 'Book-Bold', 'Book-Italic'
+
     folder = Path('/System/Library/Fonts/Supplemental')
     names = [('Book', 'Georgia.ttf'), ('Book-Bold', 'Georgia Bold.ttf'),
              ('Book-Italic', 'Georgia Italic.ttf'),
@@ -55,6 +92,8 @@ STYLES = {
                               textColor=INK, spaceBefore=12, spaceAfter=20),
     'section': ParagraphStyle('section', fontName=BOLD, fontSize=13.5, leading=18,
                               textColor=INK, spaceBefore=12, spaceAfter=7, keepWithNext=True),
+    'subsection': ParagraphStyle('subsection', fontName=BOLD, fontSize=11, leading=15,
+                                 textColor=INK, spaceBefore=10, spaceAfter=5, keepWithNext=True),
     'code': ParagraphStyle('code', fontName='Courier', fontSize=7.5, leading=10.2,
                            backColor=PALE, borderPadding=8, spaceBefore=5, spaceAfter=12),
     'caption': ParagraphStyle('caption', fontName=ITALIC, fontSize=8.6, leading=12,
@@ -67,6 +106,7 @@ STYLES = {
 
 def inline(text):
     value = html.escape(text)
+    value = re.sub(r'\[([^]]+)\]\((https?://[^)]+)\)', r'<link href="\2">\1</link>', value)
     value = re.sub(r'`([^`]+)`', r'<font name="Courier" size="8.8">\1</font>', value)
     value = re.sub(r'\*\*([^*]+)\*\*', r'<b>\1</b>', value)
     return value
@@ -80,6 +120,23 @@ def materialize_examples(text):
         path.write_text(match[2] + '\n')
         names.append(match[1])
     return names
+
+
+def verify_atlas(text):
+    pattern = r'### `(examples/[^`]+\.yaml)`\nSource file:.*?\n\n```yaml\n(.*?)\n```'
+    entries = re.findall(pattern, text, re.S)
+    expected = {p.relative_to(ROOT).as_posix() for p in (ROOT / 'examples').rglob('*.yaml')
+                if 'userguide' not in p.parts}
+    found = {path for path, _ in entries}
+    if found != expected or len(entries) != len(found):
+        raise ValueError(f'Atlas inventory differs from examples/: missing={expected-found}, extra={found-expected}')
+
+    def without_trailing_space(value):
+        return '\n'.join(line.rstrip() for line in value.splitlines()).rstrip()
+    for path, contents in entries:
+        if without_trailing_space((ROOT / path).read_text()) != without_trailing_space(contents):
+            raise ValueError(f'Atlas entry differs from source: {path}')
+    return len(entries)
 
 
 class Diagram(Flowable):
@@ -161,6 +218,41 @@ class Diagram(Flowable):
             c.drawString(24, 10, 'Azimuth is measured from forward; positive angles turn right.')
 
 
+class RepositoryLogo(Flowable):
+    """Draw the repository SVG's geometry without a raster conversion dependency."""
+
+    def __init__(self):
+        super().__init__()
+        self.width = BODY_WIDTH
+        self.height = BODY_WIDTH * 360 / 1400
+
+    def draw(self):
+        root = ET.parse(ROOT / 'assets/logo.svg').getroot()
+        scale = self.width / float(root.attrib['width'])
+        c = self.canv
+        c.saveState()
+        c.scale(scale, scale)
+        c.setFillColor(colors.white)
+        c.rect(0, 0, 1400, 360, fill=1, stroke=0)
+        mark = root.find('.//{*}g[@transform="translate(380,180)"]')
+        assert mark is not None
+        c.setStrokeColor(colors.Color(0, 0, 0, alpha=0.28))
+        c.setLineWidth(3)
+        for orbit in mark.findall('.//{*}ellipse'):
+            rx, ry = float(orbit.attrib['rx']), float(orbit.attrib['ry'])
+            c.ellipse(380-rx, 180-ry, 380+rx, 180+ry, fill=0, stroke=1)
+        c.setFillColor(colors.black)
+        for particle in mark.findall('.//{*}circle'):
+            x = 380 + float(particle.attrib['cx'])
+            y = 180 - float(particle.attrib['cy'])
+            c.circle(x, y, float(particle.attrib['r']), fill=1, stroke=0)
+        wordmark = root.find('.//{*}text')
+        assert wordmark is not None
+        c.setFont(ROMAN, 110)
+        c.drawString(610, 150, ''.join(wordmark.itertext()).strip())
+        c.restoreState()
+
+
 CAPTIONS = {
     'signal-flow': 'Figure 1. The granular signal path. A patch coordinates source selection, grain shape, and output geometry.',
     'overlap': 'Figure 2. Three overlapping Hann envelopes. This schematic shows overlap, not a capture of scheduler timing.',
@@ -235,23 +327,25 @@ def table(lines):
 
 def build(text, output):
     story = []
-    title_style = ParagraphStyle('cover', fontName=BOLD, fontSize=43, leading=49, textColor=INK)
     subtitle_style = ParagraphStyle('subtitle', fontName=ROMAN, fontSize=19, leading=26, textColor=INK)
-    story += [Spacer(1, 70), Paragraph('PARTICELLE', title_style), Spacer(1, 12),
+    story += [Spacer(1, 45), RepositoryLogo(), Spacer(1, 10),
               Paragraph('User Guide', subtitle_style), Spacer(1, 35), Diagram('overlap'),
               Spacer(1, 27), Paragraph('Granular sound design, spatial composition,<br/>and expressive control', subtitle_style),
               Spacer(1, 26), Paragraph('Practical workflows / Illustrated concepts<br/>Listening exercises / Command and patch reference', STYLES['body']),
               Spacer(1, 12), Paragraph('Colby Leider, PhD', STYLES['body']),
               Spacer(1, 10), Paragraph('SOURCE-TREE EDITION  /  OCTOBER 10, 2026', STYLES['label']), PageBreak()]
     toc = TableOfContents()
-    toc.levelStyles = [ParagraphStyle('toc', fontName=ROMAN, fontSize=9.5, leading=12, spaceBefore=2),
-                       ParagraphStyle('tocsub', fontName=ROMAN, fontSize=8.5, leading=12, leftIndent=14)]
+    toc.levelStyles = [ParagraphStyle('toc', fontName=ROMAN, fontSize=9.0, leading=10.5, spaceBefore=0),
+                       ParagraphStyle('tocsub', fontName=ROMAN, fontSize=8.2, leading=10.5, leftIndent=14)]
     story += [Paragraph('Contents', STYLES['chapter']), toc, PageBreak()]
     lines = text.splitlines()
     i = 1
     while i < len(lines):
         line = lines[i].strip()
         if not line:
+            i += 1
+            continue
+        if line.startswith('!['):
             i += 1
             continue
         if line.startswith('# '):
@@ -267,6 +361,8 @@ def build(text, output):
             if line[3:] in ('Preface', 'How to use this book'):
                 p.toc_level = 0
             story.append(p)
+        elif line.startswith('### '):
+            story.append(Paragraph(inline(line[4:]), STYLES['subsection']))
         elif line.startswith('```'):
             info = line[3:]
             code = []
@@ -278,8 +374,12 @@ def build(text, output):
             block = []
             if 'file=' in info:
                 block.append(Paragraph(html.escape(info.split('file=')[1]), STYLES['caption']))
-            block.append(Preformatted('\n'.join(code), STYLES['code']))
-            story.append(KeepTogether(block))
+            for start in range(0, len(code), 38):
+                page = code[start:start + 38]
+                if start:
+                    block = []
+                block.append(Preformatted('\n'.join(page), STYLES['code']))
+                story.append(KeepTogether(block))
         elif line.startswith('|'):
             block = []
             while i < len(lines) and lines[i].strip().startswith('|'):
@@ -308,9 +408,10 @@ def main():
     parser.add_argument('--output', type=Path, default=ROOT / 'output/pdf/Particelle_User_Guide.pdf')
     args = parser.parse_args()
     text = SOURCE.read_text()
+    atlas_count = verify_atlas(text)
     examples = materialize_examples(text)
     build(text, args.output)
-    print(f'Built {args.output}; materialized {len(examples)} teaching files.')
+    print(f'Built {args.output}; materialized {len(examples)} teaching files; verified {atlas_count} atlas entries.')
 
 
 if __name__ == '__main__':

@@ -3,7 +3,10 @@
 The authored manuscript is `docs/USERGUIDE.md`. The PDF is
 `output/pdf/Particelle_User_Guide.pdf`. The book follows the VerbX guide's
 chapter-and-exercise approach with original vector diagrams and a compact
-7.5-by-10-inch page design.
+7.5-by-10-inch page design. The expanded source-tree edition is over 47,000
+words and includes a complete atlas of the 223 non-teaching YAML examples.
+The cover and Markdown front matter use the repository's tracked
+`assets/logo.svg` (the same asset published on GitHub).
 
 ## Build
 
@@ -13,11 +16,20 @@ Use Python 3 with ReportLab installed, then run from the repository root:
 python3 scripts/build_userguide.py
 ```
 
-The builder uses Georgia when installed and PDF core Times otherwise. It embeds
-Georgia, builds the linked contents and chapter bookmarks, and extracts the
+The builder prefers licensed New Century Schoolbook TTF files placed in
+`assets/fonts/` with the names `NewCenturySchoolbook-Roman.ttf`,
+`NewCenturySchoolbook-Bold.ttf`, `NewCenturySchoolbook-Italic.ttf`, and
+`NewCenturySchoolbook-BoldItalic.ttf`. This source tree does not redistribute
+those proprietary outlines. Without them, the builder embeds the four
+MacTeX/TeX Live TeX Gyre Schola faces, a New Century Schoolbook-compatible
+design. Georgia and then PDF Times remain portability fallbacks if neither
+family is available. The checked-in PDF uses TeX Gyre Schola. The builder
+builds the linked contents and chapter bookmarks, and extracts the
 seven named YAML/JSON blocks into `examples/userguide/`. Edit the manuscript
 first when changing these examples. The builder overwrites the corresponding
-example files to keep the distributed examples identical to the book.
+example files to keep the distributed examples identical to the book. It also
+checks that every atlas entry still matches its canonical `examples/` file;
+update the manuscript when adding or changing a repository example.
 
 ReportLab is the only third-party build dependency. Install it in a project
 virtual environment if it is not already available. The render verification
