@@ -5,3 +5,7 @@
 ## 2023-10-24 - [Helpful Redirection Tips for Data-Producing Commands]
 **Learning:** When CLI commands output raw data (like YAML patches or TSV data) directly to `stdout`, new users can be confused by the wall of text if they don't redirect it.
 **Action:** Use `std::io::stdout().is_terminal()` to detect interactive usage and emit a helpful `eprintln!` tip suggesting file redirection (e.g., `> file.yaml`), establishing a reusable pattern for all data-producing commands.
+
+## 2024-05-14 - Animated CLI Progress Spinner
+**Learning:** A static symbol (`⧖`) during a multi-minute render process in the terminal creates anxiety that the process may have frozen.
+**Action:** Always animate long-running terminal loops (using simple modulo character arrays like Braille dots) so the user has immediate visual confirmation of continuous execution.
