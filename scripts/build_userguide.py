@@ -14,6 +14,7 @@ import re
 import shutil
 import subprocess
 import textwrap
+import tomllib
 import xml.etree.ElementTree as ET
 
 from reportlab.lib import colors
@@ -27,6 +28,7 @@ from reportlab.platypus import (
 from reportlab.platypus.tableofcontents import TableOfContents
 
 ROOT = Path(__file__).resolve().parents[1]
+VERSION = tomllib.loads((ROOT / 'Cargo.toml').read_text())['workspace']['package']['version']
 SOURCE = ROOT / 'docs/USERGUIDE.md'
 INK = colors.HexColor('#163d3a')
 GOLD = colors.HexColor('#b88a36')
@@ -333,7 +335,7 @@ def build(text, output):
               Spacer(1, 27), Paragraph('Granular sound design, spatial composition,<br/>and expressive control', subtitle_style),
               Spacer(1, 26), Paragraph('Practical workflows / Illustrated concepts<br/>Listening exercises / Command and patch reference', STYLES['body']),
               Spacer(1, 12), Paragraph('Colby Leider, PhD', STYLES['body']),
-              Spacer(1, 10), Paragraph('V0.3.0 CLI EDITION  /  OCTOBER 17, 2026', STYLES['label']), PageBreak()]
+              Spacer(1, 10), Paragraph(f'V{VERSION} CLI EDITION  /  OCTOBER 17, 2026', STYLES['label']), PageBreak()]
     toc = TableOfContents()
     toc.levelStyles = [ParagraphStyle('toc', fontName=ROMAN, fontSize=9.0, leading=10.5, spaceBefore=0),
                        ParagraphStyle('tocsub', fontName=ROMAN, fontSize=8.2, leading=10.5, leftIndent=14)]

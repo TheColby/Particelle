@@ -4,7 +4,7 @@
 
 Granular sound design, spatial composition, and expressive control
 
-Expanded book edition for the 0.3.0 CLI release. Prepared October 17, 2026. Obelisk M0 host archives and the browser study remain previews, not qualified VST3/AU or physical-controller releases.
+Expanded book edition for the 0.3.1 CLI release. Prepared October 17, 2026. Obelisk M0 host archives and the browser study remain previews, not qualified VST3/AU or physical-controller releases.
 
 ## Preface
 
@@ -2042,6 +2042,7 @@ Formula maintenance:
 ```
 
 This script refreshes release URLs and SHA-256 checksums in the formula from GitHub release metadata.
+Without `--tag`, it selects the latest non-prerelease release; RC testing always passes an explicit tag.
 
 ## Release Assets
 
@@ -2056,7 +2057,7 @@ Alongside:
 - `*.sha256` per artifact
 - consolidated `SHA256SUMS`
 - Sigstore keyless signatures/certificates (`*.sig`, `*.pem`)
-- Versioned v0.3.0 PDF guide, listening demos, presets, and preview-labeled Obelisk M0 C API/host archives
+- Versioned PDF guide, listening demos, presets, and preview-labeled Obelisk M0 C API/host archives
 - Cargo metadata SBOM and provenance, included in the checksum manifest and signed
 
 RCs and GA candidates stay prereleases until the release gates, pinned installer check, Homebrew test, and formula update succeed. `stable` does not move on failure. Browser and native plug-in qualification are not asserted by these portable checks.

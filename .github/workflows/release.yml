@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Existing v0.3.0 or v0.3.0-rc.N tag"
+        description: "Existing version tag (for example v0.3.1 or v0.3.1-rc.1)"
         required: true
         type: string
 
@@ -36,8 +36,8 @@ jobs:
         run: |
           tag="${{ github.event.inputs.tag || github.ref_name }}"
           python3 scripts/check_release_version.py --tag "$tag"
-          if [[ "$tag" == v0.3.0 ]] && [[ "$(gh release view "$tag" --json isPrerelease --jq '.isPrerelease' 2>/dev/null || true)" == false ]]; then
-            echo 'Stable v0.3.0 already exists; refusing to demote it on rerun' >&2
+          if [[ "$tag" != *-rc.* ]] && [[ "$(gh release view "$tag" --json isPrerelease --jq '.isPrerelease' 2>/dev/null || true)" == false ]]; then
+            echo "Stable $tag already exists; refusing to demote it on rerun" >&2
             exit 1
           fi
           python3 -m unittest scripts/test_release_pipeline.py
@@ -106,6 +106,8 @@ jobs:
         run: |
           set -euo pipefail
           tag="${{ github.event.inputs.tag || github.ref_name }}"
+          version="${tag#v}"
+          version="${version%-rc.*}"
           cargo build --release --locked -p particelle-cli -p obelisk-m0 --target "${{ matrix.target }}"
           python3 scripts/check_release_version.py --tag "$tag" --binary "target/${{ matrix.target }}/release/particelle"
           ./scripts/package_release.sh --target "${{ matrix.target }}" --version "$tag" --binary "target/${{ matrix.target }}/release/particelle" --out-dir dist
@@ -115,12 +117,13 @@ jobs:
           trap 'rm -rf "$work"' EXIT
           tar -xzf "dist/particelle_${tag}_${{ matrix.target }}.tar.gz" -C "$work"
           bin="$work/particelle_${tag}_${{ matrix.target }}/bin/particelle"
-          test "$("$bin" --version)" = "particelle 0.3.0"
+          test "$("$bin" --version)" = "particelle $version"
           ./scripts/prepare_example_samples.sh
           "$bin" init > "$work/patch.yaml"
           "$bin" validate "$work/patch.yaml"
           "$bin" render "$work/patch.yaml" -o "$work/sound.wav" --duration 0.25
           sox "$work/sound.wav" -n stat 2>&1 | awk -F': *' '/RMS.*amplitude/{if ($2 > 0.0000001) good=1} END{exit !good}'
+          ./scripts/test_installer_local.sh "$tag" "${{ matrix.target }}" dist
       - name: Curated demos and presets
         if: runner.os == 'Linux'
         run: |
@@ -153,19 +156,24 @@ jobs:
           merge-multiple: true
       - name: Build versioned guide
         run: |
+          tag="${{ github.event.inputs.tag || github.ref_name }}"
+          version="${tag#v}"
+          version="${version%-rc.*}"
           sudo apt-get update && sudo apt-get install -y texlive-fonts-recommended
           python3 -m venv /tmp/particelle-guide-venv
           /tmp/particelle-guide-venv/bin/pip install reportlab pypdf
-          /tmp/particelle-guide-venv/bin/python scripts/build_userguide.py --output dist/Particelle_User_Guide_v0.3.0.pdf
-          /tmp/particelle-guide-venv/bin/python - <<'PY'
+          /tmp/particelle-guide-venv/bin/python scripts/build_userguide.py --output "dist/Particelle_User_Guide_v${version}.pdf"
+          VERSION="$version" /tmp/particelle-guide-venv/bin/python - <<'PY'
           from pathlib import Path
           from pypdf import PdfReader
-          p = Path('dist/Particelle_User_Guide_v0.3.0.pdf')
+          import os
+          version = os.environ['VERSION']
+          p = Path(f'dist/Particelle_User_Guide_v{version}.pdf')
           assert p.stat().st_size > 100000, 'guide PDF is unexpectedly small'
-          assert '0.3.0 CLI release' in Path('docs/USERGUIDE.md').read_text()
+          assert f'{version} CLI release' in Path('docs/USERGUIDE.md').read_text()
           reader = PdfReader(p)
           assert len(reader.pages) > 250, 'guide is missing pages'
-          assert 'V0.3.0 CLI EDITION' in reader.pages[0].extract_text()
+          assert f'V{version} CLI EDITION' in reader.pages[0].extract_text()
           fonts = {str(ref.get('/BaseFont')) for page in reader.pages[:5]
                    for ref in page['/Resources']['/Font'].values()}
           assert any('TeXGyreSchola' in font or 'NewCenturySchoolbook' in font for font in fonts), fonts
@@ -203,15 +211,31 @@ jobs:
   promote-rc:
     if: contains(github.event.inputs.tag || github.ref_name, '-rc.')
     needs: publish
-    runs-on: ubuntu-latest
+    runs-on: macos-15
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           ref: ${{ github.event.inputs.tag || github.ref }}
+      - name: Test pinned RC installer and Homebrew before creating GA tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${{ github.event.inputs.tag || github.ref_name }}"
+          version="${tag#v}"
+          version="${version%-rc.*}"
+          work="$(mktemp -d)"
+          trap 'rm -rf "$work"' EXIT
+          ./install.sh --channel stable --version "$tag" --install-dir "$work"
+          test "$("$work/particelle" --version)" = "particelle $version"
+          ./scripts/update_homebrew_formula.sh --tag "$tag"
+          ruby -c Formula/particelle.rb
+          brew install --formula "$PWD/Formula/particelle.rb"
+          brew test particelle
+          test "$(particelle --version)" = "particelle $version"
       - name: Promote same commit to GA candidate
-        env:
-          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
@@ -241,10 +265,9 @@ jobs:
         run: |
           set -euo pipefail
           tag="${{ github.event.inputs.tag || github.ref_name }}"
-          test "$tag" = v0.3.0
           git fetch --tags origin
           qualified=0
-          for rc in $(git tag -l 'v0.3.0-rc.*'); do
+          for rc in $(git tag -l "${tag}-rc.*"); do
             if [[ "$(git rev-list -n 1 "$rc")" == "$(git rev-list -n 1 "$tag")" ]] && gh release view "$rc" >/dev/null 2>&1; then
               qualified=1
               break
@@ -254,13 +277,13 @@ jobs:
           work="$(mktemp -d)"
           trap 'rm -rf "$work"' EXIT
           ./install.sh --channel stable --version "$tag" --install-dir "$work"
-          test "$("$work/particelle" --version)" = 'particelle 0.3.0'
+          test "$("$work/particelle" --version)" = "particelle ${tag#v}"
           ./scripts/update_homebrew_formula.sh --tag "$tag"
           ruby -c Formula/particelle.rb
           brew install --formula "$PWD/Formula/particelle.rb"
           brew test particelle
           test "$(brew --prefix)/bin/particelle" != ''
-          test "$(particelle --version)" = 'particelle 0.3.0'
+          test "$(particelle --version)" = "particelle ${tag#v}"
       - name: Commit formula, then make release stable
         shell: bash
         run: |

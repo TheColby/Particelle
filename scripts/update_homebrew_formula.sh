@@ -52,7 +52,7 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_root"
 
 if [[ -z "$tag" ]]; then
-  tag="$(gh release list --repo "$repo" --limit 1 --json tagName --jq '.[0].tagName')"
+  tag="$(gh api "repos/${repo}/releases/latest" --jq '.tag_name')"
 fi
 
 if [[ -z "$tag" ]]; then

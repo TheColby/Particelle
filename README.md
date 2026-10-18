@@ -12,7 +12,7 @@ or [the Markdown edition](docs/USERGUIDE.md). Eighteen chapters cover first rend
 Dronoify, automation, spatial composition, MIDI/OSC, Obelisk M0, troubleshooting,
 and listening exercises, with runnable examples in `examples/userguide/`.
 
-**Release status:** v0.3.0 is CLI-first. Its candidates remain prereleases until the evidence-gated workflow promotes them; during that interval, the stable installer and Homebrew formula remain on v0.2.3. The versioned PDF guide is attached to the v0.3.0 release. Obelisk M0 C API/host archives and browser source are previews; named VST3/AU hosts, physical MPE controllers, and browser playback are not qualified by this release.
+**Release status:** v0.3.1 is the corrected CLI-first release candidate. v0.3.0 remains a prerelease because its installer exit-status check failed; stable and Homebrew remain on v0.2.3 until v0.3.1 passes every gate. A versioned PDF guide is attached to each release. Obelisk M0 C API/host archives and browser source are previews; named VST3/AU hosts, physical MPE controllers, and browser playback are not qualified by this release.
 
 An algorithmic granular synthesis engine designed for extreme microtonal precision and formats beyond stereo. Not GUI-driven. Ugly, yet capable. Pure infrastructure--controlled through YAML and a CLI, or MIDI and networked Open Sound Control. Scatter millions of grains across 64-channel Dolby Atmos spaces. You can easily patch any audio file's audio features to control granulation parameters of itself or another sound file. Tune in 31-EDO or load an included Scala scale. Render deterministically to 64-bit float WAV files, or run live to  your multiple audio interfaces.
 
@@ -96,7 +96,7 @@ Upgrade paths:
 4. pin/unpin: use `--version <tag>` to pin, then omit `--version` to unpin.
 
 Release channels, signatures, and published artifact names are documented in [`docs/RELEASE_CHANNELS.md`](/Users/cleider/dev/Particelle/docs/RELEASE_CHANNELS.md).
-The v0.3.0 release workflow checks the locked Rust graph, all examples, native Linux/macOS parity, archive audio output, and PDF integrity before it can promote a candidate. A failing RC or GA remains a prerelease; it never advances the stable installer.
+The release workflow checks the locked Rust graph, all examples, native Linux/macOS parity, archive audio output, and PDF integrity before it can promote a candidate. A failing RC or GA remains a prerelease; it never advances the stable installer.
 
 ### 🔧 From Source (manual)
 
