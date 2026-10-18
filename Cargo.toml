@@ -14,7 +14,7 @@ members = [
 resolver = "2"
 
 [workspace.package]
-version   = "0.3.0"
+version   = "0.3.1"
 edition   = "2021"
 authors   = ["Particelle"]
 license   = "MIT"
@@ -22,11 +22,11 @@ license   = "MIT"
 [workspace.dependencies]
 # Internal crates
 particelle-core   = { path = "particelle-core" }
-particelle-dsp    = { path = "particelle-dsp", version = "0.3.0" }
+particelle-dsp    = { path = "particelle-dsp", version = "0.3.1" }
 particelle-curve  = { path = "particelle-curve" }
-particelle-params = { path = "particelle-params", version = "0.3.0" }
+particelle-params = { path = "particelle-params", version = "0.3.1" }
 particelle-tuning = { path = "particelle-tuning" }
-particelle-analysis = { path = "particelle-analysis", version = "0.3.0" }
+particelle-analysis = { path = "particelle-analysis", version = "0.3.1" }
 particelle-midi   = { path = "particelle-midi" }
 particelle-io     = { path = "particelle-io" }
 particelle-schema = { path = "particelle-schema" }

@@ -8,6 +8,8 @@ VERSION=""
 SKIP_VERIFY=0
 SIGNATURE_VERIFY_MODE="${SIGNATURE_VERIFY_MODE:-auto}"
 EXPECTED_OIDC_ISSUER="https://token.actions.githubusercontent.com"
+INSTALL_TMP_DIR=""
+trap 'if [[ -n "$INSTALL_TMP_DIR" ]]; then rm -rf -- "$INSTALL_TMP_DIR"; fi' EXIT
 
 usage() {
   cat <<'USAGE'
@@ -218,7 +220,7 @@ install_prebuilt() {
 
   local tmp_dir
   tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/particelle-install.XXXXXX")"
-  trap 'rm -rf "$tmp_dir"' EXIT
+  INSTALL_TMP_DIR="$tmp_dir"
 
   echo "Downloading ${asset} from ${release_url}"
   curl -fsSL -o "${tmp_dir}/${asset}" "${release_url}/${asset}"
@@ -310,6 +312,6 @@ case "$CHANNEL" in
     ;;
 esac
 
-echo "Installed: $(command -v particelle || echo "${INSTALL_DIR}/particelle")"
-particelle --version 2>/dev/null || true
+echo "Installed: ${INSTALL_DIR}/particelle"
+"${INSTALL_DIR}/particelle" --version
 echo "Run 'particelle --help' to get started."

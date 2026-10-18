@@ -7,9 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.3.0] - release candidate
+## [0.3.1] - release candidate
 
-CLI-first release: the changes below are included in the 0.3.0 candidate and remain subject to release gates. Obelisk M0 C API/host archives and browser code are previews; this release does not qualify VST3/AU hosts, physical MPE controllers, or real-browser playback.
+- Fixed the stable installer exit trap, which caused a successful prebuilt installation to return a failure status.
+- Made the release workflow derive CLI, guide, and archive version checks from the tag so patch releases do not require hard-coded edits.
+
+## [0.3.0] - 2026-10-17 (prerelease; not promoted)
+
+CLI-first candidate: the changes below were included in v0.3.0, but its installer promotion gate found an exit-status bug. The candidate remains a prerelease; v0.3.1 carries the fix. Obelisk M0 C API/host archives and browser code are previews; neither version qualifies VST3/AU hosts, physical MPE controllers, or real-browser playback.
 
 ### Added
 - **Granular pitch controls:** Connected cloud `playback_rate` and tuning-selected `pitch` to source playback, including mixed source/output sample rates and `loop_source: false`.

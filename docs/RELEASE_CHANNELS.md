@@ -43,6 +43,7 @@ Formula maintenance:
 ```
 
 This script refreshes release URLs and SHA-256 checksums in the formula from GitHub release metadata.
+Without `--tag`, it selects the latest non-prerelease release; RC testing always passes an explicit tag.
 
 ## Release Assets
 
@@ -57,7 +58,7 @@ Alongside:
 - `*.sha256` per artifact
 - consolidated `SHA256SUMS`
 - Sigstore keyless signatures/certificates (`*.sig`, `*.pem`)
-- `Particelle_User_Guide_v0.3.0.pdf` on v0.3.0, plus the listening demos, presets, and `obelisk-m0-preview_<version>_<target>.tar.gz` C API/host archives
+- `Particelle_User_Guide_v<version>.pdf`, plus the listening demos, presets, and `obelisk-m0-preview_<version>_<target>.tar.gz` C API/host archives
 - Cargo metadata SBOM and release provenance, also checksummed and signed
 
 `SHA256SUMS` covers all unsigned deliverables, including individual `.sha256` sidecars. Signatures and certificates are produced afterward and therefore cannot be included in that manifest without a circular dependency.
@@ -71,7 +72,7 @@ When signatures are verified, the installer validates keyless certificates again
 
 ## CI/Automation
 
-- A maintainer creates an RC tag. [`.github/workflows/release.yml`](/Users/cleider/dev/Particelle/.github/workflows/release.yml) runs release gates and publishes it as a prerelease. On success it tags the same commit for GA and dispatches the GA workflow; GA stays a prerelease until pinned installer and Homebrew tests pass and the formula update lands on `main`.
+- A maintainer creates an RC tag. [`.github/workflows/release.yml`](/Users/cleider/dev/Particelle/.github/workflows/release.yml) runs release gates and publishes it as a prerelease. The pinned RC installer and Homebrew formula must pass before automation tags the same commit for GA. GA stays a prerelease until its own installer and Homebrew tests pass and the formula update lands on `main`. v0.3.0 was stopped at the GA installer gate; v0.3.1 includes the installer fix and earlier RC checks.
 - Failed gates leave the current stable release untouched. Corrected candidates require a new RC tag; published tags are never rewritten.
 - Nightly channel is built/published by [`.github/workflows/nightly.yml`](/Users/cleider/dev/Particelle/.github/workflows/nightly.yml).
 - Packaging logic is centralized in [`scripts/package_release.sh`](/Users/cleider/dev/Particelle/scripts/package_release.sh).
