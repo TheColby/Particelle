@@ -4,7 +4,7 @@ Particelle ships signed release artifacts for macOS and Linux plus channel-aware
 
 ## Channels
 
-- `stable`: latest tagged release (`v*`)
+- `stable`: latest promoted, non-prerelease release (not an RC)
 - `nightly`: rolling prerelease on tag `nightly`
 - `source`: build locally from the checked-out repository
 
@@ -16,7 +16,7 @@ Use the root installer script:
 ./install.sh --channel stable
 ./install.sh --channel nightly
 ./install.sh --channel source
-./install.sh --channel stable --version v0.2.0
+./install.sh --channel stable --version v0.2.3
 ./install.sh --channel stable --verify-signatures
 ```
 
@@ -57,6 +57,10 @@ Alongside:
 - `*.sha256` per artifact
 - consolidated `SHA256SUMS`
 - Sigstore keyless signatures/certificates (`*.sig`, `*.pem`)
+- `Particelle_User_Guide_v0.3.0.pdf` on v0.3.0, plus the listening demos, presets, and `obelisk-m0-preview_<version>_<target>.tar.gz` C API/host archives
+- Cargo metadata SBOM and release provenance, also checksummed and signed
+
+`SHA256SUMS` covers all unsigned deliverables, including individual `.sha256` sidecars. Signatures and certificates are produced afterward and therefore cannot be included in that manifest without a circular dependency.
 
 When signatures are verified, the installer validates keyless certificates against:
 
@@ -67,6 +71,7 @@ When signatures are verified, the installer validates keyless certificates again
 
 ## CI/Automation
 
-- Tagged releases are built/published by [`.github/workflows/release.yml`](/Users/cleider/dev/Particelle/.github/workflows/release.yml).
+- A maintainer creates an RC tag. [`.github/workflows/release.yml`](/Users/cleider/dev/Particelle/.github/workflows/release.yml) runs release gates and publishes it as a prerelease. On success it tags the same commit for GA and dispatches the GA workflow; GA stays a prerelease until pinned installer and Homebrew tests pass and the formula update lands on `main`.
+- Failed gates leave the current stable release untouched. Corrected candidates require a new RC tag; published tags are never rewritten.
 - Nightly channel is built/published by [`.github/workflows/nightly.yml`](/Users/cleider/dev/Particelle/.github/workflows/nightly.yml).
 - Packaging logic is centralized in [`scripts/package_release.sh`](/Users/cleider/dev/Particelle/scripts/package_release.sh).

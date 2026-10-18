@@ -288,7 +288,7 @@ class Book(BaseDocTemplate):
         c.setFont(ROMAN, 8)
         c.drawString(MARGIN, HEIGHT - 25, 'PARTICELLE  /  USER GUIDE')
         c.drawRightString(WIDTH - MARGIN, 28, str(doc.page))
-        c.drawString(MARGIN, 28, 'Source-tree edition  /  October 2026')
+        c.drawString(MARGIN, 28, 'CLI release edition  /  October 2026')
         c.restoreState()
 
     def afterFlowable(self, flowable):
@@ -333,7 +333,7 @@ def build(text, output):
               Spacer(1, 27), Paragraph('Granular sound design, spatial composition,<br/>and expressive control', subtitle_style),
               Spacer(1, 26), Paragraph('Practical workflows / Illustrated concepts<br/>Listening exercises / Command and patch reference', STYLES['body']),
               Spacer(1, 12), Paragraph('Colby Leider, PhD', STYLES['body']),
-              Spacer(1, 10), Paragraph('SOURCE-TREE EDITION  /  OCTOBER 10, 2026', STYLES['label']), PageBreak()]
+              Spacer(1, 10), Paragraph('V0.3.0 CLI EDITION  /  OCTOBER 17, 2026', STYLES['label']), PageBreak()]
     toc = TableOfContents()
     toc.levelStyles = [ParagraphStyle('toc', fontName=ROMAN, fontSize=9.0, leading=10.5, spaceBefore=0),
                        ParagraphStyle('tocsub', fontName=ROMAN, fontSize=8.2, leading=10.5, leftIndent=14)]

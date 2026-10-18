@@ -20,7 +20,7 @@ done
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 build_dir="$repo_root/target/$target/release"
-asset_base="obelisk-m0_${version}_${target}"
+asset_base="obelisk-m0-preview_${version}_${target}"
 stage_dir="$(mktemp -d "${TMPDIR:-/tmp}/obelisk-m0.XXXXXX")"
 trap 'rm -rf "$stage_dir"' EXIT
 mkdir -p "$stage_dir/$asset_base/bin" "$stage_dir/$asset_base/include" "$stage_dir/$asset_base/presets"

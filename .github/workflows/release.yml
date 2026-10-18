@@ -7,156 +7,284 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release tag (e.g., v0.2.0). If omitted, uses current ref tag."
-        required: false
+        description: "Existing v0.3.0 or v0.3.0-rc.N tag"
+        required: true
         type: string
 
 permissions:
   contents: write
+  actions: write
   id-token: write
+  pull-requests: write
 
 jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - run: sudo apt-get update && sudo apt-get install -y sox libasound2-dev pkg-config
+      - name: Check tag and locked dependencies
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${{ github.event.inputs.tag || github.ref_name }}"
+          python3 scripts/check_release_version.py --tag "$tag"
+          if [[ "$tag" == v0.3.0 ]] && [[ "$(gh release view "$tag" --json isPrerelease --jq '.isPrerelease' 2>/dev/null || true)" == false ]]; then
+            echo 'Stable v0.3.0 already exists; refusing to demote it on rerun' >&2
+            exit 1
+          fi
+          python3 -m unittest scripts/test_release_pipeline.py
+          cargo metadata --locked --format-version 1 --no-deps > /dev/null
+      - run: ./scripts/verify_sample_pack.sh
+      - run: ruby -c Formula/particelle.rb
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - run: cargo test --workspace --locked
+      - run: ./scripts/check_performance.sh
+      - run: ./scripts/check_first_run.sh
+      - run: ./scripts/check_examples.sh
+      - run: ./scripts/qualify_obelisk_m0.sh
+      - run: cargo test --manifest-path obelisk-wasm/Cargo.toml --locked
+      - run: node --test web/audio.test.mjs
+      - run: ./scripts/build_wasm.sh
+      - run: node web/wasm-smoke.mjs
+
+  parity:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-15-intel, macos-15]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y sox libasound2-dev pkg-config
+      - if: runner.os == 'macOS'
+        run: brew install sox
+      - run: ./scripts/check_render_parity.sh
+      - uses: actions/upload-artifact@v7
+        with:
+          name: parity-${{ matrix.os }}
+          path: target/render-parity/report.json
+
   build:
+    needs: [preflight, parity]
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-          - os: macos-14
+          - os: macos-15-intel
             target: x86_64-apple-darwin
-          - os: macos-14
+          - os: macos-15
             target: aarch64-apple-darwin
     runs-on: ${{ matrix.os }}
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Resolve release version
-        id: version
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y sox libasound2-dev pkg-config
+      - if: runner.os == 'macOS'
+        run: brew install sox
+      - name: Build and package
         shell: bash
         run: |
-          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
-            version="${GITHUB_REF_NAME}"
-          elif [[ -n "${{ github.event.inputs.tag || '' }}" ]]; then
-            version="${{ github.event.inputs.tag }}"
-          else
-            version="manual-${GITHUB_RUN_NUMBER}"
-          fi
-          echo "value=${version}" >>"$GITHUB_OUTPUT"
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
-
-      - name: Cache cargo artifacts
-        uses: Swatinem/rust-cache@v2
-
-      - name: Install Linux audio build deps
+          set -euo pipefail
+          tag="${{ github.event.inputs.tag || github.ref_name }}"
+          cargo build --release --locked -p particelle-cli -p obelisk-m0 --target "${{ matrix.target }}"
+          python3 scripts/check_release_version.py --tag "$tag" --binary "target/${{ matrix.target }}/release/particelle"
+          ./scripts/package_release.sh --target "${{ matrix.target }}" --version "$tag" --binary "target/${{ matrix.target }}/release/particelle" --out-dir dist
+          ./scripts/package_obelisk_m0.sh --target "${{ matrix.target }}" --version "$tag" --out-dir dist
+          python3 scripts/check_release_version.py --tag "$tag" --archive "dist/particelle_${tag}_${{ matrix.target }}.tar.gz"
+          work="$(mktemp -d)"
+          trap 'rm -rf "$work"' EXIT
+          tar -xzf "dist/particelle_${tag}_${{ matrix.target }}.tar.gz" -C "$work"
+          bin="$work/particelle_${tag}_${{ matrix.target }}/bin/particelle"
+          test "$("$bin" --version)" = "particelle 0.3.0"
+          ./scripts/prepare_example_samples.sh
+          "$bin" init > "$work/patch.yaml"
+          "$bin" validate "$work/patch.yaml"
+          "$bin" render "$work/patch.yaml" -o "$work/sound.wav" --duration 0.25
+          sox "$work/sound.wav" -n stat 2>&1 | awk -F': *' '/RMS.*amplitude/{if ($2 > 0.0000001) good=1} END{exit !good}'
+      - name: Curated demos and presets
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev pkg-config sox
-
-      - name: Build release binary
-        run: cargo build --release -p particelle-cli -p obelisk-m0 --target ${{ matrix.target }}
-
-      - name: Package release artifact
         run: |
-          ./scripts/package_release.sh \
-            --target "${{ matrix.target }}" \
-            --version "${{ steps.version.outputs.value }}" \
-            --binary "target/${{ matrix.target }}/release/particelle" \
-            --out-dir dist
-
-      - name: Package curated listening demos
-        if: runner.os == 'Linux'
-        run: ./scripts/package_listening_demos.sh dist/listening-demos
-
-      - name: Package versioned preset catalog
-        if: runner.os == 'Linux'
-        run: ./scripts/package_presets.sh dist/presets
-
-      - name: Package Obelisk M0 host API
-        run: ./scripts/package_obelisk_m0.sh --target "${{ matrix.target }}" --version "${{ steps.version.outputs.value }}" --out-dir dist
-
-      - name: Upload packaged artifacts
-        uses: actions/upload-artifact@v7
+          ./scripts/package_listening_demos.sh dist/listening-demos
+          ./scripts/package_presets.sh dist/presets
+      - uses: actions/upload-artifact@v7
         with:
           name: release-${{ matrix.target }}
-          path: dist/*
-
-  publish:
-    needs: build
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Resolve release version
-        id: version
-        shell: bash
-        run: |
-          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
-            version="${GITHUB_REF_NAME}"
-          elif [[ -n "${{ github.event.inputs.tag || '' }}" ]]; then
-            version="${{ github.event.inputs.tag }}"
-          else
-            version="manual-${GITHUB_RUN_NUMBER}"
-          fi
-          echo "value=${version}" >>"$GITHUB_OUTPUT"
-
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: release-*
-          path: dist
-          merge-multiple: true
-
-      - name: Consolidate checksums
-        shell: bash
-        run: |
-          cat dist/*.sha256 > dist/SHA256SUMS
-
-      - name: Generate SBOM and provenance
-        run: ./scripts/generate_provenance.sh dist
-
-      - name: Install cosign
-        uses: sigstore/cosign-installer@v3
-
-      - name: Sign release payloads
-        shell: bash
-        run: |
-          for artifact in dist/*.tar.gz dist/SHA256SUMS; do
-            cosign sign-blob --yes \
-              --output-signature "${artifact}.sig" \
-              --output-certificate "${artifact}.pem" \
-              "$artifact"
-          done
-
-      - name: Publish GitHub release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.version.outputs.value }}
-          name: Particelle ${{ steps.version.outputs.value }}
-          generate_release_notes: true
-          files: |
+          path: |
             dist/*.tar.gz
             dist/*.sha256
-            dist/SHA256SUMS
-            dist/*.tar.gz.sig
-            dist/*.tar.gz.pem
-            dist/SHA256SUMS.sig
-            dist/SHA256SUMS.pem
-            dist/particelle.sbom.cargo-metadata.json
-            dist/particelle.provenance.json
             dist/listening-demos/*.tar.gz
             dist/listening-demos/*.sha256
             dist/presets/*.tar.gz
             dist/presets/*.sha256
-            dist/obelisk-m0_*.tar.gz
-            dist/obelisk-m0_*.sha256
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: dist
+          merge-multiple: true
+      - name: Build versioned guide
+        run: |
+          sudo apt-get update && sudo apt-get install -y texlive-fonts-recommended
+          python3 -m venv /tmp/particelle-guide-venv
+          /tmp/particelle-guide-venv/bin/pip install reportlab pypdf
+          /tmp/particelle-guide-venv/bin/python scripts/build_userguide.py --output dist/Particelle_User_Guide_v0.3.0.pdf
+          /tmp/particelle-guide-venv/bin/python - <<'PY'
+          from pathlib import Path
+          from pypdf import PdfReader
+          p = Path('dist/Particelle_User_Guide_v0.3.0.pdf')
+          assert p.stat().st_size > 100000, 'guide PDF is unexpectedly small'
+          assert '0.3.0 CLI release' in Path('docs/USERGUIDE.md').read_text()
+          reader = PdfReader(p)
+          assert len(reader.pages) > 250, 'guide is missing pages'
+          assert 'V0.3.0 CLI EDITION' in reader.pages[0].extract_text()
+          fonts = {str(ref.get('/BaseFont')) for page in reader.pages[:5]
+                   for ref in page['/Resources']['/Font'].values()}
+          assert any('TeXGyreSchola' in font or 'NewCenturySchoolbook' in font for font in fonts), fonts
+          PY
+      - name: Consolidate and attest all assets
+        run: |
+          python3 scripts/stage_release_assets.py dist
+          ./scripts/generate_provenance.sh dist
+          python3 scripts/finalize_release_assets.py dist
+          (cd dist && sha256sum -c SHA256SUMS)
+      - uses: sigstore/cosign-installer@v3
+      - name: Sign all deliverables and manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          for artifact in dist/*.tar.gz dist/*.sha256 dist/*.pdf dist/*.json dist/SHA256SUMS; do
+            cosign sign-blob --yes --output-signature "${artifact}.sig" --output-certificate "${artifact}.pem" "$artifact"
+            cosign verify-blob --certificate "${artifact}.pem" --signature "${artifact}.sig" \
+              --certificate-identity-regexp "^https://github.com/${GITHUB_REPOSITORY}/.github/workflows/release.yml@.*$" \
+              --certificate-oidc-issuer https://token.actions.githubusercontent.com "$artifact"
+          done
+      - name: Publish as prerelease until promotion passes
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          name: Particelle ${{ github.event.inputs.tag || github.ref_name }}
+          prerelease: true
+          fail_on_unmatched_files: true
+          body: |
+            CLI-first release candidate. Obelisk M0 C API/host archives and browser source remain previews.
+            No named VST3/AU host, physical MPE controller, MTS-ESP wrapper, or browser playback qualification is claimed.
+            Install only after checking SHA256SUMS and Sigstore signatures. The versioned PDF guide is attached.
+          files: dist/*
+
+  promote-rc:
+    if: contains(github.event.inputs.tag || github.ref_name, '-rc.')
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.tag || github.ref }}
+      - name: Promote same commit to GA candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${{ github.event.inputs.tag || github.ref_name }}"
+          final="${tag%-rc.*}"
+          if git ls-remote --exit-code --tags origin "refs/tags/$final" >/dev/null 2>&1; then
+            echo "GA tag already exists; refusing to rewrite it" >&2
+            exit 1
+          fi
+          git tag "$final" "$(git rev-list -n 1 "$tag")"
+          git push origin "refs/tags/$final"
+          gh workflow run release.yml --ref "$final" -f tag="$final"
+
+  promote-ga:
+    if: ${{ !contains(github.event.inputs.tag || github.ref_name, '-rc.') }}
+    needs: publish
+    runs-on: macos-15
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.tag || github.ref }}
+      - name: Verify installed GA and prepare formula
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${{ github.event.inputs.tag || github.ref_name }}"
+          test "$tag" = v0.3.0
+          git fetch --tags origin
+          qualified=0
+          for rc in $(git tag -l 'v0.3.0-rc.*'); do
+            if [[ "$(git rev-list -n 1 "$rc")" == "$(git rev-list -n 1 "$tag")" ]] && gh release view "$rc" >/dev/null 2>&1; then
+              qualified=1
+              break
+            fi
+          done
+          test "$qualified" -eq 1 || { echo 'GA tag has no published RC on the same commit' >&2; exit 1; }
+          work="$(mktemp -d)"
+          trap 'rm -rf "$work"' EXIT
+          ./install.sh --channel stable --version "$tag" --install-dir "$work"
+          test "$("$work/particelle" --version)" = 'particelle 0.3.0'
+          ./scripts/update_homebrew_formula.sh --tag "$tag"
+          ruby -c Formula/particelle.rb
+          brew install --formula "$PWD/Formula/particelle.rb"
+          brew test particelle
+          test "$(brew --prefix)/bin/particelle" != ''
+          test "$(particelle --version)" = 'particelle 0.3.0'
+      - name: Commit formula, then make release stable
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${{ github.event.inputs.tag || github.ref_name }}"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git fetch origin main
+          git switch -c "codex/formula-${tag}" origin/main
+          ./scripts/update_homebrew_formula.sh --tag "$tag"
+          git add Formula/particelle.rb
+          git commit -m "Update Homebrew formula for ${tag}"
+          if ! git push origin HEAD:main; then
+            git push origin "HEAD:refs/heads/codex/formula-${tag}"
+            gh pr create --base main --head "codex/formula-${tag}" --title "Update Homebrew formula for ${tag}" --body "Automated release formula update after install and brew tests."
+            gh workflow run ci.yml --ref "codex/formula-${tag}"
+            run_id=''
+            for i in {1..12}; do
+              run_id="$(gh run list --workflow ci.yml --branch "codex/formula-${tag}" --limit 1 --json databaseId --jq '.[0].databaseId // empty')"
+              [[ -n "$run_id" ]] && break
+              sleep 10
+            done
+            test -n "$run_id"
+            gh run watch "$run_id" --exit-status
+            gh pr merge "codex/formula-${tag}" --squash --delete-branch
+          fi
+          gh release edit "$tag" --prerelease=false --latest

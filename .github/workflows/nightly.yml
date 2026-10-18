@@ -65,7 +65,13 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: nightly-${{ matrix.target }}
-          path: dist/*
+          path: |
+            dist/*.tar.gz
+            dist/*.sha256
+            dist/listening-demos/*.tar.gz
+            dist/listening-demos/*.sha256
+            dist/presets/*.tar.gz
+            dist/presets/*.sha256
 
   publish:
     needs: build
@@ -87,10 +93,15 @@ jobs:
 
       - name: Consolidate checksums
         shell: bash
-        run: cat dist/*.sha256 > dist/SHA256SUMS
+        run: python3 scripts/stage_release_assets.py dist
 
       - name: Generate SBOM and provenance
         run: ./scripts/generate_provenance.sh dist
+
+      - name: Checksum every asset
+        run: |
+          python3 scripts/finalize_release_assets.py dist
+          (cd dist && sha256sum -c SHA256SUMS)
 
       - name: Install cosign
         uses: sigstore/cosign-installer@v3
@@ -98,11 +109,14 @@ jobs:
       - name: Sign nightly payloads
         shell: bash
         run: |
-          for artifact in dist/*.tar.gz dist/SHA256SUMS; do
+          for artifact in dist/*.tar.gz dist/*.sha256 dist/*.json dist/SHA256SUMS; do
             cosign sign-blob --yes \
               --output-signature "${artifact}.sig" \
               --output-certificate "${artifact}.pem" \
               "$artifact"
+            cosign verify-blob --certificate "${artifact}.pem" --signature "${artifact}.sig" \
+              --certificate-identity-regexp "^https://github.com/${GITHUB_REPOSITORY}/.github/workflows/nightly.yml@.*$" \
+              --certificate-oidc-issuer https://token.actions.githubusercontent.com "$artifact"
           done
 
       - name: Publish/refresh nightly release
@@ -113,21 +127,6 @@ jobs:
           prerelease: true
           allowUpdates: true
           removeArtifacts: true
-          artifacts: >-
-            dist/*.tar.gz,
-            dist/*.sha256,
-            dist/SHA256SUMS,
-            dist/*.tar.gz.sig,
-            dist/*.tar.gz.pem,
-            dist/SHA256SUMS.sig,
-            dist/SHA256SUMS.pem
-            dist/particelle.sbom.cargo-metadata.json
-            dist/particelle.provenance.json
-            dist/listening-demos/*.tar.gz
-            dist/listening-demos/*.sha256
-            dist/presets/*.tar.gz
-            dist/presets/*.sha256
-            dist/obelisk-m0_*.tar.gz
-            dist/obelisk-m0_*.sha256
+          artifacts: "dist/*.tar.gz,dist/*.sha256,dist/*.json,dist/SHA256SUMS,dist/*.sig,dist/*.pem"
           body: |
             Automated nightly build from `${{ github.sha }}`.

@@ -1,4 +1,4 @@
 /target
 /Particelle/
 **/*.rs.bk
-Cargo.lock
+__pycache__/
