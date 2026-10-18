@@ -65,15 +65,17 @@ version="${tag#v}"
 asset_sha() {
   local asset_name="$1"
   local digest
-  if ! digest="$(gh release view "$tag" --repo "$repo" --json assets --jq ".assets[] | select(.name==\"$asset_name\") | .digest")"; then
-    echo "Failed to query GitHub release metadata for '$tag'." >&2
-    exit 1
-  fi
-  if [[ -z "$digest" ]]; then
-    echo "Unable to find digest for asset '$asset_name' on tag '$tag'." >&2
-    exit 1
-  fi
-  echo "${digest#sha256:}"
+  local attempt
+  for attempt in 1 2 3 4 5; do
+    digest="$(gh release view "$tag" --repo "$repo" --json assets --jq ".assets[] | select(.name==\"$asset_name\") | .digest")" || digest=""
+    if [[ "$digest" =~ ^sha256:[a-fA-F0-9]{64}$ ]]; then
+      echo "${digest#sha256:}"
+      return 0
+    fi
+    sleep 10
+  done
+  echo "Unable to resolve SHA-256 digest for '$asset_name' on tag '$tag'." >&2
+  exit 1
 }
 
 macos_arm_asset="particelle_${tag}_aarch64-apple-darwin.tar.gz"

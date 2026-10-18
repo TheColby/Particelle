@@ -11,7 +11,11 @@ Release workflows generate two machine-readable files:
 - `particelle.sbom.cargo-metadata.json`: Cargo package graph metadata.
 - `particelle.provenance.json`: revision, generation timestamp, and SHA-256 digests for release/demo artifacts.
 
-Binary archives and checksum manifests remain Sigstore-signed. Verify both the archive signature and its digest before installation.
+All unsigned release deliverables (archives, PDF guide, SBOM, provenance, and per-asset sidecars) appear in `SHA256SUMS`; each and the manifest receive Sigstore signatures. Verify both the archive signature and its digest before installation. Signature files cannot be included in the manifest they sign.
+
+## v0.3.0 Promotion Gate
+
+The release workflow runs locked-dependency version checks, workspace formatting/lint/tests, performance, first-run, all example audibility/fingerprints, portable M0, browser build tests, and native Linux/macOS Intel/arm64 render parity before packaging. Each extracted CLI archive must report `particelle 0.3.0` and produce non-silent audio through `init`, `validate`, and `render`. The versioned guide PDF is rebuilt and checked before publication. An RC passes to a GA tag on the same commit only after these checks; GA remains a prerelease until pinned installer and Homebrew installation succeed and the formula update lands. Failures do not alter the current stable release.
 
 ## Cross-Platform Render Policy
 

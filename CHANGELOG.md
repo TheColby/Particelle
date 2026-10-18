@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - release candidate
+
+CLI-first release: the changes below are included in the 0.3.0 candidate and remain subject to release gates. Obelisk M0 C API/host archives and browser code are previews; this release does not qualify VST3/AU hosts, physical MPE controllers, or real-browser playback.
+
 ### Added
 - **Granular pitch controls:** Connected cloud `playback_rate` and tuning-selected `pitch` to source playback, including mixed source/output sample rates and `loop_source: false`.
 - **M0 delivery:** Added JUCE VST3/AU wrapper source with in-process smoke coverage, standalone preset loading, a multichannel spatial voice bus, improved diffusion, and an offline WASM browser study.
@@ -39,6 +43,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Control Reconstruction:** Replaced cubic, monotone-cubic, sinc, two-pole, and MinBLEP linear fallbacks with dedicated processors; one-pole and slew modes now continue advancing between control ticks.
 - **Rust 1.98 CI:** Reworked the M0 live stereo copy loop to satisfy the latest strict clippy lint without raising the Rust 1.70 minimum version.
 - **Portable M0 Qualification:** The hardware-free M0 release gate now disables realtime audio features, avoiding accidental ALSA dependencies on clean CI runners.
+
+## [0.2.3] - 2026-03-15
+
+Release-workflow compatibility update for macOS archive targets.
+
+## [0.2.2] - 2026-03-15
+
+Linux CI dependency and release/source build corrections.
+
+## [0.2.1] - 2026-03-15
+
+Sample-pack verification fallback when `ripgrep` is unavailable.
+
+## [0.2.0] - 2026-03-15
+
+First tagged 0.2 release. The CLI binary in earlier 0.2 artifacts still reported `0.1.0`; v0.3.0 aligns the binary and release versions.
 
 ## [0.1.0] - 2026-03-03
 

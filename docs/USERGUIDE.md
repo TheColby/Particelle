@@ -4,7 +4,7 @@
 
 Granular sound design, spatial composition, and expressive control
 
-Expanded book edition for the 0.1.0 source tree. Prepared October 10, 2026.
+Expanded book edition for the 0.3.0 CLI release. Prepared October 17, 2026. Obelisk M0 host archives and the browser study remain previews, not qualified VST3/AU or physical-controller releases.
 
 ## Preface
 
@@ -2003,7 +2003,7 @@ Particelle ships signed release artifacts for macOS and Linux plus channel-aware
 
 ## Channels
 
-- `stable`: latest tagged release (`v*`)
+- `stable`: latest promoted, non-prerelease release (not an RC)
 - `nightly`: rolling prerelease on tag `nightly`
 - `source`: build locally from the checked-out repository
 
@@ -2015,7 +2015,7 @@ Use the root installer script:
 ./install.sh --channel stable
 ./install.sh --channel nightly
 ./install.sh --channel source
-./install.sh --channel stable --version v0.2.0
+./install.sh --channel stable --version v0.2.3
 ./install.sh --channel stable --verify-signatures
 ```
 
@@ -2056,6 +2056,10 @@ Alongside:
 - `*.sha256` per artifact
 - consolidated `SHA256SUMS`
 - Sigstore keyless signatures/certificates (`*.sig`, `*.pem`)
+- Versioned v0.3.0 PDF guide, listening demos, presets, and preview-labeled Obelisk M0 C API/host archives
+- Cargo metadata SBOM and provenance, included in the checksum manifest and signed
+
+RCs and GA candidates stay prereleases until the release gates, pinned installer check, Homebrew test, and formula update succeed. `stable` does not move on failure. Browser and native plug-in qualification are not asserted by these portable checks.
 
 When signatures are verified, the installer validates keyless certificates against:
 
@@ -2066,7 +2070,7 @@ When signatures are verified, the installer validates keyless certificates again
 
 ## CI/Automation
 
-- Tagged releases are built/published by [`.github/workflows/release.yml`](/Users/cleider/dev/Particelle/.github/workflows/release.yml).
+- Tagged releases are gated, published as prereleases, and promoted only after installer and formula tests by [`.github/workflows/release.yml`](/Users/cleider/dev/Particelle/.github/workflows/release.yml).
 - Nightly channel is built/published by [`.github/workflows/nightly.yml`](/Users/cleider/dev/Particelle/.github/workflows/nightly.yml).
 - Packaging logic is centralized in [`scripts/package_release.sh`](/Users/cleider/dev/Particelle/scripts/package_release.sh).
 
