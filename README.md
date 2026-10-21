@@ -14,9 +14,9 @@ and listening studies of Curtis Roads, Björk, and Daft Punk, with runnable exam
 `examples/userguide/`. The chapter distinguishes granular synthesis from other ways
 of working with small sounds; it does not claim those artists used Particelle.
 
-**Release status:** v0.3.1 is the corrected CLI-first release candidate. v0.3.0 remains a prerelease because its installer exit-status check failed; stable and Homebrew remain on v0.2.3 until v0.3.1 passes every gate. A versioned PDF guide is attached to each release. Obelisk M0 C API/host archives and browser source are previews; named VST3/AU hosts, physical MPE controllers, and browser playback are not qualified by this release.
+**Release status:** v0.3.1 is stable for the CLI on Linux x86_64, macOS Intel, and macOS Apple Silicon. Its signed release includes a versioned PDF guide. Obelisk M0 host archives and browser source remain previews; this release does not qualify named VST3/AU hosts, physical MPE controllers, or browser playback.
 
-An algorithmic granular synthesis engine designed for extreme microtonal precision and formats beyond stereo. Not GUI-driven. Ugly, yet capable. Pure infrastructure--controlled through YAML and a CLI, or MIDI and networked Open Sound Control. Scatter millions of grains across 64-channel Dolby Atmos spaces. You can easily patch any audio file's audio features to control granulation parameters of itself or another sound file. Tune in 31-EDO or load an included Scala scale. Render deterministically to 64-bit float WAV files, or run live to  your multiple audio interfaces.
+Particelle turns a WAV recording into clouds of short sounds. Write a YAML patch, render a new WAV, or run it live with a suitable audio device. You can shape the clouds with curves, audio analysis, MIDI, or OSC, and send them to more than two output channels. A multichannel WAV is not automatically a Dolby Atmos master. The CLI writes 32-bit float WAV by default, with PCM24 and PCM16 options. No mystery knobs: the patch is the score.
 
 ```sh
 # 60 seconds to granular sound — no toolchain required
@@ -69,14 +69,15 @@ curl -fsSL https://raw.githubusercontent.com/TheColby/Particelle/main/install.sh
 ./install.sh --channel stable
 ./install.sh --channel nightly
 ./install.sh --channel source
-./install.sh --channel stable --version v0.2.3
+./install.sh --channel stable --version v0.3.1
 ./install.sh --channel stable --verify-signatures
 ```
 
 ### 🍺 Homebrew
 
 ```sh
-brew install --formula https://raw.githubusercontent.com/TheColby/Particelle/main/Formula/particelle.rb
+brew tap TheColby/Particelle https://github.com/TheColby/Particelle.git
+brew install TheColby/Particelle/particelle
 ```
 
 ### 🆕 What’s New
@@ -97,7 +98,7 @@ Upgrade paths:
 3. `nightly -> stable`: run `./install.sh --channel stable`.
 4. pin/unpin: use `--version <tag>` to pin, then omit `--version` to unpin.
 
-Release channels, signatures, and published artifact names are documented in [`docs/RELEASE_CHANNELS.md`](/Users/cleider/dev/Particelle/docs/RELEASE_CHANNELS.md).
+Release channels, signatures, and published artifact names are documented in [`docs/RELEASE_CHANNELS.md`](docs/RELEASE_CHANNELS.md).
 The release workflow checks the locked Rust graph, all examples, native Linux/macOS parity, archive audio output, and PDF integrity before it can promote a candidate. A failing RC or GA remains a prerelease; it never advances the stable installer.
 
 ### 🔧 From Source (manual)
@@ -129,10 +130,10 @@ Examples and documentation snippets that reference `samples/*.wav` target a dete
 ./scripts/generate_sample_pack.sh
 ```
 
-- Assets live in [`samples/`](/Users/cleider/dev/Particelle/samples) and are described in [`samples/README.md`](/Users/cleider/dev/Particelle/samples/README.md).
-- [`samples/manifest.sha256`](/Users/cleider/dev/Particelle/samples/manifest.sha256) records the canonical hashes for every generated file.
+- Assets live in [`samples/`](samples) and are described in [`samples/README.md`](samples/README.md).
+- [`samples/manifest.sha256`](samples/manifest.sha256) records the canonical hashes for every generated file.
 - The generator scans `README.md`, `docs/`, and `examples/` for `samples/*.wav` references so the pack stays aligned with the documented surface area.
-- Run [`scripts/verify_sample_pack.sh`](/Users/cleider/dev/Particelle/scripts/verify_sample_pack.sh) to confirm deterministic regeneration and referenced-file coverage.
+- Run [`scripts/verify_sample_pack.sh`](scripts/verify_sample_pack.sh) to confirm deterministic regeneration and referenced-file coverage.
 
 ### 🎧 Curated Listening Demos
 
@@ -142,9 +143,9 @@ For fast, ear-first evaluation of output quality:
 ./scripts/render_listening_demos.sh
 ```
 
-- Renders a curated 5-demo set from [`examples/listening_demos.tsv`](/Users/cleider/dev/Particelle/examples/listening_demos.tsv)
+- Renders a curated 5-demo set from [`examples/listening_demos.tsv`](examples/listening_demos.tsv)
 - Writes WAV files, playlist, metrics, and manifest to `target/listening-demos/`
-- Full usage details in [`docs/LISTENING_DEMOS.md`](/Users/cleider/dev/Particelle/docs/LISTENING_DEMOS.md)
+- Full usage details in [`docs/LISTENING_DEMOS.md`](docs/LISTENING_DEMOS.md)
 
 ---
 
@@ -1571,11 +1572,11 @@ The workspace ships dedicated regression entry points:
 3. renders a 1-second offline WAV for every example,
 4. computes deterministic per-example PCM16 SHA-256 fingerprints,
 5. fails on silence, out-of-range dynamics, or fingerprint drift, and
-6. writes per-example metrics and summary reports under [`target/example-metrics/`](/Users/cleider/dev/Particelle/target/example-metrics).
+6. writes per-example metrics and summary reports under [`target/example-metrics/`](target/example-metrics).
 
 The metrics files record peak amplitude, RMS amplitude, crest factor, active channel count, per-channel RMS values, and the deterministic PCM16 hash so DSP regressions are visible even when a render is technically non-silent.
 
-Golden fingerprint baseline file: [`examples/golden_fingerprints.tsv`](/Users/cleider/dev/Particelle/examples/golden_fingerprints.tsv). Update it with:
+Golden fingerprint baseline file: [`examples/golden_fingerprints.tsv`](examples/golden_fingerprints.tsv). Update it with:
 
 ```sh
 ./scripts/update_golden_fingerprints.sh
@@ -1589,12 +1590,12 @@ EXAMPLE_SHARD_TOTAL=4 EXAMPLE_SHARD_INDEX=0 ./scripts/check_examples.sh
 
 `check_performance.sh` runs representative render-throughput scenarios plus two deterministic realtime benchmarks:
 
-- block-latency benchmark: [`particelle-core/examples/realtime_block_benchmark.rs`](/Users/cleider/dev/Particelle/particelle-core/examples/realtime_block_benchmark.rs)
-- soak/XRUN stability benchmark: [`particelle-core/examples/realtime_soak_benchmark.rs`](/Users/cleider/dev/Particelle/particelle-core/examples/realtime_soak_benchmark.rs)
+- block-latency benchmark: [`particelle-core/examples/realtime_block_benchmark.rs`](particelle-core/examples/realtime_block_benchmark.rs)
+- soak/XRUN stability benchmark: [`particelle-core/examples/realtime_soak_benchmark.rs`](particelle-core/examples/realtime_soak_benchmark.rs)
 
 It fails if configured throughput, latency, or XRUN-equivalent budgets are exceeded.
 
-External control-path behavior is covered by deterministic tests in [`particelle-cli/tests/external_control_io.rs`](/Users/cleider/dev/Particelle/particelle-cli/tests/external_control_io.rs), including OSC queue timing semantics and OSC/MIDI same-field ordering.
+External control-path behavior is covered by deterministic tests in [`particelle-cli/tests/external_control_io.rs`](particelle-cli/tests/external_control_io.rs), including OSC queue timing semantics and OSC/MIDI same-field ordering.
 
 For launch preparation, run the full announcement gate:
 
@@ -1606,7 +1607,7 @@ This gate runs sample-pack verification, fmt/clippy/tests, performance budgets, 
 
 ## 📣 Announcement FAQ
 
-Anticipated launch objections and concrete mitigations are documented in [`docs/ANNOUNCEMENT_FAQ.md`](/Users/cleider/dev/Particelle/docs/ANNOUNCEMENT_FAQ.md), with each item tied to specific code and documentation changes.
+Anticipated launch objections and concrete mitigations are documented in [`docs/ANNOUNCEMENT_FAQ.md`](docs/ANNOUNCEMENT_FAQ.md), with each item tied to specific code and documentation changes.
 
 ---
 
@@ -1676,7 +1677,7 @@ Particelle accepts a compatibility layer for legacy patch syntax when field name
 
 Patches now declare `schema_version` explicitly. `particelle init` emits the current version, and `particelle validate` reports any compatibility migrations it applied before validation.
 
-Migration IDs, source/target version semantics, and current-version policy are documented in [`docs/SCHEMA_MIGRATIONS.md`](/Users/cleider/dev/Particelle/docs/SCHEMA_MIGRATIONS.md).
+Migration IDs, source/target version semantics, and current-version policy are documented in [`docs/SCHEMA_MIGRATIONS.md`](docs/SCHEMA_MIGRATIONS.md).
 
 ## ⚖️ License
 

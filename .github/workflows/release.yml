@@ -203,7 +203,7 @@ jobs:
           prerelease: true
           fail_on_unmatched_files: true
           body: |
-            CLI-first release candidate. Obelisk M0 C API/host archives and browser source remain previews.
+            CLI-first release. RC tags remain prereleases until their install gates pass. Obelisk M0 C API/host archives and browser source remain previews.
             No named VST3/AU host, physical MPE controller, MTS-ESP wrapper, or browser playback qualification is claimed.
             Install only after checking SHA256SUMS and Sigstore signatures. The versioned PDF guide is attached.
           files: dist/*
