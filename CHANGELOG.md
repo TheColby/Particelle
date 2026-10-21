@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed the stable installer exit trap, which caused a successful prebuilt installation to return a failure status.
 - Made the release workflow derive CLI, guide, and archive version checks from the tag so patch releases do not require hard-coded edits.
 - Corrected the Homebrew release gate for tap-only installs and added a plain-language listening chapter to the user guide, grounded in Curtis Roads's *Microsound* and electronic/pop recordings.
+- Made the Homebrew formula find the executable both in a nested release tarball and in Homebrew's flattened staging directory.
 
 ## [0.3.0] - 2026-10-17 (prerelease; not promoted)
 

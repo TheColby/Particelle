@@ -72,7 +72,7 @@ When signatures are verified, the installer validates keyless certificates again
 
 ## CI/Automation
 
-- A maintainer creates an RC tag. [`.github/workflows/release.yml`](/Users/cleider/dev/Particelle/.github/workflows/release.yml) runs release gates and publishes it as a prerelease. The pinned RC installer and Homebrew formula must pass before automation tags the same commit for GA. GA stays a prerelease until its own installer and Homebrew tests pass and the formula update lands on `main`. v0.3.0 was stopped at the GA installer gate; v0.3.1-rc.1 was stopped at the RC Homebrew gate. The corrected candidate tests through a temporary tap.
+- A maintainer creates an RC tag. [`.github/workflows/release.yml`](/Users/cleider/dev/Particelle/.github/workflows/release.yml) runs release gates and publishes it as a prerelease. The pinned RC installer and Homebrew formula must pass before automation tags the same commit for GA. GA stays a prerelease until its own installer and Homebrew tests pass and the formula update lands on `main`. v0.3.0 was stopped at the GA installer gate; v0.3.1-rc.1 was stopped because Homebrew requires a tap; v0.3.1-rc.2 exposed Homebrew's flattened archive layout. The corrected candidate tests both layouts before running an install through a temporary tap.
 - Failed gates leave the current stable release untouched. Corrected candidates require a new RC tag; published tags are never rewritten.
 - Nightly channel is built/published by [`.github/workflows/nightly.yml`](/Users/cleider/dev/Particelle/.github/workflows/nightly.yml).
 - Packaging logic is centralized in [`scripts/package_release.sh`](/Users/cleider/dev/Particelle/scripts/package_release.sh).
