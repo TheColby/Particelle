@@ -1923,11 +1923,11 @@ The workspace ships dedicated regression entry points:
 3. renders a 1-second offline WAV for every example,
 4. computes deterministic per-example PCM16 SHA-256 fingerprints,
 5. fails on silence, out-of-range dynamics, or fingerprint drift, and
-6. writes per-example metrics and summary reports under [`target/example-metrics/`](/Users/cleider/dev/Particelle/target/example-metrics).
+6. writes per-example metrics and summary reports under `target/example-metrics/`.
 
 The metrics files record peak amplitude, RMS amplitude, crest factor, active channel count, per-channel RMS values, and the deterministic PCM16 hash so DSP regressions are visible even when a render is technically non-silent.
 
-Golden fingerprint baseline file: [`examples/golden_fingerprints.tsv`](/Users/cleider/dev/Particelle/examples/golden_fingerprints.tsv). Update it with:
+Golden fingerprint baseline file: `examples/golden_fingerprints.tsv`. Update it with:
 
 ```sh
 ./scripts/update_golden_fingerprints.sh
@@ -1941,12 +1941,12 @@ EXAMPLE_SHARD_TOTAL=4 EXAMPLE_SHARD_INDEX=0 ./scripts/check_examples.sh
 
 `check_performance.sh` runs representative render-throughput scenarios plus two deterministic realtime benchmarks:
 
-- block-latency benchmark: [`particelle-core/examples/realtime_block_benchmark.rs`](/Users/cleider/dev/Particelle/particelle-core/examples/realtime_block_benchmark.rs)
-- soak/XRUN stability benchmark: [`particelle-core/examples/realtime_soak_benchmark.rs`](/Users/cleider/dev/Particelle/particelle-core/examples/realtime_soak_benchmark.rs)
+- block-latency benchmark: `particelle-core/examples/realtime_block_benchmark.rs`
+- soak/XRUN stability benchmark: `particelle-core/examples/realtime_soak_benchmark.rs`
 
 It fails if configured throughput, latency, or XRUN-equivalent budgets are exceeded.
 
-External control-path behavior is covered by deterministic tests in [`particelle-cli/tests/external_control_io.rs`](/Users/cleider/dev/Particelle/particelle-cli/tests/external_control_io.rs), including OSC queue timing semantics and OSC/MIDI same-field ordering.
+External control-path behavior is covered by deterministic tests in `particelle-cli/tests/external_control_io.rs`, including OSC queue timing semantics and OSC/MIDI same-field ordering.
 
 For launch preparation, run the full announcement gate:
 
@@ -2054,7 +2054,7 @@ Use the root installer script:
 ./install.sh --channel stable
 ./install.sh --channel nightly
 ./install.sh --channel source
-./install.sh --channel stable --version v0.2.3
+./install.sh --channel stable --version v0.3.1
 ./install.sh --channel stable --verify-signatures
 ```
 
@@ -2066,18 +2066,19 @@ For prebuilt channels, the installer verifies SHA-256 checksums by default. Sigs
 
 ## Homebrew
 
-Particelle ships a first-party formula at [`Formula/particelle.rb`](/Users/cleider/dev/Particelle/Formula/particelle.rb).
+Particelle ships a first-party formula at `Formula/particelle.rb`.
 
 Install:
 
 ```sh
-brew install --formula https://raw.githubusercontent.com/TheColby/Particelle/main/Formula/particelle.rb
+brew tap TheColby/Particelle https://github.com/TheColby/Particelle.git
+brew install TheColby/Particelle/particelle
 ```
 
 Formula maintenance:
 
 ```sh
-./scripts/update_homebrew_formula.sh --tag v0.2.3
+./scripts/update_homebrew_formula.sh --tag v0.3.1
 ```
 
 This script refreshes release URLs and SHA-256 checksums in the formula from GitHub release metadata.
@@ -2110,9 +2111,9 @@ When signatures are verified, the installer validates keyless certificates again
 
 ## CI/Automation
 
-- Tagged releases are gated, published as prereleases, and promoted only after installer and formula tests by [`.github/workflows/release.yml`](/Users/cleider/dev/Particelle/.github/workflows/release.yml).
-- Nightly channel is built/published by [`.github/workflows/nightly.yml`](/Users/cleider/dev/Particelle/.github/workflows/nightly.yml).
-- Packaging logic is centralized in [`scripts/package_release.sh`](/Users/cleider/dev/Particelle/scripts/package_release.sh).
+- Tagged releases are gated, published as prereleases, and promoted only after installer and formula tests by `.github/workflows/release.yml`.
+- Nightly channel is built/published by `.github/workflows/nightly.yml`.
+- Packaging logic is centralized in `scripts/package_release.sh`.
 
 ## Realtime Operations
 The current source note is `docs/REALTIME_OPERATIONS.md`. The excerpt below is included for offline reading; consult that file for later revisions.

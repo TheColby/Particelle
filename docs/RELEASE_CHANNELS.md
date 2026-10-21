@@ -16,7 +16,7 @@ Use the root installer script:
 ./install.sh --channel stable
 ./install.sh --channel nightly
 ./install.sh --channel source
-./install.sh --channel stable --version v0.2.3
+./install.sh --channel stable --version v0.3.1
 ./install.sh --channel stable --verify-signatures
 ```
 
@@ -28,22 +28,23 @@ For prebuilt channels, the installer verifies SHA-256 checksums by default. Sigs
 
 ## Homebrew
 
-Particelle ships a first-party formula at [`Formula/particelle.rb`](/Users/cleider/dev/Particelle/Formula/particelle.rb).
+Particelle ships a first-party formula at [`Formula/particelle.rb`](../Formula/particelle.rb).
 
 Install:
 
 ```sh
-brew install --formula https://raw.githubusercontent.com/TheColby/Particelle/main/Formula/particelle.rb
+brew tap TheColby/Particelle https://github.com/TheColby/Particelle.git
+brew install TheColby/Particelle/particelle
 ```
 
 Formula maintenance:
 
 ```sh
-./scripts/update_homebrew_formula.sh --tag v0.2.3
+./scripts/update_homebrew_formula.sh --tag v0.3.1
 ```
 
 This script refreshes release URLs and SHA-256 checksums in the formula from GitHub release metadata.
-Without `--tag`, it selects the latest non-prerelease release; RC testing always passes an explicit tag. The release check creates a temporary Homebrew tap before installing the generated formula, because current Homebrew rejects direct local formula paths. The formula's version matches the CLI version even when its download URLs point to an RC tag.
+Without `--tag`, it selects the latest non-prerelease release; RC testing always passes an explicit tag. Homebrew requires the formula to be in a tap; the two-argument `brew tap` command names this repository explicitly, since it is not named `homebrew-Particelle`. The release check uses a temporary tap. The formula's version matches the CLI version even when its download URLs point to an RC tag.
 
 ## Release Assets
 
@@ -72,7 +73,7 @@ When signatures are verified, the installer validates keyless certificates again
 
 ## CI/Automation
 
-- A maintainer creates an RC tag. [`.github/workflows/release.yml`](/Users/cleider/dev/Particelle/.github/workflows/release.yml) runs release gates and publishes it as a prerelease. The pinned RC installer and Homebrew formula must pass before automation tags the same commit for GA. GA stays a prerelease until its own installer and Homebrew tests pass and the formula update lands on `main`. v0.3.0 was stopped at the GA installer gate; v0.3.1-rc.1 was stopped because Homebrew requires a tap; v0.3.1-rc.2 exposed Homebrew's flattened archive layout. The corrected candidate tests both layouts before running an install through a temporary tap.
+- A maintainer creates an RC tag. [`.github/workflows/release.yml`](../.github/workflows/release.yml) runs release gates and publishes it as a prerelease. The pinned RC installer and Homebrew formula must pass before automation tags the same commit for GA. GA stays a prerelease until its own installer and Homebrew tests pass and the formula update lands on `main`. v0.3.0 was stopped at the GA installer gate; v0.3.1-rc.1 was stopped because Homebrew requires a tap; v0.3.1-rc.2 exposed Homebrew's flattened archive layout. The corrected candidate tests both layouts before running an install through a temporary tap.
 - Failed gates leave the current stable release untouched. Corrected candidates require a new RC tag; published tags are never rewritten.
-- Nightly channel is built/published by [`.github/workflows/nightly.yml`](/Users/cleider/dev/Particelle/.github/workflows/nightly.yml).
-- Packaging logic is centralized in [`scripts/package_release.sh`](/Users/cleider/dev/Particelle/scripts/package_release.sh).
+- Nightly channel is built/published by [`.github/workflows/nightly.yml`](../.github/workflows/nightly.yml).
+- Packaging logic is centralized in [`scripts/package_release.sh`](../scripts/package_release.sh).
