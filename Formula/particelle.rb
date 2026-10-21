@@ -20,7 +20,7 @@ class Particelle < Formula
   end
 
   def install
-    binary = Dir["*/bin/particelle"].first
+    binary = Dir["bin/particelle", "*/bin/particelle"].first
     odie "Expected particelle binary in release tarball, but none was found." if binary.nil?
 
     bin.install binary => "particelle"

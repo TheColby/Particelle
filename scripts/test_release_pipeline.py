@@ -1,6 +1,7 @@
 """Release-packaging regression tests; run with python3 -m unittest."""
 import hashlib
 from pathlib import Path
+import re
 import subprocess
 import sys
 import tempfile
@@ -44,6 +45,22 @@ class ReleasePipelineTests(unittest.TestCase):
             (root / "nested").mkdir()
             (root / "nested" / "same.tar.gz").write_bytes(b"b")
             self.assertNotEqual(self.run_script("stage_release_assets.py", root).returncode, 0)
+
+    def test_homebrew_formula_finds_both_archive_layouts(self):
+        for source in (ROOT / "Formula/particelle.rb", ROOT / "scripts/update_homebrew_formula.sh"):
+            match = re.search(r'binary = (Dir\[[^\n]+\]\.first)', source.read_text())
+            self.assertIsNotNone(match, source)
+            for relative in (Path("bin/particelle"), Path("archive/bin/particelle")):
+                with self.subTest(source=source.name, layout=str(relative)):
+                    with tempfile.TemporaryDirectory() as directory:
+                        binary = Path(directory) / relative
+                        binary.parent.mkdir(parents=True)
+                        binary.write_bytes(b"binary")
+                        found = subprocess.run(
+                            ["ruby", "-e", f'Dir.chdir(ARGV.fetch(0)) {{ print({match[1]}) }}', directory],
+                            capture_output=True, text=True, check=True,
+                        ).stdout
+                        self.assertEqual(found, relative.as_posix())
 
 
 if __name__ == "__main__":
