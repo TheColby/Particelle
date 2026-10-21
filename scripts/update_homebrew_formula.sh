@@ -61,6 +61,7 @@ if [[ -z "$tag" ]]; then
 fi
 
 version="${tag#v}"
+version="${version%-rc.*}"
 
 asset_sha() {
   local asset_name="$1"

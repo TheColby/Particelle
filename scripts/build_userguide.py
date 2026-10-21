@@ -109,8 +109,9 @@ STYLES = {
 def inline(text):
     value = html.escape(text)
     value = re.sub(r'\[([^]]+)\]\((https?://[^)]+)\)', r'<link href="\2">\1</link>', value)
-    value = re.sub(r'`([^`]+)`', r'<font name="Courier" size="8.8">\1</font>', value)
     value = re.sub(r'\*\*([^*]+)\*\*', r'<b>\1</b>', value)
+    value = re.sub(r'(?<![\w*`])\*([A-Za-z][^*`<>]*?[A-Za-z])\*(?![\w*`])', r'<i>\1</i>', value)
+    value = re.sub(r'`([^`]+)`', r'<font name="Courier" size="8.8">\1</font>', value)
     return value
 
 
@@ -335,7 +336,7 @@ def build(text, output):
               Spacer(1, 27), Paragraph('Granular sound design, spatial composition,<br/>and expressive control', subtitle_style),
               Spacer(1, 26), Paragraph('Practical workflows / Illustrated concepts<br/>Listening exercises / Command and patch reference', STYLES['body']),
               Spacer(1, 12), Paragraph('Colby Leider, PhD', STYLES['body']),
-              Spacer(1, 10), Paragraph(f'V{VERSION} CLI EDITION  /  OCTOBER 17, 2026', STYLES['label']), PageBreak()]
+              Spacer(1, 10), Paragraph(f'V{VERSION} CLI EDITION  /  OCTOBER 21, 2026', STYLES['label']), PageBreak()]
     toc = TableOfContents()
     toc.levelStyles = [ParagraphStyle('toc', fontName=ROMAN, fontSize=9.0, leading=10.5, spaceBefore=0),
                        ParagraphStyle('tocsub', fontName=ROMAN, fontSize=8.2, leading=10.5, leftIndent=14)]
