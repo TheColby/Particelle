@@ -4,7 +4,7 @@
 
 Granular sound design, spatial composition, and expressive control
 
-Expanded book edition for the 0.3.1 CLI release. Prepared October 17, 2026. Obelisk M0 host archives and the browser study remain previews, not qualified VST3/AU or physical-controller releases.
+Expanded book edition for the 0.3.1 CLI release. Prepared October 21, 2026. Obelisk M0 host archives and the browser study remain previews, not qualified VST3/AU or physical-controller releases.
 
 ## Preface
 
@@ -14,7 +14,7 @@ Particelle describes that process in a text file. A patch is a recipe that can b
 
 The book follows the teaching approach of the VerbX user guide: practical chapters first, illustrated explanations alongside the work, listening exercises, and a reference section for returning users. Read Chapters 1 through 4 in sequence. After that, choose a route: Chapter 5 for drones, Chapters 6 and 7 for automation, Chapters 8 and 9 for spatial work and tuning, or Chapters 10 and 11 for performance and Obelisk M0.
 
-Chapters 19-22 form a deeper field reference; Chapter 23 is a complete source-tree patch atlas. Use the first eighteen chapters to learn, then use the later material to compare full designs and find exact examples. The cover displays the repository logo from `assets/logo.svg`, which is also used on GitHub.
+Chapter 19 is a guided listening trip through electronic and pop music. Chapters 20-23 form a deeper field reference; Chapter 24 is a complete source-tree patch atlas. Use the first nineteen chapters to learn, then use the later material to compare full designs and find exact examples. The cover displays the repository logo from `assets/logo.svg`, which is also used on GitHub.
 
 This edition was checked against the repository source, rather than treating every historical example or CLI help sentence as a guarantee. Particelle is alpha software. The capability table in Chapter 1 and the notes beside affected workflows distinguish implemented behavior from host and hardware qualification.
 
@@ -987,16 +987,55 @@ The following sources underpin this edition. Paths are relative to the repositor
 | What does M0 expose to a host? | `docs/OBELISK_M0_API.md` and `obelisk-m0/src/host.rs` |
 | Which host/device claims have evidence? | `docs/OBELISK_M0_QUALIFICATION.md` |
 
+## Further listening and reading
+
+Curtis Roads's [*Microsound*](https://mitpress.mit.edu/9780262182157/microsound/) (MIT Press, 2002) is the deeper reading behind Chapter 19. Roads follows the musical possibilities of very short sound particles: a few separate events can become a pulse, a tone, or a texture as their number and timing change. Particelle is one instrument for trying that idea, not an implementation of every synthesis method in the book.
+
 ## Edition and verification notes
 
-The first eighteen chapters are an authored guide to the current source tree; later chapters adapt maintained repository notes and reproduce canonical patches as a reference atlas. The example verification script renders the teaching patches, checks finite nonzero audio, checks expected frame/channel counts, and repeats one render to compare bytes. The PDF build includes a linked contents page, chapter bookmarks, original vector diagrams, and running page furniture. This PDF edition embeds TeX Gyre Schola, the available New Century Schoolbook-compatible family; the exact proprietary face can be used when its licensed font files are supplied to the builder.
+The first nineteen chapters are an authored guide to the current source tree; later chapters adapt maintained repository notes and reproduce canonical patches as a reference atlas. The example verification script renders the teaching patches, checks finite nonzero audio, checks expected frame/channel counts, and repeats one render to compare bytes. The PDF build includes a linked contents page, chapter bookmarks, original vector diagrams, and running page furniture. This PDF edition embeds TeX Gyre Schola, the available New Century Schoolbook-compatible family; the exact proprietary face can be used when its licensed font files are supplied to the builder.
 
 Hardware playback, physical MPE response, and DAW hosting still require equipment-specific testing. These activities are identified as listening or performance exercises rather than claimed as completed by a documentation build.
 
 The project is maintained at https://github.com/TheColby/Particelle. Consult the repository's LICENSE for distribution terms. All diagrams in this book are generated specifically for the guide.
 
-# 19. Extended listening and synthesis concepts
-The first eighteen chapters are a guided route through the instrument. The remainder of this volume is a field reference: fuller background, repository workflows, and an example atlas. The material below adapts the source-tree README and specialist notes. Some reference patches are intentionally extreme; use a short offline preview and a low monitoring level before committing to a long render. When a historical description conflicts with the CLI or the earlier capability table, test the actual checkout and treat the executable as authoritative.
+# 19. Small sounds in electronic and pop music
+
+Granular synthesis is easier to understand with your ears than with a diagram. Curtis Roads's [*Microsound*](https://mitpress.mit.edu/9780262182157/microsound/) gives us a useful listening question: when do separate tiny events stop sounding like separate events and start sounding like a pulse, a pitch, or a continuous surface? The answer changes with density, duration, source, and context. That is the same question you can ask while turning a Particelle cloud's `density` and `duration` controls.
+
+This is a listening guide, not a list of records secretly made with Particelle. Sampling, micro-edits, drum programming, and granular synthesis can produce related experiences through different methods. We will say when an artist has described a process and when we are only drawing a listening comparison. You do not need to own any of these recordings to follow the exercises: use your own short recording and listen for the same change in scale.
+
+## Curtis Roads: *Half-life, Part II: Granules*
+
+Start with Roads's *Half-life, Part II: Granules*, listed on his [*Point Line Cloud* album page](https://www.curtisroads.net/music). Hear the small events before trying to name the overall texture. Some seem to arrive alone; others gather into a stream. Roads's own [account of the album](https://www.curtisroads.net/s/04-Path-to-Half-Life-nzwg.pdf) describes the move from point to pulse, line, and cloud as particle density rises. That is a compositional move, not just a technical trick.
+
+**Try it:** Make three five-second Particelle renders from one short source. Hold the source position and grain duration fixed. Use densities of 5, 25, and 100 grains per second, reducing amplitude if the denser version gets too loud. Ask when you stop counting events and start hearing a body of sound. The aim is not to recreate Roads's piece; it is to hear the change of scale he makes musically useful.
+
+## Björk: *Cocoon* and *Hidden Place*
+
+On [*Vespertine*](https://shop.bjork.com/products/bjork-vespertine), listen to *Cocoon* and then *Hidden Place*. The quiet details matter as much as the lead voice. Björk has described collecting small environmental sounds and editing them into [microbeats](https://www.bjork.fr/Sonic-symbolism-vespertine). That is her account of the album's process; it does **not** mean every tick on either track is a granular-synthesis grain.
+
+Listen once for the main pulse and again for the softer sounds around it. Notice how a tiny sound can make an arrangement feel close without filling every gap. Silence is part of that effect. In Particelle, try a sparse cloud of short, quiet grains beneath a longer sustained layer. If the detail vanishes, raise its level a little; if it becomes a hailstorm, lower `density`. A cloud can whisper. It is not contractually obliged to become weather.
+
+## Daft Punk and Todd Edwards: *Face to Face*
+
+[*Face to Face*](https://www.daftpunk.com/) is a good place to hear fragments function as arrangement. Listen for pieces that feel cut and fitted into a rhythmic whole, then notice how the vocal and the larger groove keep those edits legible. The duo's official site lists the track and a [Todd Edwards feature](https://www.daftpunk.com/). Treat this as a comparison with chopped-sample production, **not** evidence that Particelle's grain engine or a specific granular algorithm made the record.
+
+**Try it:** Choose a recording you made yourself. Render a restrained cloud from one recognizable syllable or instrument attack. Leave plenty of room between grain onsets so the source still has an identity. Then make a much denser render from the same region. Decide which version helps a song and which version works better as a standalone texture. Density is a musical decision, not a scoreboard.
+
+## One listening method for any track
+
+Use this four-pass method on another electronic or pop piece of your choice:
+
+- Follow the song without analyzing it. Where does the texture change the mood?
+- Follow only the smallest audible events. Are they isolated, pulsed, or fused?
+- Follow the gaps. Which details disappear if you imagine filling every space?
+- Make a ten-second study using your own or properly licensed source audio. Change one control at a time, then compare it with your first listen.
+
+Keep the study and a short note about what you heard. Do not bundle commercial recordings with your patch. The useful lesson from these pieces is not "make it sound like this record." It is that scale, timing, and restraint can make the same small sound carry rhythm, intimacy, or atmosphere.
+
+# 20. Extended listening and synthesis concepts
+The first nineteen chapters are a guided route through the instrument. The remainder of this volume is a field reference: fuller background, repository workflows, and an example atlas. The material below adapts the source-tree README and specialist notes. Some reference patches are intentionally extreme; use a short offline preview and a low monitoring level before committing to a long render. When a historical description conflicts with the CLI or the earlier capability table, test the actual checkout and treat the executable as authoritative.
 
 Use these chapters selectively. A beginning reader can return to them when a question arises; an experienced reader can compare approaches and locate complete patch files. The example atlas is not a substitute for the named teaching exercises in Chapters 1-17, which are the best learning route.
 
@@ -1268,7 +1307,7 @@ The engine runs identically in offline mode (writing to file) and real-time mode
 
 ---
 
-# 20. Worked patch and workflow reference
+# 21. Worked patch and workflow reference
 This chapter retains longer repository examples so you can inspect complete designs, not only the small teaching patches. Each patch is also available as a real file in the checkout. Read a printed patch as a score: identify the source, output layout, cloud count, and the parameters that move over time. Then run the checked-in file, not a fragment copied from a PDF page.
 
 ## Example 1 — Stereo Shimmer
@@ -1516,7 +1555,7 @@ clouds:
 
 ## ️ Example Use Cases
 
-# 21. Analysis, tuning, spatial, and control workflows
+# 22. Analysis, tuning, spatial, and control workflows
 The following workflow material expands the quick introductions earlier in this book. It includes examples intended for particular source files, layouts, interfaces, or external controllers. Validate each file, render a short preview, and document the hardware and source media used. A higher channel count is not a guarantee that every channel has equal activity or that a deliverable conforms to a named distribution format.
 
 ## Offline Audio Feature Analysis
@@ -1917,7 +1956,7 @@ For launch preparation, run the full announcement gate:
 
 This gate runs sample-pack verification, fmt/clippy/tests, performance budgets, and full example regression in one command.
 
-# 22. Operations, compatibility, and integration notes
+# 23. Operations, compatibility, and integration notes
 ## Presets
 The current source note is `docs/PRESETS.md`. The excerpt below is included for offline reading; consult that file for later revisions.
 ## Presets
@@ -2311,7 +2350,7 @@ This document captures the five objections most likely to appear immediately aft
 
 **Code:** `scripts/render_listening_demos.sh`, `examples/listening_demos.tsv`, `docs/LISTENING_DEMOS.md`, `README.md`.
 
-# 23. Complete source-tree patch atlas
+# 24. Complete source-tree patch atlas
 This atlas reproduces the repository YAML patches outside `examples/userguide/`. Its purpose is to make the tested patch vocabulary browsable in one book, including source names, channel layouts, analysis routes, cloud parameters, and window choices. The canonical editable versions remain the files under `examples/`. The regression gate in `scripts/check_examples.sh` validates every example, renders one second, checks positive amplitude and RMS, and records channel metrics and fingerprints. That gate is a short audibility check, not a subjective listening endorsement for every full-length composition.
 
 Prepare the canonical samples before running the atlas if the asset paths do not resolve. Execute commands from the repository root. For a representative file, use `particelle validate examples/granular_delay.yaml` and `particelle render examples/granular_delay.yaml -o renders/granular-delay.wav --duration 5.0`. The catalog below is grouped by directory, then filename. Each listing matches the repository YAML content at the time this book was built, apart from insignificant trailing whitespace. Start with `examples/` top-level recipes, then move to the mono, stereo, multichannel, analysis, and generated-prompt studies. The complex group is for stress and edge-case exploration, not a recommended first session.

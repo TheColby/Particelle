@@ -8,9 +8,11 @@
 **Sound, atomized.**
 
 **Read the book:** [Particelle User Guide (PDF)](output/pdf/Particelle_User_Guide.pdf)
-or [the Markdown edition](docs/USERGUIDE.md). Eighteen chapters cover first renders,
+or [the Markdown edition](docs/USERGUIDE.md). Twenty-four chapters cover first renders,
 Dronoify, automation, spatial composition, MIDI/OSC, Obelisk M0, troubleshooting,
-and listening exercises, with runnable examples in `examples/userguide/`.
+and listening studies of Curtis Roads, Björk, and Daft Punk, with runnable examples in
+`examples/userguide/`. The chapter distinguishes granular synthesis from other ways
+of working with small sounds; it does not claim those artists used Particelle.
 
 **Release status:** v0.3.1 is the corrected CLI-first release candidate. v0.3.0 remains a prerelease because its installer exit-status check failed; stable and Homebrew remain on v0.2.3 until v0.3.1 passes every gate. A versioned PDF guide is attached to each release. Obelisk M0 C API/host archives and browser source are previews; named VST3/AU hosts, physical MPE controllers, and browser playback are not qualified by this release.
 

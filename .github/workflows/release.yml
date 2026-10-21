@@ -232,9 +232,11 @@ jobs:
           test "$("$work/particelle" --version)" = "particelle $version"
           ./scripts/update_homebrew_formula.sh --tag "$tag"
           ruby -c Formula/particelle.rb
-          brew install --formula "$PWD/Formula/particelle.rb"
-          brew test particelle
-          test "$(particelle --version)" = "particelle $version"
+          brew tap-new --no-git particelle/release-ci
+          cp Formula/particelle.rb "$(brew --repo particelle/release-ci)/Formula/particelle.rb"
+          brew install particelle/release-ci/particelle
+          brew test particelle/release-ci/particelle
+          test "$("$(brew --prefix particelle/release-ci/particelle)/bin/particelle" --version)" = "particelle $version"
       - name: Promote same commit to GA candidate
         shell: bash
         run: |
@@ -280,10 +282,11 @@ jobs:
           test "$("$work/particelle" --version)" = "particelle ${tag#v}"
           ./scripts/update_homebrew_formula.sh --tag "$tag"
           ruby -c Formula/particelle.rb
-          brew install --formula "$PWD/Formula/particelle.rb"
-          brew test particelle
-          test "$(brew --prefix)/bin/particelle" != ''
-          test "$(particelle --version)" = "particelle ${tag#v}"
+          brew tap-new --no-git particelle/release-ci
+          cp Formula/particelle.rb "$(brew --repo particelle/release-ci)/Formula/particelle.rb"
+          brew install particelle/release-ci/particelle
+          brew test particelle/release-ci/particelle
+          test "$("$(brew --prefix particelle/release-ci/particelle)/bin/particelle" --version)" = "particelle ${tag#v}"
       - name: Commit formula, then make release stable
         shell: bash
         run: |
