@@ -13,7 +13,7 @@ Release workflows generate two machine-readable files:
 
 All unsigned release deliverables (archives, PDF guide, SBOM, provenance, and per-asset sidecars) appear in `SHA256SUMS`; each and the manifest receive Sigstore signatures. Verify both the archive signature and its digest before installation. Signature files cannot be included in the manifest they sign.
 
-## v0.3.x Promotion Gate
+## v0.4.0 Promotion Gate
 
 The release workflow runs locked-dependency version checks, workspace formatting/lint/tests, performance, first-run, all example audibility/fingerprints, portable M0, browser build tests, and native Linux/macOS Intel/arm64 render parity before packaging. Each extracted CLI archive must report the tagged workspace version and produce non-silent audio through `init`, `validate`, and `render`; a local archive installer test also checks exit status. The versioned guide PDF is rebuilt and checked, including its Homebrew command, before publication. An RC passes to a GA tag on the same commit only after pinned RC installer and Homebrew tests pass; GA remains a prerelease until its own pinned installer and Homebrew installation succeed, the formula update lands, and the public tap installs successfully. The previous stable release stays available until that happens. Historical prerelease tags and assets are not rewritten.
 
@@ -29,6 +29,6 @@ The release workflow runs locked-dependency version checks, workspace formatting
 
 The example gate validates and renders every shipped YAML patch, rejects silent output, and compares PCM16 hashes against `examples/golden_fingerprints.tsv`. The baseline was regenerated only after two complete 229-example runs produced identical hashes following the sample-position scheduler change.
 
-The M0 portable gate checks audible output and zero audio-thread allocations. The browser CI job tests the Rust renderer and WAV encoder, builds the `wasm32-unknown-unknown` artifact, and runs a real Chromium render/playback-control/WAV-export test. Release preflight runs the same browser gate. This is evidence for the Chromium preview path, not a blanket claim for Safari, Firefox, accessibility, or hosted-playground support. The local Homebrew Rust installation lacks the WASM linker; CI supplies the target and browser runtime.
+The M0 portable gate checks audible output and zero audio-thread allocations. The browser CI job tests the Rust renderer and WAV encoder, builds the `wasm32-unknown-unknown` artifact, and runs a real Chromium render/playback-control/WAV-export test. Release preflight runs the same browser gate. The Linux build packages a versioned browser preview archive, checked alongside the other unsigned deliverables and signed in the same pass. This is evidence for the Chromium preview path, not a blanket claim for Safari, Firefox, accessibility, or hosted-playground support. See [the browser matrix](BROWSER_QUALIFICATION.md).
 
 The JUCE VST3/AU wrapper builds and passes an in-process MIDI/audio/state smoke test on macOS with a local JUCE CMake package. These checks do not qualify a named DAW, physical MPE controller, MTS-ESP bridge, code signing, or notarization. Record those separately in [`OBELISK_M0_QUALIFICATION.md`](OBELISK_M0_QUALIFICATION.md).

@@ -128,7 +128,7 @@ dependencies = [
 
 [[package]]
 name = "obelisk-m0"
-version = "0.3.2"
+version = "0.4.0"
 dependencies = [
  "hound",
  "particelle-io",
@@ -149,7 +149,7 @@ dependencies = [
 
 [[package]]
 name = "particelle-core"
-version = "0.3.2"
+version = "0.4.0"
 dependencies = [
  "particelle-params",
  "thiserror",
@@ -157,7 +157,7 @@ dependencies = [
 
 [[package]]
 name = "particelle-curve"
-version = "0.3.2"
+version = "0.4.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -166,7 +166,7 @@ dependencies = [
 
 [[package]]
 name = "particelle-io"
-version = "0.3.2"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "hound",
@@ -176,7 +176,7 @@ dependencies = [
 
 [[package]]
 name = "particelle-midi"
-version = "0.3.2"
+version = "0.4.0"
 dependencies = [
  "midly",
  "particelle-params",
@@ -187,7 +187,7 @@ dependencies = [
 
 [[package]]
 name = "particelle-params"
-version = "0.3.2"
+version = "0.4.0"
 dependencies = [
  "particelle-curve",
  "serde",
@@ -197,7 +197,7 @@ dependencies = [
 
 [[package]]
 name = "particelle-tuning"
-version = "0.3.2"
+version = "0.4.0"
 dependencies = [
  "serde",
  "thiserror",

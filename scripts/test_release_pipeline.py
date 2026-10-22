@@ -4,7 +4,9 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+import tarfile
 import tempfile
+import tomllib
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -16,7 +18,7 @@ class ReleasePipelineTests(unittest.TestCase):
                               capture_output=True, text=True)
 
     def test_release_version_accepts_rc_and_rejects_old_tag(self):
-        self.assertEqual(self.run_script("check_release_version.py", "--tag", "v0.3.2-rc.1").returncode, 0)
+        self.assertEqual(self.run_script("check_release_version.py", "--tag", "v0.4.0-rc.1").returncode, 0)
         self.assertNotEqual(self.run_script("check_release_version.py", "--tag", "v0.2.3").returncode, 0)
 
     def test_stage_and_manifest_cover_nested_assets_and_sidecars(self):
@@ -24,7 +26,7 @@ class ReleasePipelineTests(unittest.TestCase):
             root = Path(directory)
             nested = root / "presets"
             nested.mkdir()
-            archive = root / "particelle_v0.3.2_x86_64-unknown-linux-gnu.tar.gz"
+            archive = root / "particelle_v0.4.0_x86_64-unknown-linux-gnu.tar.gz"
             archive.write_bytes(b"archive")
             (nested / "particelle-presets-1.0.0.tar.gz").write_bytes(b"preset")
             (root / f"{archive.name}.sha256").write_text(
@@ -61,6 +63,32 @@ class ReleasePipelineTests(unittest.TestCase):
                             capture_output=True, text=True, check=True,
                         ).stdout
                         self.assertEqual(found, relative.as_posix())
+
+    def test_browser_bundle_is_versioned_and_checksummed(self):
+        version = tomllib.loads((ROOT / "Cargo.toml").read_text())["workspace"]["package"]["version"]
+        tag = f"v{version}-rc.1"
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            web = root / "web"
+            (web / "pkg").mkdir(parents=True)
+            for relative in ("index.html", "style.css", "app.mjs", "audio.mjs",
+                             "render-worker.mjs", "README.md"):
+                (web / relative).write_text(relative)
+            (web / "pkg/obelisk_wasm.wasm").write_bytes(b"\x00asm\x01\x00\x00\x00" + b"payload")
+            out = root / "dist"
+            result = self.run_script("package_browser_preview.py", "--version", tag,
+                                     "--web-dir", web, "--out-dir", out)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            archive = out / f"obelisk-m0-browser-preview_{tag}.tar.gz"
+            digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+            self.assertEqual((out / f"{archive.name}.sha256").read_text(),
+                             f"{digest}  {archive.name}\n")
+            with tarfile.open(archive) as bundle:
+                self.assertEqual(bundle.extractfile(f"obelisk-m0-browser-preview_{tag}/VERSION")
+                                 .read().decode(), f"{tag}\n")
+            check = self.run_script("check_release_version.py", "--tag", tag,
+                                    "--browser-archive", archive)
+            self.assertEqual(check.returncode, 0, check.stderr)
 
 
 if __name__ == "__main__":

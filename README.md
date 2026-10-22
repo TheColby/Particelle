@@ -14,7 +14,7 @@ and listening studies of Curtis Roads, Björk, and Daft Punk, with runnable exam
 `examples/userguide/`. The chapter distinguishes granular synthesis from other ways
 of working with small sounds; it does not claim those artists used Particelle.
 
-**Release status:** The latest promoted GitHub release is the stable CLI version; this source tree targets v0.3.2. CLI archives target Linux x86_64, macOS Intel, and macOS Apple Silicon, with a signed versioned PDF guide. Obelisk M0 host archives and browser source remain previews; this release does not qualify named VST3/AU hosts, physical MPE controllers, or browser playback.
+**Release status:** The latest promoted GitHub release is the stable CLI version; this source tree targets v0.4.0. CLI archives target Linux x86_64, macOS Intel, and macOS Apple Silicon, with a signed versioned PDF guide. Obelisk M0 host archives and the versioned browser bundle remain previews; this release does not qualify named VST3/AU hosts, physical MPE controllers, or general browser support. Chromium render, playback controls, and WAV export have an automated gate.
 
 Particelle turns a WAV recording into clouds of short sounds. Write a YAML patch, render a new WAV, or run it live with a suitable audio device. You can shape the clouds with curves, audio analysis, MIDI, or OSC, and send them to more than two output channels. A multichannel WAV is not automatically a Dolby Atmos master. The CLI writes 32-bit float WAV by default, with PCM24 and PCM16 options. No mystery knobs: the patch is the score.
 
@@ -69,7 +69,7 @@ curl -fsSL https://raw.githubusercontent.com/TheColby/Particelle/main/install.sh
 ./install.sh --channel stable
 ./install.sh --channel nightly
 ./install.sh --channel source
-./install.sh --channel stable --version v0.3.2
+./install.sh --channel stable --version v0.4.0
 ./install.sh --channel stable --verify-signatures
 ```
 
@@ -1646,7 +1646,7 @@ Anticipated launch objections and concrete mitigations are documented in [`docs/
 
 1. **P0: named-host and hardware qualification.** Run the physical MPE controller matrix and VST3/AU tests in named hosts/versions; record timing, automation, transport, restore, and block-size evidence in [`docs/OBELISK_M0_QUALIFICATION.md`](docs/OBELISK_M0_QUALIFICATION.md). Do not claim DAW compatibility from a build or smoke test alone.
 2. **P1: native release readiness.** Wire MTS-ESP discovery into the wrapper, establish supported bus layouts, then sign/notarize distributable binaries after host qualification.
-3. **P1: browser delivery.** The v0.4.0 work adds a real Chromium audio/export gate. A versioned static build, broader browser testing, and accessibility criteria remain before any hosted-playground support claim.
+3. **P1: browser delivery.** v0.4.0 adds a real Chromium audio/export gate and versioned static preview bundle. Broader browser testing and accessibility qualification remain before any hosted-playground support claim; see [the browser matrix](docs/BROWSER_QUALIFICATION.md).
 4. **P2: device-specific granular callback qualification.** Measure allocations, contention, deadline misses, and control latency on target audio interfaces; the portable core audit does not replace a hardware soak.
 
 ### Completed Phases (Archive)

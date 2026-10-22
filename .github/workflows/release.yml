@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Existing version tag (for example v0.3.2 or v0.3.2-rc.1)"
+        description: "Existing version tag (for example v0.4.0 or v0.4.0-rc.1)"
         required: true
         type: string
 
@@ -73,6 +73,8 @@ jobs:
         with:
           ref: ${{ github.event.inputs.tag || github.ref }}
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
       - uses: Swatinem/rust-cache@v2
       - if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y sox libasound2-dev pkg-config
@@ -102,6 +104,8 @@ jobs:
         with:
           ref: ${{ github.event.inputs.tag || github.ref }}
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
       - uses: Swatinem/rust-cache@v2
       - if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y sox libasound2-dev pkg-config
@@ -135,6 +139,14 @@ jobs:
         run: |
           ./scripts/package_listening_demos.sh dist/listening-demos
           ./scripts/package_presets.sh dist/presets
+      - name: Versioned browser preview
+        if: runner.os == 'Linux'
+        run: |
+          tag="${{ github.event.inputs.tag || github.ref_name }}"
+          ./scripts/build_wasm.sh
+          node web/wasm-smoke.mjs
+          python3 scripts/package_browser_preview.py --version "$tag" --out-dir dist/browser-preview
+          python3 scripts/check_release_version.py --tag "$tag" --browser-archive "dist/browser-preview/obelisk-m0-browser-preview_${tag}.tar.gz"
       - uses: actions/upload-artifact@v7
         with:
           name: release-${{ matrix.target }}
@@ -145,6 +157,8 @@ jobs:
             dist/listening-demos/*.sha256
             dist/presets/*.tar.gz
             dist/presets/*.sha256
+            dist/browser-preview/*.tar.gz
+            dist/browser-preview/*.sha256
           if-no-files-found: error
 
   publish:
@@ -212,8 +226,8 @@ jobs:
           prerelease: true
           fail_on_unmatched_files: true
           body: |
-            CLI-first release. RC tags remain prereleases until their install gates pass. Obelisk M0 C API/host archives and browser source remain previews.
-            No named VST3/AU host, physical MPE controller, MTS-ESP wrapper, or browser playback qualification is claimed.
+            CLI-first release. RC tags remain prereleases until their install gates pass. Obelisk M0 C API/host archives and the versioned browser bundle remain previews.
+            No named VST3/AU host, physical MPE controller, MTS-ESP wrapper, or general browser compatibility is claimed. The Chromium preview render/playback/export path is automated.
             Install only after checking SHA256SUMS and Sigstore signatures. The versioned PDF guide is attached.
             Homebrew (after stable promotion): `brew tap TheColby/Particelle https://github.com/TheColby/Particelle.git` then `brew install TheColby/Particelle/particelle`.
           files: dist/*
