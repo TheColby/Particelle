@@ -47,10 +47,10 @@
               </select>
             </div>
             <div class="sliders">
-              <div class="slider-field"><div class="slider-top"><label for="morph">Body morph</label><output for="morph" id="morph-value">0.62</output></div><input id="morph" name="morph" type="range" min="0" max="1" step="0.01" value="0.62"><p>Move from wavetable edge to resonant body.</p></div>
-              <div class="slider-field"><div class="slider-top"><label for="motion">Slow motion</label><output for="motion" id="motion-value">0.18 Hz</output></div><input id="motion" name="motion" type="range" min="0" max="2" step="0.01" value="0.18"><p>A gentle movement in the morph.</p></div>
-              <div class="slider-field"><div class="slider-top"><label for="delay">Delay</label><output for="delay" id="delay-value">0.16</output></div><input id="delay" name="delay" type="range" min="0" max="1" step="0.01" value="0.16"><p>Repeats that recede behind the notes.</p></div>
-              <div class="slider-field"><div class="slider-top"><label for="reverb">Reverb</label><output for="reverb" id="reverb-value">0.28</output></div><input id="reverb" name="reverb" type="range" min="0" max="1" step="0.01" value="0.28"><p>Diffuse space around the body.</p></div>
+              <div class="slider-field"><div class="slider-top"><label for="morph">Body morph</label><output for="morph" id="morph-value">0.62</output></div><input id="morph" name="morph" type="range" min="0" max="1" step="0.01" value="0.62" aria-describedby="morph-desc"><p id="morph-desc">Move from wavetable edge to resonant body.</p></div>
+              <div class="slider-field"><div class="slider-top"><label for="motion">Slow motion</label><output for="motion" id="motion-value">0.18 Hz</output></div><input id="motion" name="motion" type="range" min="0" max="2" step="0.01" value="0.18" aria-describedby="motion-desc"><p id="motion-desc">A gentle movement in the morph.</p></div>
+              <div class="slider-field"><div class="slider-top"><label for="delay">Delay</label><output for="delay" id="delay-value">0.16</output></div><input id="delay" name="delay" type="range" min="0" max="1" step="0.01" value="0.16" aria-describedby="delay-desc"><p id="delay-desc">Repeats that recede behind the notes.</p></div>
+              <div class="slider-field"><div class="slider-top"><label for="reverb">Reverb</label><output for="reverb" id="reverb-value">0.28</output></div><input id="reverb" name="reverb" type="range" min="0" max="1" step="0.01" value="0.28" aria-describedby="reverb-desc"><p id="reverb-desc">Diffuse space around the body.</p></div>
             </div>
             <button id="render" class="primary-button" type="submit"><span>Render passage</span><span aria-hidden="true">↗</span></button>
           </form>
@@ -58,7 +58,7 @@
 
         <section class="output card" aria-labelledby="output-title">
           <div class="section-heading"><span class="index">02 / LISTEN</span><h2 id="output-title">The result</h2></div>
-          <div class="visual" aria-label="Rendered audio waveform"><canvas id="waveform"></canvas><div class="visual-overlay" id="visual-overlay">Your passage will appear here</div><span class="visual-label">STEREO / 48 kHz</span></div>
+          <div class="visual" role="img" aria-label="Rendered audio waveform"><canvas id="waveform"></canvas><div class="visual-overlay" id="visual-overlay">Your passage will appear here</div><span class="visual-label">STEREO / 48 kHz</span></div>
           <div class="transport">
             <button id="play" class="play-button" type="button" disabled aria-label="Play rendered passage"><span id="play-icon" aria-hidden="true">▶</span></button>
             <div class="transport-copy"><strong id="transport-title">No render yet</strong><span id="transport-detail">Set your controls and render to begin.</span></div>
