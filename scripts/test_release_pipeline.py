@@ -16,7 +16,7 @@ class ReleasePipelineTests(unittest.TestCase):
                               capture_output=True, text=True)
 
     def test_release_version_accepts_rc_and_rejects_old_tag(self):
-        self.assertEqual(self.run_script("check_release_version.py", "--tag", "v0.3.1-rc.1").returncode, 0)
+        self.assertEqual(self.run_script("check_release_version.py", "--tag", "v0.3.2-rc.1").returncode, 0)
         self.assertNotEqual(self.run_script("check_release_version.py", "--tag", "v0.2.3").returncode, 0)
 
     def test_stage_and_manifest_cover_nested_assets_and_sidecars(self):
@@ -24,7 +24,7 @@ class ReleasePipelineTests(unittest.TestCase):
             root = Path(directory)
             nested = root / "presets"
             nested.mkdir()
-            archive = root / "particelle_v0.3.1_x86_64-unknown-linux-gnu.tar.gz"
+            archive = root / "particelle_v0.3.2_x86_64-unknown-linux-gnu.tar.gz"
             archive.write_bytes(b"archive")
             (nested / "particelle-presets-1.0.0.tar.gz").write_bytes(b"preset")
             (root / f"{archive.name}.sha256").write_text(

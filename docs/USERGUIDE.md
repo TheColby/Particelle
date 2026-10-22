@@ -4,7 +4,7 @@
 
 Granular sound design, spatial composition, and expressive control
 
-Expanded book edition for the 0.3.1 CLI release. Prepared October 21, 2026. Obelisk M0 host archives and the browser study remain previews, not qualified VST3/AU or physical-controller releases.
+Expanded book edition for the 0.3.2 CLI release. Prepared October 22, 2026. Obelisk M0 host archives and the browser study remain previews, not qualified VST3/AU or physical-controller releases.
 
 ## Preface
 
@@ -2054,7 +2054,7 @@ Use the root installer script:
 ./install.sh --channel stable
 ./install.sh --channel nightly
 ./install.sh --channel source
-./install.sh --channel stable --version v0.3.1
+./install.sh --channel stable --version v0.3.2
 ./install.sh --channel stable --verify-signatures
 ```
 
@@ -2078,7 +2078,7 @@ brew install TheColby/Particelle/particelle
 Formula maintenance:
 
 ```sh
-./scripts/update_homebrew_formula.sh --tag v0.3.1
+./scripts/update_homebrew_formula.sh --tag v0.3.2
 ```
 
 This script refreshes release URLs and SHA-256 checksums in the formula from GitHub release metadata.
