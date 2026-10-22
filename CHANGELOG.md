@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-10-22
+
+- Reissued the signed user guide with the working two-step Homebrew tap command. The v0.3.1 assets remain unchanged; use this release for the corrected PDF.
+- Added a public-repository Homebrew tap installation test after the formula lands on `main` and before stable promotion.
+- Added guide-text and release-note checks so the published instructions agree with the install path.
+
 ## [0.3.1] - 2026-10-21
 
 - Fixed the stable installer exit trap, which caused a successful prebuilt installation to return a failure status.

@@ -14,7 +14,7 @@ and listening studies of Curtis Roads, Björk, and Daft Punk, with runnable exam
 `examples/userguide/`. The chapter distinguishes granular synthesis from other ways
 of working with small sounds; it does not claim those artists used Particelle.
 
-**Release status:** v0.3.1 is stable for the CLI on Linux x86_64, macOS Intel, and macOS Apple Silicon. Its signed release includes a versioned PDF guide. Obelisk M0 host archives and browser source remain previews; this release does not qualify named VST3/AU hosts, physical MPE controllers, or browser playback.
+**Release status:** The latest promoted GitHub release is the stable CLI version; this source tree targets v0.3.2. CLI archives target Linux x86_64, macOS Intel, and macOS Apple Silicon, with a signed versioned PDF guide. Obelisk M0 host archives and browser source remain previews; this release does not qualify named VST3/AU hosts, physical MPE controllers, or browser playback.
 
 Particelle turns a WAV recording into clouds of short sounds. Write a YAML patch, render a new WAV, or run it live with a suitable audio device. You can shape the clouds with curves, audio analysis, MIDI, or OSC, and send them to more than two output channels. A multichannel WAV is not automatically a Dolby Atmos master. The CLI writes 32-bit float WAV by default, with PCM24 and PCM16 options. No mystery knobs: the patch is the score.
 
@@ -69,7 +69,7 @@ curl -fsSL https://raw.githubusercontent.com/TheColby/Particelle/main/install.sh
 ./install.sh --channel stable
 ./install.sh --channel nightly
 ./install.sh --channel source
-./install.sh --channel stable --version v0.3.1
+./install.sh --channel stable --version v0.3.2
 ./install.sh --channel stable --verify-signatures
 ```
 
