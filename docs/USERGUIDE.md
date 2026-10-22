@@ -4,7 +4,7 @@
 
 Granular sound design, spatial composition, and expressive control
 
-Expanded book edition for the 0.3.2 CLI release. Prepared October 22, 2026. Obelisk M0 host archives and the browser study remain previews, not qualified VST3/AU or physical-controller releases.
+Expanded book edition for the 0.4.0 CLI release. Prepared October 22, 2026. Obelisk M0 host archives and the browser study remain previews, not qualified VST3/AU or physical-controller releases.
 
 ## Preface
 
@@ -676,7 +676,7 @@ Session state intentionally excludes active voices, effect tails, bus configurat
 
 The JUCE wrapper source in `native/obelisk-plugin/` builds VST3 and, on macOS, AU from the M0 C ABI. It exposes four automatable controls and saves their state. Its in-process smoke check is not a named-DAW test; do not describe a host as supported until its timing, automation, stop/reset, and restore paths have been exercised there. The wrapper is stereo and does not yet discover MTS-ESP tuning tables.
 
-For a browser-only listening study, build the M0 WASM target with `./scripts/build_wasm.sh`, then serve `web/` over HTTP. The browser renders a short preset-like phrase locally, previews it, and exports PCM WAV. It is an offline playground, not a live MIDI instrument or a general Particelle YAML renderer.
+For a browser-only listening study, use the versioned `obelisk-m0-browser-preview_v0.4.0.tar.gz` release archive, extract it, enter its folder, and serve it with `python3 -m http.server 8000`. Or build the M0 WASM target with `./scripts/build_wasm.sh` and serve `web/` over HTTP. The browser renders a short phrase locally, previews it, and exports PCM WAV. It is an offline preview, not a live MIDI instrument or a general Particelle YAML renderer. Only the Chromium CI path is automated; the [browser qualification matrix](BROWSER_QUALIFICATION.md) records untested combinations and accessibility work.
 
 The external tuning bridge accepts 128 positive frequencies. The current engine applies its cached base frequencies when voices start; do not assume that replacing the table retunes already sounding voices. Test that distinction if continuous retuning is central to a piece.
 
@@ -2054,7 +2054,7 @@ Use the root installer script:
 ./install.sh --channel stable
 ./install.sh --channel nightly
 ./install.sh --channel source
-./install.sh --channel stable --version v0.3.2
+./install.sh --channel stable --version v0.4.0
 ./install.sh --channel stable --verify-signatures
 ```
 
@@ -2078,7 +2078,7 @@ brew install TheColby/Particelle/particelle
 Formula maintenance:
 
 ```sh
-./scripts/update_homebrew_formula.sh --tag v0.3.2
+./scripts/update_homebrew_formula.sh --tag v0.4.0
 ```
 
 This script refreshes release URLs and SHA-256 checksums in the formula from GitHub release metadata.
@@ -2254,7 +2254,7 @@ Binary archives and checksum manifests remain Sigstore-signed. Verify both the a
 
 The example gate validates and renders every shipped YAML patch, rejects silent output, and compares PCM16 hashes against `examples/golden_fingerprints.tsv`. The baseline was regenerated only after two complete 229-example runs produced identical hashes following the sample-position scheduler change.
 
-The M0 portable gate checks audible output and zero audio-thread allocations. The browser CI job tests the Rust renderer and WAV encoder and builds the `wasm32-unknown-unknown` artifact. The local Homebrew Rust installation used for this change lacks `rust-lld`; its native renderer and JavaScript tests passed, but local WASM playback was not verified. A CI build and browser playback check are still required before publishing a hosted playground.
+The M0 portable gate checks audible output and zero audio-thread allocations. The browser CI job tests the Rust renderer and WAV encoder, builds WASM, and runs a real Chromium render, playback-control, and audible WAV-download test. This is evidence for a preview, not Safari/Firefox or accessibility qualification. The versioned browser bundle is checked, signed, and published with the CLI archives. See the [browser qualification matrix](BROWSER_QUALIFICATION.md) before making browser support claims.
 
 The JUCE VST3/AU wrapper builds and passes an in-process MIDI/audio/state smoke test on macOS with a local JUCE CMake package. These checks do not qualify a named DAW, physical MPE controller, MTS-ESP bridge, code signing, or notarization. Record those separately in [`OBELISK_M0_QUALIFICATION.md`](OBELISK_M0_QUALIFICATION.md).
 

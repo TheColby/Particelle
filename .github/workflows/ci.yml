@@ -128,6 +128,14 @@ jobs:
           test -s web/pkg/obelisk_wasm.wasm
           node web/wasm-smoke.mjs
 
+      - name: Package versioned browser preview
+        run: |
+          version="$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[] | select(.name == "particelle-cli") | .version')"
+          tag="v${version}-rc.1"
+          python3 scripts/package_browser_preview.py --version "$tag" --out-dir /tmp/particelle-browser-preview
+          python3 scripts/check_release_version.py --tag "$tag" --browser-archive "/tmp/particelle-browser-preview/obelisk-m0-browser-preview_${tag}.tar.gz"
+          (cd /tmp/particelle-browser-preview && sha256sum -c "obelisk-m0-browser-preview_${tag}.tar.gz.sha256")
+
       - name: Install browser test dependencies
         run: |
           npm ci

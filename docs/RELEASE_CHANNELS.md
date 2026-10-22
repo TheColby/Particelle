@@ -16,7 +16,7 @@ Use the root installer script:
 ./install.sh --channel stable
 ./install.sh --channel nightly
 ./install.sh --channel source
-./install.sh --channel stable --version v0.3.2
+./install.sh --channel stable --version v0.4.0
 ./install.sh --channel stable --verify-signatures
 ```
 
@@ -40,7 +40,7 @@ brew install TheColby/Particelle/particelle
 Formula maintenance:
 
 ```sh
-./scripts/update_homebrew_formula.sh --tag v0.3.2
+./scripts/update_homebrew_formula.sh --tag v0.4.0
 ```
 
 This script refreshes release URLs and SHA-256 checksums in the formula from GitHub release metadata.
@@ -59,10 +59,12 @@ Alongside:
 - `*.sha256` per artifact
 - consolidated `SHA256SUMS`
 - Sigstore keyless signatures/certificates (`*.sig`, `*.pem`)
-- `Particelle_User_Guide_v<version>.pdf`, plus the listening demos, presets, and `obelisk-m0-preview_<version>_<target>.tar.gz` C API/host archives
+- `Particelle_User_Guide_v<version>.pdf`, plus the listening demos, presets, `obelisk-m0-preview_<version>_<target>.tar.gz` C API/host archives, and `obelisk-m0-browser-preview_<version>.tar.gz` static browser bundle
 - Cargo metadata SBOM and release provenance, also checksummed and signed
 
 `SHA256SUMS` covers all unsigned deliverables, including individual `.sha256` sidecars. Signatures and certificates are produced afterward and therefore cannot be included in that manifest without a circular dependency.
+
+The M0 host and browser bundles are previews, not qualified plug-in or cross-browser products. The browser bundle has an automated Chromium render/playback/export gate; [the browser matrix](BROWSER_QUALIFICATION.md) records the remaining gaps.
 
 When signatures are verified, the installer validates keyless certificates against:
 

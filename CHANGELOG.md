@@ -7,7 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-- Began the CLI-first v0.4.0 release gates with a real Chromium test of the Obelisk M0 browser preview's render, playback controls, and non-silent WAV export. Browser and native host support claims remain evidence-gated.
+## [0.4.0] - 2026-10-22
+
+- Added a real Chromium end-to-end gate for the Obelisk M0 browser preview: render, playback controls, and audible PCM16 WAV export.
+- Added a versioned, checksummed static browser preview bundle to nightly and release assets. It shares the release provenance and signature pass.
+- Documented the browser qualification matrix and kept VST3/AU hosts, physical controllers, and cross-browser support explicitly unqualified previews.
+- Kept the CLI-first acceptance gates and release promotion safeguards; the patch schema is unchanged.
 
 ## [0.3.2] - 2026-10-22
 
