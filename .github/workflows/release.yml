@@ -55,6 +55,12 @@ jobs:
       - run: node --test web/audio.test.mjs
       - run: ./scripts/build_wasm.sh
       - run: node web/wasm-smoke.mjs
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - run: npm ci
+      - run: npx playwright install --with-deps --only-shell chromium
+      - run: npm run test:browser
 
   parity:
     strategy:

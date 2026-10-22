@@ -1646,7 +1646,7 @@ Anticipated launch objections and concrete mitigations are documented in [`docs/
 
 1. **P0: named-host and hardware qualification.** Run the physical MPE controller matrix and VST3/AU tests in named hosts/versions; record timing, automation, transport, restore, and block-size evidence in [`docs/OBELISK_M0_QUALIFICATION.md`](docs/OBELISK_M0_QUALIFICATION.md). Do not claim DAW compatibility from a build or smoke test alone.
 2. **P1: native release readiness.** Wire MTS-ESP discovery into the wrapper, establish supported bus layouts, then sign/notarize distributable binaries after host qualification.
-3. **P1: browser delivery.** Confirm the new WASM CI build, run real-browser audio/export checks, publish a versioned static build, and define browser support and accessibility criteria.
+3. **P1: browser delivery.** The v0.4.0 work adds a real Chromium audio/export gate. A versioned static build, broader browser testing, and accessibility criteria remain before any hosted-playground support claim.
 4. **P2: device-specific granular callback qualification.** Measure allocations, contention, deadline misses, and control latency on target audio interfaces; the portable core audit does not replace a hardware soak.
 
 ### Completed Phases (Archive)
@@ -1670,6 +1670,8 @@ Anticipated launch objections and concrete mitigations are documented in [`docs/
    Reliability gates, compatibility parsing, deterministic assets/metrics, realtime + control-path harnesses, release channels, schema migration metadata, supply-chain checks, golden fingerprints, and soak benchmarks are complete.
 
 Operational and release policy details: [`docs/REALTIME_OPERATIONS.md`](docs/REALTIME_OPERATIONS.md), [`docs/RELEASE_ASSURANCE.md`](docs/RELEASE_ASSURANCE.md), [`docs/PRESETS.md`](docs/PRESETS.md), [`docs/OBELISK_M0_API.md`](docs/OBELISK_M0_API.md), and [`docs/OBELISK_M0_QUALIFICATION.md`](docs/OBELISK_M0_QUALIFICATION.md).
+
+The CLI-first v0.4.0 candidate scope and acceptance gates are in [`docs/NEXT_RELEASE.md`](docs/NEXT_RELEASE.md).
 
 ### Compatibility Policy
 

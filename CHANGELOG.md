@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Began the CLI-first v0.4.0 release gates with a real Chromium test of the Obelisk M0 browser preview's render, playback controls, and non-silent WAV export. Browser and native host support claims remain evidence-gated.
+
 ## [0.3.2] - 2026-10-22
 
 - Reissued the signed user guide with the working two-step Homebrew tap command. The v0.3.1 assets remain unchanged; use this release for the corrected PDF.
