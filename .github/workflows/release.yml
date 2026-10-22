@@ -174,15 +174,14 @@ jobs:
           pattern: release-*
           path: dist
           merge-multiple: true
-      - name: Build versioned guide
+      - name: Verify versioned guide
         run: |
           tag="${{ github.event.inputs.tag || github.ref_name }}"
           version="${tag#v}"
           version="${version%-rc.*}"
-          sudo apt-get update && sudo apt-get install -y texlive-fonts-recommended
+          cp output/pdf/Particelle_User_Guide.pdf "dist/Particelle_User_Guide_v${version}.pdf"
           python3 -m venv /tmp/particelle-guide-venv
-          /tmp/particelle-guide-venv/bin/pip install reportlab pypdf
-          /tmp/particelle-guide-venv/bin/python scripts/build_userguide.py --output "dist/Particelle_User_Guide_v${version}.pdf"
+          /tmp/particelle-guide-venv/bin/pip install --timeout 15 --retries 2 pypdf
           VERSION="$version" /tmp/particelle-guide-venv/bin/python - <<'PY'
           from pathlib import Path
           from pypdf import PdfReader
