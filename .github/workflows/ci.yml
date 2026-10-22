@@ -104,6 +104,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      - name: Install Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+
       - name: Install Rust with WASM target
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -122,6 +127,22 @@ jobs:
           ./scripts/build_wasm.sh
           test -s web/pkg/obelisk_wasm.wasm
           node web/wasm-smoke.mjs
+
+      - name: Install browser test dependencies
+        run: |
+          npm ci
+          npx playwright install --with-deps --only-shell chromium
+
+      - name: Test browser render, playback, and WAV export
+        run: npm run test:browser
+
+      - name: Upload browser test evidence
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: obelisk-browser-test-results
+          path: test-results/
+          if-no-files-found: ignore
 
   render-parity:
     runs-on: ${{ matrix.os }}
