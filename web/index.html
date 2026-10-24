@@ -58,7 +58,7 @@
 
         <section class="output card" aria-labelledby="output-title">
           <div class="section-heading"><span class="index">02 / LISTEN</span><h2 id="output-title">The result</h2></div>
-          <div class="visual" aria-label="Rendered audio waveform"><canvas id="waveform"></canvas><div class="visual-overlay" id="visual-overlay">Your passage will appear here</div><span class="visual-label">STEREO / 48 kHz</span></div>
+          <div class="visual" role="img" aria-label="Rendered audio waveform"><canvas id="waveform" aria-hidden="true"></canvas><div class="visual-overlay" id="visual-overlay" aria-hidden="true">Your passage will appear here</div><span class="visual-label" aria-hidden="true">STEREO / 48 kHz</span></div>
           <div class="transport">
             <button id="play" class="play-button" type="button" disabled aria-label="Play rendered passage"><span id="play-icon" aria-hidden="true">▶</span></button>
             <div class="transport-copy"><strong id="transport-title">No render yet</strong><span id="transport-detail">Set your controls and render to begin.</span></div>
