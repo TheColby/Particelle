@@ -26,6 +26,7 @@ function setStatus(message, error = false) {
 
 function updateControls() {
   renderButton.disabled = !ready || pending;
+  renderButton.setAttribute('aria-busy', pending ? 'true' : 'false');
   renderButton.firstElementChild.textContent = pending ? 'Rendering…' : 'Render passage';
   playButton.disabled = !samples || pending;
   downloadButton.disabled = !samples || pending;
