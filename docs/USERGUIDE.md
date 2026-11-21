@@ -4,7 +4,7 @@
 
 Granular sound design, spatial composition, and expressive control
 
-Expanded book edition for the 0.4.0 CLI release. Prepared October 22, 2026. Obelisk M0 host archives and the browser study remain previews, not qualified VST3/AU or physical-controller releases.
+Expanded book edition for the 0.5.0 CLI release. Prepared November 20, 2026. Obelisk M0 host archives and the browser study remain previews, not qualified VST3/AU or physical-controller releases.
 
 ## Preface
 
@@ -125,7 +125,16 @@ The granular read-head step compensates for the source and engine sample-rate ra
 
 ## Exercise: make a portable project
 
-Create a new folder with a short WAV, a patch, and a one-line text note recording the command used to render it. Move the entire folder, change into its new root, and render again. If it fails, inspect relative paths before changing synthesis settings. Portability is a compositional convenience as well as a reproducibility tool.
+Create a new folder with a short WAV, a patch, and a one-line text note recording the command used to render it. The CLI can prepare the handoff for you:
+
+```sh
+particelle bundle examples/userguide/basic.yaml -o renders/basic-handoff
+particelle verify-bundle renders/basic-handoff
+particelle render renders/basic-handoff/patch.yaml \
+  -o renders/basic-from-handoff.wav --duration 5 --format pcm24
+```
+
+Move `basic-handoff` to another folder and run its verification and render again. `bundle` copies referenced audio, curve, analysis, and Scala files into `assets/` and rewrites the patch to use relative paths. It does not preserve comments in the original YAML, so keep your authored patch if the notes matter. A failed copy leaves an `INCOMPLETE` marker. Only share recordings you are allowed to redistribute.
 
 # 3. Your first finished render
 
@@ -676,7 +685,7 @@ Session state intentionally excludes active voices, effect tails, bus configurat
 
 The JUCE wrapper source in `native/obelisk-plugin/` builds VST3 and, on macOS, AU from the M0 C ABI. It exposes four automatable controls and saves their state. Its in-process smoke check is not a named-DAW test; do not describe a host as supported until its timing, automation, stop/reset, and restore paths have been exercised there. The wrapper is stereo and does not yet discover MTS-ESP tuning tables.
 
-For a browser-only listening study, use the versioned `obelisk-m0-browser-preview_v0.4.0.tar.gz` release archive, extract it, enter its folder, and serve it with `python3 -m http.server 8000`. Or build the M0 WASM target with `./scripts/build_wasm.sh` and serve `web/` over HTTP. The browser renders a short phrase locally, previews it, and exports PCM WAV. It is an offline preview, not a live MIDI instrument or a general Particelle YAML renderer. Only the Chromium CI path is automated; the [browser qualification matrix](BROWSER_QUALIFICATION.md) records untested combinations and accessibility work.
+For a browser-only listening study, use the versioned `obelisk-m0-browser-preview_v0.5.0.tar.gz` release archive, extract it, enter its folder, and serve it with `python3 -m http.server 8000`. Or build the M0 WASM target with `./scripts/build_wasm.sh` and serve `web/` over HTTP. The browser renders a short phrase locally, previews it, and exports PCM WAV. It is an offline preview, not a live MIDI instrument or a general Particelle YAML renderer. Only the Chromium CI path is automated; the [browser qualification matrix](BROWSER_QUALIFICATION.md) records untested combinations and accessibility work.
 
 The external tuning bridge accepts 128 positive frequencies. The current engine applies its cached base frequencies when voices start; do not assume that replacing the table retunes already sounding voices. Test that distinction if continuous retuning is central to a piece.
 
@@ -777,6 +786,16 @@ particelle render examples/userguide/basic.yaml \
 
 The CLI does not expose a 64-bit-float WAV output option, even though the granular calculations use f64 internally. Internal precision and delivery encoding are separate choices. Do not describe an ordinary default render as a 64-bit WAV.
 
+## Separate the clouds without changing the layout
+
+```sh
+particelle render examples/userguide/basic.yaml \
+  -o renders/basic-mix.wav --duration 5 --format f32 \
+  --stems-dir renders/basic-stems
+```
+
+For a patch with several clouds, `--stems-dir` writes one numbered WAV per cloud and a manifest mapping filenames to cloud IDs. Every stem keeps the full output channel count and order, even when some channels are silent. The ordinary mix remains at the path given with `-o`; `--hash` still hashes that mix only. Stems are separately rendered and should sum close to the mix, not necessarily byte for byte after PCM quantization. The stems directory must be new. If an export is interrupted, its `INCOMPLETE` marker tells you to rerun it instead of delivering a partial set.
+
 ## Inspect level and channel activity
 
 For a short render, confirm sample rate, frame count, channel count, and peak. If using SoX, `soxi renders/share.wav` reports format information and `sox renders/share.wav -n stats` reports level statistics. Listen to the result as well; measurements do not identify a musically unwanted loop or a badly chosen source segment.
@@ -787,7 +806,7 @@ For multichannel work, inspect each channel individually. Silence can be intenti
 
 ## Reproduce the result you actually tested
 
-Keep the executable version or commit, patch, source WAVs, curves, analysis files, duration, sample rate, block size, and output encoding. Repeat a render with exactly those inputs before claiming repeatability.
+Keep the executable version or commit, patch, source WAVs, curves, analysis files, duration, sample rate, block size, and output encoding. `bundle` and `verify-bundle` make that collection and integrity check easier, but their manifest is not a digital signature. Repeat a render with exactly those inputs before claiming repeatability.
 
 The granular CLI's `--hash` hashes the complete output file. M0 reports a hash of its rendered sample values. Those hashes are not interchangeable. Across architectures, library versions, or changed blocks, do not promise an identical digest without running the relevant comparison. The repository's render-parity scripts are the place to check its narrower tested policy.
 
@@ -2054,7 +2073,7 @@ Use the root installer script:
 ./install.sh --channel stable
 ./install.sh --channel nightly
 ./install.sh --channel source
-./install.sh --channel stable --version v0.4.0
+./install.sh --channel stable --version v0.5.0
 ./install.sh --channel stable --verify-signatures
 ```
 
@@ -2078,7 +2097,7 @@ brew install TheColby/Particelle/particelle
 Formula maintenance:
 
 ```sh
-./scripts/update_homebrew_formula.sh --tag v0.4.0
+./scripts/update_homebrew_formula.sh --tag v0.5.0
 ```
 
 This script refreshes release URLs and SHA-256 checksums in the formula from GitHub release metadata.

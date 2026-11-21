@@ -14,7 +14,7 @@ and listening studies of Curtis Roads, Björk, and Daft Punk, with runnable exam
 `examples/userguide/`. The chapter distinguishes granular synthesis from other ways
 of working with small sounds; it does not claim those artists used Particelle.
 
-**Release status:** The latest promoted GitHub release is the stable CLI version; this source tree targets v0.4.0. CLI archives target Linux x86_64, macOS Intel, and macOS Apple Silicon, with a signed versioned PDF guide. Obelisk M0 host archives and the versioned browser bundle remain previews; this release does not qualify named VST3/AU hosts, physical MPE controllers, or general browser support. Chromium render, playback controls, and WAV export have an automated gate.
+**Release status:** This source tree targets the CLI-first v0.5.0 release. CLI archives target Linux x86_64, macOS Intel, and macOS Apple Silicon, with a signed versioned PDF guide. Obelisk M0 host archives and the versioned browser bundle remain previews; this release does not qualify named VST3/AU hosts, physical MPE controllers, or general browser support. Chromium render, playback controls, and WAV export have an automated gate.
 
 Particelle turns a WAV recording into clouds of short sounds. Write a YAML patch, render a new WAV, or run it live with a suitable audio device. You can shape the clouds with curves, audio analysis, MIDI, or OSC, and send them to more than two output channels. A multichannel WAV is not automatically a Dolby Atmos master. The CLI writes 32-bit float WAV by default, with PCM24 and PCM16 options. No mystery knobs: the patch is the score.
 
@@ -69,7 +69,7 @@ curl -fsSL https://raw.githubusercontent.com/TheColby/Particelle/main/install.sh
 ./install.sh --channel stable
 ./install.sh --channel nightly
 ./install.sh --channel source
-./install.sh --channel stable --version v0.4.0
+./install.sh --channel stable --version v0.5.0
 ./install.sh --channel stable --verify-signatures
 ```
 
@@ -82,8 +82,18 @@ brew install TheColby/Particelle/particelle
 
 ### 🆕 What’s New
 
+- **Portable handoffs:** `bundle` gathers a patch, sources, curves, and scales; `verify-bundle` checks its hashes after moving or sharing it.
+- **Cloud stems:** `render --stems-dir` writes a full-layout WAV for each cloud alongside the mix.
 - **Homebrew support:** install directly with `brew`.
 - **Stdin patch input:** `render`, `validate`, and `set` now accept `-` as patch path.
+
+```sh
+particelle bundle my-patch.yaml -o handoff
+particelle verify-bundle handoff
+particelle render handoff/patch.yaml -o mix.wav --duration 10 --stems-dir stems
+```
+
+See [portable workflows](docs/PORTABLE_WORKFLOWS.md) for portability, stem-summing, and incomplete-output limits.
 
 ```sh
 particelle init \
@@ -1641,12 +1651,13 @@ Anticipated launch objections and concrete mitigations are documented in [`docs/
 4. **Native M0 plug-in source:** `native/obelisk-plugin/` builds JUCE VST3 and macOS AU wrappers with MIDI sample offsets, four automatable controls, programs, and session state. The local in-process smoke test passes; signed distribution and named DAW compatibility remain unqualified.
 5. **M0 atmosphere and space:** Standalone `--preset` loading, decorrelated diffusion, and independently routed voices on larger M0 output buses are implemented. The shipped JUCE wrapper is stereo.
 6. **Browser study:** `obelisk-wasm/` and `web/` provide a local offline M0 phrase renderer, playback, and PCM WAV export. It is not a granular YAML editor, live MIDI host, or general graph compiler. Build and serve it with `./scripts/build_wasm.sh` and `python3 -m http.server 8000 --directory web`. A Rust toolchain with a WASM linker is required; see [`web/README.md`](web/README.md).
+7. **Portable CLI projects and cloud stems:** `bundle` collects and hashes external files into a relocatable patch folder; `verify-bundle` checks it. `render --stems-dir` writes one full-layout WAV per cloud for mixing and diagnosis.
 
 ### Next evidence gates
 
 1. **P0: named-host and hardware qualification.** Run the physical MPE controller matrix and VST3/AU tests in named hosts/versions; record timing, automation, transport, restore, and block-size evidence in [`docs/OBELISK_M0_QUALIFICATION.md`](docs/OBELISK_M0_QUALIFICATION.md). Do not claim DAW compatibility from a build or smoke test alone.
 2. **P1: native release readiness.** Wire MTS-ESP discovery into the wrapper, establish supported bus layouts, then sign/notarize distributable binaries after host qualification.
-3. **P1: browser delivery.** v0.4.0 adds a real Chromium audio/export gate and versioned static preview bundle. Broader browser testing and accessibility qualification remain before any hosted-playground support claim; see [the browser matrix](docs/BROWSER_QUALIFICATION.md).
+3. **P1: browser delivery.** The Chromium audio/export gate and versioned static preview bundle exist. Broader browser testing and accessibility qualification remain before any hosted-playground support claim; see [the browser matrix](docs/BROWSER_QUALIFICATION.md).
 4. **P2: device-specific granular callback qualification.** Measure allocations, contention, deadline misses, and control latency on target audio interfaces; the portable core audit does not replace a hardware soak.
 
 ### Completed Phases (Archive)
@@ -1671,7 +1682,7 @@ Anticipated launch objections and concrete mitigations are documented in [`docs/
 
 Operational and release policy details: [`docs/REALTIME_OPERATIONS.md`](docs/REALTIME_OPERATIONS.md), [`docs/RELEASE_ASSURANCE.md`](docs/RELEASE_ASSURANCE.md), [`docs/PRESETS.md`](docs/PRESETS.md), [`docs/OBELISK_M0_API.md`](docs/OBELISK_M0_API.md), and [`docs/OBELISK_M0_QUALIFICATION.md`](docs/OBELISK_M0_QUALIFICATION.md).
 
-The CLI-first v0.4.0 candidate scope and acceptance gates are in [`docs/NEXT_RELEASE.md`](docs/NEXT_RELEASE.md).
+The CLI-first v0.5.0 candidate scope and acceptance gates are in [`docs/NEXT_RELEASE.md`](docs/NEXT_RELEASE.md).
 
 ### Compatibility Policy
 

@@ -16,7 +16,7 @@ Use the root installer script:
 ./install.sh --channel stable
 ./install.sh --channel nightly
 ./install.sh --channel source
-./install.sh --channel stable --version v0.4.0
+./install.sh --channel stable --version v0.5.0
 ./install.sh --channel stable --verify-signatures
 ```
 
@@ -40,7 +40,7 @@ brew install TheColby/Particelle/particelle
 Formula maintenance:
 
 ```sh
-./scripts/update_homebrew_formula.sh --tag v0.4.0
+./scripts/update_homebrew_formula.sh --tag v0.5.0
 ```
 
 This script refreshes release URLs and SHA-256 checksums in the formula from GitHub release metadata.

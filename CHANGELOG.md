@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-20
+
+- Added `particelle bundle` and `particelle verify-bundle` to make self-contained, checksummed patch folders. Bundles include source audio, analysis audio, curve JSON, and Scala files; live `input` sources are rejected.
+- Added `particelle render --stems-dir` for one full-layout WAV per cloud alongside the ordinary mix. Stems use the same sample rate, duration, and format; an incomplete marker flags interrupted renders.
+- Rejected zero, non-finite, and out-of-range offline render durations before creating output audio.
+- Kept the patch schema at v2 and M0 host/browser assets explicitly in preview status.
+
 ## [0.4.0] - 2026-10-22
 
 - Added a real Chromium end-to-end gate for the Obelisk M0 browser preview: render, playback controls, and audible PCM16 WAV export.

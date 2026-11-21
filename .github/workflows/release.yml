@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Existing version tag (for example v0.4.0 or v0.4.0-rc.1)"
+        description: "Existing version tag (for example v0.5.0 or v0.5.0-rc.1)"
         required: true
         type: string
 
@@ -133,6 +133,14 @@ jobs:
           "$bin" validate "$work/patch.yaml"
           "$bin" render "$work/patch.yaml" -o "$work/sound.wav" --duration 0.25
           sox "$work/sound.wav" -n stat 2>&1 | awk -F': *' '/RMS.*amplitude/{if ($2 > 0.0000001) good=1} END{exit !good}'
+          "$bin" bundle "$work/patch.yaml" -o "$work/bundle"
+          "$bin" verify-bundle "$work/bundle"
+          "$bin" render "$work/bundle/patch.yaml" -o "$work/bundle-mix.wav" --duration 0.25 --format pcm24 --stems-dir "$work/stems"
+          for stem in "$work/stems"/*.wav; do
+            sox "$stem" -n stat 2>&1 | awk -F': *' '/RMS.*amplitude/{if ($2 > 0.0000001) good=1} END{exit !good}'
+          done
+          test -s "$work/stems/manifest.json"
+          test ! -e "$work/stems/INCOMPLETE"
           ./scripts/test_installer_local.sh "$tag" "${{ matrix.target }}" dist
       - name: Curated demos and presets
         if: runner.os == 'Linux'
