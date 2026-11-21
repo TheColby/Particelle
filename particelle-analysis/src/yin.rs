@@ -88,9 +88,9 @@ impl YinBuffer {
         self.yin_buffer[0] = 1.0;
         let mut running_sum = 0.0;
 
-        for tau in 1..max_tau {
-            running_sum += self.yin_buffer[tau];
-            self.yin_buffer[tau] *= tau as f64 / running_sum;
+        for (tau, value) in self.yin_buffer.iter_mut().enumerate().take(max_tau).skip(1) {
+            running_sum += *value;
+            *value *= tau as f64 / running_sum;
         }
     }
 

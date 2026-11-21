@@ -26,9 +26,13 @@ fn asset(path: &mut String, base: &Path, field: &str) -> Result<()> {
     Ok(())
 }
 
-fn signal(expr: &mut SignalExprConfig, base: &Path, field: &str) -> Result<()> {
+fn signal(
+    expr: &mut SignalExprConfig,
+    field: &str,
+    visit: &mut impl FnMut(&mut String, &str) -> Result<()>,
+) -> Result<()> {
     match expr {
-        SignalExprConfig::Ref(path) if !path.starts_with('$') => asset(path, base, field)?,
+        SignalExprConfig::Ref(path) if !path.starts_with('$') => visit(path, field)?,
         SignalExprConfig::Expr(op) => {
             for (i, arg) in op.args.iter_mut().enumerate() {
                 // These operator arguments are symbols, not curve filenames.
@@ -38,7 +42,7 @@ fn signal(expr: &mut SignalExprConfig, base: &Path, field: &str) -> Result<()> {
                 ) {
                     continue;
                 }
-                signal(arg, base, &format!("{field}.args[{i}]"))?;
+                signal(arg, &format!("{field}.args[{i}]"), visit)?;
             }
         }
         _ => {}
@@ -46,16 +50,13 @@ fn signal(expr: &mut SignalExprConfig, base: &Path, field: &str) -> Result<()> {
     Ok(())
 }
 
-pub fn resolve(config: &mut ParticelleConfig, patch: &str) -> Result<()> {
-    let cwd = std::env::current_dir()?;
-    let base = if patch == "-" {
-        cwd.clone()
-    } else {
-        cwd.join(patch).parent().unwrap_or(&cwd).to_path_buf()
-    };
+pub fn visit_assets(
+    config: &mut ParticelleConfig,
+    visit: &mut impl FnMut(&mut String, &str) -> Result<()>,
+) -> Result<()> {
     for (i, cloud) in config.clouds.iter_mut().enumerate() {
         if cloud.source != "input" {
-            asset(&mut cloud.source, &base, &format!("clouds[{i}].source"))?;
+            visit(&mut cloud.source, &format!("clouds[{i}].source"))?;
         }
         for (name, expr) in [
             ("density", &mut cloud.density),
@@ -68,32 +69,38 @@ pub fn resolve(config: &mut ParticelleConfig, patch: &str) -> Result<()> {
             ("orientation_elevation", &mut cloud.orientation_elevation),
             ("playback_rate", &mut cloud.playback_rate),
         ] {
-            signal(expr, &base, &format!("clouds[{i}].{name}"))?;
+            signal(expr, &format!("clouds[{i}].{name}"), visit)?;
         }
     }
     for (i, analysis) in config.analysis.iter_mut().enumerate() {
-        asset(
-            &mut analysis.source,
-            &base,
-            &format!("analysis[{i}].source"),
-        )?;
+        visit(&mut analysis.source, &format!("analysis[{i}].source"))?;
     }
     if let TuningConfig::Scala { scl_path, kbm_path } = &mut config.tuning {
-        asset(scl_path, &base, "tuning.scl_path")?;
+        visit(scl_path, "tuning.scl_path")?;
         if let Some(path) = kbm_path {
-            asset(path, &base, "tuning.kbm_path")?;
+            visit(path, "tuning.kbm_path")?;
         }
     }
     for (i, binding) in config.routing.midi_bindings.iter_mut().enumerate() {
         if let Some(expr) = &mut binding.transform {
             signal(
                 expr,
-                &base,
                 &format!("routing.midi_bindings[{i}].transform"),
+                visit,
             )?;
         }
     }
     Ok(())
+}
+
+pub fn resolve(config: &mut ParticelleConfig, patch: &str) -> Result<()> {
+    let cwd = std::env::current_dir()?;
+    let base = if patch == "-" {
+        cwd.clone()
+    } else {
+        cwd.join(patch).parent().unwrap_or(&cwd).to_path_buf()
+    };
+    visit_assets(config, &mut |path, field| asset(path, &base, field))
 }
 
 /// Update exactly one existing node. Both clouds.0.width and clouds[0].width

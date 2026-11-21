@@ -161,15 +161,12 @@ mod tests {
         engine.process(&mut output)?;
 
         // Verify that we have some non-zero samples in the output
-        let mut has_sound = false;
-        for ch in 0..output.n_channels() {
-            for f in 0..output.frames {
-                if output.channels[ch][f].abs() > 0.0 {
-                    has_sound = true;
-                    break;
-                }
-            }
-        }
+        let has_sound = output.channels.iter().any(|channel| {
+            channel
+                .iter()
+                .take(output.frames)
+                .any(|sample| sample.abs() > 0.0)
+        });
 
         assert!(has_sound, "Engine produced no sound (all samples are zero)");
         Ok(())

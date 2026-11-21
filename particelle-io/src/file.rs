@@ -150,16 +150,18 @@ impl AudioFileWriter {
 
     /// Write a block of planar f64 samples. Interleaves and converts to target format.
     pub fn write_block(&mut self, block: &AudioBlock) -> Result<(), FileError> {
-        let n_ch = block.n_channels().min(self.n_channels);
         let frames = block.frames;
 
-        for f in 0..frames {
-            for ch in 0..self.n_channels {
-                let sample = if ch < n_ch {
-                    block.channels[ch][f]
-                } else {
-                    0.0
-                };
+        for frame in 0..frames {
+            let samples = (0..self.n_channels).map(|ch| {
+                block
+                    .channels
+                    .get(ch)
+                    .and_then(|channel| channel.get(frame))
+                    .copied()
+                    .unwrap_or(0.0)
+            });
+            for sample in samples {
                 match self.bit_depth {
                     16 => {
                         let val = (sample.clamp(-1.0, 1.0) * i16::MAX as f64) as i16;
@@ -261,8 +263,8 @@ mod tests {
         {
             let mut writer = AudioFileWriter::create(path, 1, 48000.0, 32).unwrap();
             let mut block = AudioBlock::new(1, 512);
-            for i in 0..512 {
-                block.channels[0][i] = (i as f64 / 512.0) * 2.0 - 1.0;
+            for (i, sample) in block.channels[0].iter_mut().enumerate() {
+                *sample = (i as f64 / 512.0) * 2.0 - 1.0;
             }
             writer.write_block(&block).unwrap();
             writer.finalize().unwrap();

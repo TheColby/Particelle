@@ -10,6 +10,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
+mod bundle;
 mod osc_control;
 mod patch;
 
@@ -169,12 +170,14 @@ enum Commands {
     #[command(after_help = "\
 EXAMPLES:\n\
     particelle render shimmer.yaml -o shimmer.wav --duration 8.0\n\
-    particelle render patch.yaml -o out.wav -d 60.0 --hash\n\n\
+    particelle render patch.yaml -o out.wav -d 60.0 --hash\n\
+    particelle render layers.yaml -o mix.wav --stems-dir stems\n\n\
 NOTES:\n\
     The output channel count matches the layout declared in the YAML patch.\n\
     Sample rate and block size are taken from engine config.\n\
     Use --format pcm24 (or --pcm24) for broad player/tool compatibility.\n\
-    Use --hash to print a SHA-256 digest for deterministic regression tests.")]
+    Use --hash to print a SHA-256 digest for deterministic regression tests.\n\
+    Stems retain the full layout and may not sum byte-exactly after quantization.")]
     Render {
         /// Path to the YAML configuration file.
         patch: String,
@@ -209,6 +212,29 @@ NOTES:\n\
         /// Useful for verifying byte-identical renders across runs.
         #[arg(long, help = "Print SHA-256 hash of output for regression testing")]
         hash: bool,
+
+        /// Also render one full-layout WAV per cloud into a new directory.
+        #[arg(long, help = "Write separate cloud WAVs into a new directory")]
+        stems_dir: Option<String>,
+    },
+
+    /// Copy a patch and every referenced file into a portable directory.
+    #[command(
+        after_help = "EXAMPLE:\n    particelle bundle patch.yaml -o portable-patch\n    particelle render portable-patch/patch.yaml -o out.wav"
+    )]
+    Bundle {
+        /// Patch YAML file. Standard input is not supported for bundles.
+        patch: String,
+
+        /// New output directory; existing directories are never overwritten.
+        #[arg(short, long)]
+        output: String,
+    },
+
+    /// Check every bundled file against its SHA-256 manifest and validate the patch.
+    VerifyBundle {
+        /// Bundle directory created by `particelle bundle`.
+        directory: String,
     },
 
     /// Run a patch in real time using the configured hardware audio device.
@@ -403,8 +429,25 @@ fn main() -> Result<()> {
             format,
             pcm24,
             hash,
+            stems_dir,
         } => {
-            cmd_render(&patch, &output, duration, format, pcm24, hash)?;
+            cmd_render(
+                &patch,
+                &output,
+                duration,
+                format,
+                pcm24,
+                hash,
+                stems_dir.as_deref(),
+            )?;
+        }
+        Commands::Bundle { patch, output } => {
+            anyhow::ensure!(patch != "-", "Bundle requires a patch file, not stdin");
+            let config = load_patch_config(&patch)?;
+            bundle::create(config, std::path::Path::new(&output))?;
+        }
+        Commands::VerifyBundle { directory } => {
+            bundle::verify(std::path::Path::new(&directory))?;
         }
         Commands::Run {
             patch,
@@ -1264,6 +1307,7 @@ fn cmd_render(
     format: RenderFormat,
     force_pcm24: bool,
     emit_hash: bool,
+    stems_dir: Option<&str>,
 ) -> Result<()> {
     let config = load_patch_config(patch_path)?;
     let errors = particelle_schema::validate(&config);
@@ -1274,6 +1318,91 @@ fn cmd_render(
         anyhow::bail!("Configuration is invalid. Cannot render.");
     }
 
+    anyhow::ensure!(
+        duration.is_finite() && duration > 0.0,
+        "--duration must be a positive finite number of seconds"
+    );
+    let frames = duration * config.engine.sample_rate;
+    anyhow::ensure!(
+        frames.is_finite() && frames >= 1.0 && frames < u64::MAX as f64,
+        "--duration is outside the supported frame range"
+    );
+
+    if let Some(dir) = stems_dir {
+        anyhow::ensure!(!config.clouds.is_empty(), "No clouds to render as stems");
+        std::fs::create_dir(dir).with_context(|| {
+            format!("Cannot create stems directory '{dir}'; choose a new directory")
+        })?;
+        std::fs::write(
+            std::path::Path::new(dir).join("INCOMPLETE"),
+            "Stem render did not finish. Do not use this directory.\n",
+        )?;
+    }
+    render_one(
+        &config,
+        output_path,
+        duration,
+        format,
+        force_pcm24,
+        emit_hash,
+    )?;
+    if let Some(dir) = stems_dir {
+        let mut entries = Vec::new();
+        for (index, cloud) in config.clouds.iter().enumerate() {
+            let slug: String = cloud
+                .id
+                .chars()
+                .take(80)
+                .map(|ch| {
+                    if ch.is_ascii_alphanumeric() || ch == '-' {
+                        ch
+                    } else {
+                        '_'
+                    }
+                })
+                .collect();
+            let name = format!(
+                "{:02}-{}.wav",
+                index + 1,
+                if slug.is_empty() { "cloud" } else { &slug }
+            );
+            let stem_path = std::path::Path::new(dir).join(&name);
+            let mut isolated = config.clone();
+            isolated.clouds = vec![cloud.clone()];
+            render_one(
+                &isolated,
+                &stem_path.to_string_lossy(),
+                duration,
+                format,
+                force_pcm24,
+                false,
+            )?;
+            entries.push(serde_json::json!({"cloud_id": cloud.id, "file": name}));
+        }
+        let manifest = serde_json::json!({
+            "schema_version": 1,
+            "sample_rate": config.engine.sample_rate,
+            "channels": config.layout.channels.len(),
+            "duration_seconds": duration,
+            "stems": entries,
+        });
+        std::fs::write(
+            std::path::Path::new(dir).join("manifest.json"),
+            format!("{}\n", serde_json::to_string_pretty(&manifest)?),
+        )?;
+        std::fs::remove_file(std::path::Path::new(dir).join("INCOMPLETE"))?;
+    }
+    Ok(())
+}
+
+fn render_one(
+    config: &ParticelleConfig,
+    output_path: &str,
+    duration: f64,
+    format: RenderFormat,
+    force_pcm24: bool,
+    emit_hash: bool,
+) -> Result<()> {
     let sample_rate = config.engine.sample_rate;
     let block_size = config.engine.block_size;
     let n_channels = config.layout.channels.len();
@@ -1297,7 +1426,7 @@ fn cmd_render(
         particelle_io::AudioFileWriter::create(output_path, n_channels, sample_rate, bit_depth)
             .with_context(|| "Cannot create output file")?;
 
-    let mut engine = build_engine(&config)?;
+    let mut engine = build_engine(config)?;
     let mut frames_rendered = 0u64;
     let mut block = particelle_core::audio_block::AudioBlock::new(n_channels, block_size);
 
