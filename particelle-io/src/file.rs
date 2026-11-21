@@ -263,8 +263,8 @@ mod tests {
         {
             let mut writer = AudioFileWriter::create(path, 1, 48000.0, 32).unwrap();
             let mut block = AudioBlock::new(1, 512);
-            for i in 0..512 {
-                block.channels[0][i] = (i as f64 / 512.0) * 2.0 - 1.0;
+            for (i, sample) in block.channels[0].iter_mut().enumerate() {
+                *sample = (i as f64 / 512.0) * 2.0 - 1.0;
             }
             writer.write_block(&block).unwrap();
             writer.finalize().unwrap();
