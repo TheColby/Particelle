@@ -4,6 +4,9 @@ use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 fn binary() -> PathBuf {
+    if let Some(path) = option_env!("CARGO_BIN_EXE_particelle") {
+        return PathBuf::from(path);
+    }
     let exe = std::env::current_exe().unwrap();
     exe.parent().unwrap().parent().unwrap().join("particelle")
 }
